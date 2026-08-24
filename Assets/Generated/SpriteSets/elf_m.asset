@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4a5e633c2e4e1c4a9443aaccc4e3b8b, type: 3}
+  m_Name: elf_m
+  m_EditorClassIdentifier: Assembly-CSharp::SpriteFrameSet
+  objectName: elf_m
+  states:
+  - stateName: hit
+    frames:
+    - {fileID: -29358234815864012, guid: 58eb33e10ce09e344906ef2b38b2fa94, type: 3}
+  - stateName: idle
+    frames:
+    - {fileID: -8154493969204524628, guid: 19068047a3e314a47b71d6c7c3200018, type: 3}
+    - {fileID: 4624454229676752102, guid: ddaff4f269dd5384caf689d1334da9bb, type: 3}
+    - {fileID: 4257279122684674883, guid: 4e8f9454cb4c1084fb7edb2bb90fbbac, type: 3}
+    - {fileID: -2233033290454150512, guid: 1791a820fe92ddb4897fec3d5e48001e, type: 3}
+  - stateName: run
+    frames:
+    - {fileID: -8126326419397055989, guid: 3fa9a99a38a7ffc499df88a44512cdc2, type: 3}
+    - {fileID: 5823562197604254011, guid: 0f9a09c3f1c0a3241945fc361b30fd18, type: 3}
+    - {fileID: 4434501957311210326, guid: 1203d09d44cc79c40b120102e57aeb5d, type: 3}
+    - {fileID: 3882543322116250457, guid: 4cba4e23c8ccbdb4cac1604999c74ab3, type: 3}

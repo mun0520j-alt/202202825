@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4a5e633c2e4e1c4a9443aaccc4e3b8b, type: 3}
+  m_Name: ogre
+  m_EditorClassIdentifier: Assembly-CSharp::SpriteFrameSet
+  objectName: ogre
+  states:
+  - stateName: idle
+    frames:
+    - {fileID: -1974230394358207292, guid: 2969960e4beb9bc4a9268e78d067a5cd, type: 3}
+    - {fileID: -2148392632677026051, guid: 721a334905df8674c82c968e0dd60386, type: 3}
+    - {fileID: 6027237394640077921, guid: c9c11b73cc32b7547b0b67e03fa24f02, type: 3}
+    - {fileID: 3583225401270089514, guid: 7edbbc6ed3917d342bb47eb6b4a6c44b, type: 3}
+  - stateName: run
+    frames:
+    - {fileID: 1499394524035344196, guid: 8966008526ec6b744a48da37d7c99199, type: 3}
+    - {fileID: -8909242763811919458, guid: 83674d1c32d7f064487aac637a673f17, type: 3}
+    - {fileID: -5993487594134191306, guid: ca1384109aef2114a960a780b5393983, type: 3}
+    - {fileID: -545197539548485119, guid: 546ddd2fa6fbddd468662007f561476f, type: 3}

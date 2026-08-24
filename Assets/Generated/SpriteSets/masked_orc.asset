@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4a5e633c2e4e1c4a9443aaccc4e3b8b, type: 3}
+  m_Name: masked_orc
+  m_EditorClassIdentifier: Assembly-CSharp::SpriteFrameSet
+  objectName: masked_orc
+  states:
+  - stateName: idle
+    frames:
+    - {fileID: 3024801116317025369, guid: b1f2831ee6d7b8d4d89ac51187440e0e, type: 3}
+    - {fileID: 9171425769096347044, guid: 7feda1c22e920ee4fbd74e3e4bfe1f17, type: 3}
+    - {fileID: -8161456550398956291, guid: 4a56dfff6a8b72a4e800bf683d1bf62a, type: 3}
+    - {fileID: 7187381524170326588, guid: a7473fdcc8565764cb350ee355b84030, type: 3}
+  - stateName: run
+    frames:
+    - {fileID: 5645113673583816798, guid: cf1576783668237408cd5c82d1aedd85, type: 3}
+    - {fileID: 143841583819079779, guid: f8968c184ff09e84c85571a5b706407d, type: 3}
+    - {fileID: -8836709685572291857, guid: 21fc3e49ae572c444a20f706f0f1b45e, type: 3}
+    - {fileID: 3092499122064598431, guid: 3a41a1e7eef0d0e4d8e4685bffbf7271, type: 3}

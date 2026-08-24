@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4a5e633c2e4e1c4a9443aaccc4e3b8b, type: 3}
+  m_Name: knight_m
+  m_EditorClassIdentifier: Assembly-CSharp::SpriteFrameSet
+  objectName: knight_m
+  states:
+  - stateName: hit
+    frames:
+    - {fileID: 2380540920117777034, guid: f47183db6f1fb9945a2a2dc093184dad, type: 3}
+  - stateName: idle
+    frames:
+    - {fileID: 4171610428287715108, guid: 3439c1d5624e15b40862981b69656f5c, type: 3}
+    - {fileID: 3142486352412476369, guid: 52c9b816fadee0d4cb65d7395ff02d7b, type: 3}
+    - {fileID: 5311782179231711814, guid: 4823ca2e7267c6e4d812aed3f08a1546, type: 3}
+    - {fileID: 430475065234430554, guid: 82c23305ad157a440a20f29c7d417ad7, type: 3}
+  - stateName: run
+    frames:
+    - {fileID: -6918904722710735950, guid: 59a32faba04da064489b373fe7adcbc7, type: 3}
+    - {fileID: -1824817003286416738, guid: cb66d85b59284b64bae34ebdb4029b4d, type: 3}
+    - {fileID: 2388322067273261879, guid: 6f0746b5aff31d540bd8c0f3ea9bab55, type: 3}
+    - {fileID: 5928817031311551676, guid: 2e86cb4322b708644bfa5bebca1628f6, type: 3}

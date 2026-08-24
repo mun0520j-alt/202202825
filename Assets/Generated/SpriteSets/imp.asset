@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4a5e633c2e4e1c4a9443aaccc4e3b8b, type: 3}
+  m_Name: imp
+  m_EditorClassIdentifier: Assembly-CSharp::SpriteFrameSet
+  objectName: imp
+  states:
+  - stateName: idle
+    frames:
+    - {fileID: 4948191364208534778, guid: 31b6a5d0d83f352499de99434bbf5415, type: 3}
+    - {fileID: 5380121731766489985, guid: 544c694a94667a34886020b19d09164b, type: 3}
+    - {fileID: -5593284934250556229, guid: 2c6b98d73743892469f0f94fa62d1b4b, type: 3}
+    - {fileID: -5176140627763384068, guid: bc05e99e807883647a2e3a42abbd7f6a, type: 3}
+  - stateName: run
+    frames:
+    - {fileID: 2807994088814316644, guid: 3a4c73dd0ca1ecb4ea730a2d837d96a1, type: 3}
+    - {fileID: -1663252901769221706, guid: 15ec68e0ed1b1d343ad1315ea00b11b6, type: 3}
+    - {fileID: 6372115117525653377, guid: bd274587e8dbf1c4ea2bd0e5f9b89501, type: 3}
+    - {fileID: -8637876272605317312, guid: a2cb2a965fd752645ba0b8e1746381a6, type: 3}

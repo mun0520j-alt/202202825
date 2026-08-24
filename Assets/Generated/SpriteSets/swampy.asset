@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4a5e633c2e4e1c4a9443aaccc4e3b8b, type: 3}
+  m_Name: swampy
+  m_EditorClassIdentifier: Assembly-CSharp::SpriteFrameSet
+  objectName: swampy
+  states:
+  - stateName: anim
+    frames:
+    - {fileID: 3130317160998252023, guid: 515a8dcd50978fd4fbb884315e03a6b6, type: 3}
+    - {fileID: 1878867643553638925, guid: 5e8e87c757fb6d145aab48afa224e974, type: 3}
+    - {fileID: -8596561306756582351, guid: 5e6b4386ff0dc6d4ba6de68229a3a568, type: 3}
+    - {fileID: 1692772702797373504, guid: f4bd706bb0f223e42bb9cc4fd7be93ee, type: 3}

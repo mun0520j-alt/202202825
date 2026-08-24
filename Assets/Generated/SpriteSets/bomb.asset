@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4a5e633c2e4e1c4a9443aaccc4e3b8b, type: 3}
+  m_Name: bomb
+  m_EditorClassIdentifier: Assembly-CSharp::SpriteFrameSet
+  objectName: bomb
+  states:
+  - stateName: anim
+    frames:
+    - {fileID: -2049678707807839607, guid: 9c9ac81fb19b9f54aa8fc9469bb4258d, type: 3}
+    - {fileID: 583216561856263150, guid: bb1e24c711dc7da44a2379324447aaa4, type: 3}
+    - {fileID: -7102492816791215784, guid: eeeb358179adfa149af1489b9d5c3162, type: 3}

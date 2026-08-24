@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4a5e633c2e4e1c4a9443aaccc4e3b8b, type: 3}
+  m_Name: chest_empty
+  m_EditorClassIdentifier: Assembly-CSharp::SpriteFrameSet
+  objectName: chest_empty
+  states:
+  - stateName: open
+    frames:
+    - {fileID: 5930751672855658006, guid: 05dfe04c9605a9c48bff31b6fb6aa47c, type: 3}
+    - {fileID: 9054580220565639399, guid: a003a89742d07e145afb05a42a3a4b56, type: 3}
+    - {fileID: -5871772598039865606, guid: df4c00e40efa94047a530555e04c5a17, type: 3}

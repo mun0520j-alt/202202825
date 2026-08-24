@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4a5e633c2e4e1c4a9443aaccc4e3b8b, type: 3}
+  m_Name: angel
+  m_EditorClassIdentifier: Assembly-CSharp::SpriteFrameSet
+  objectName: angel
+  states:
+  - stateName: idle
+    frames:
+    - {fileID: -4502925872424433701, guid: b9ada446bf0b7e044ba58ea840e32040, type: 3}
+    - {fileID: -6272944141223022897, guid: a47f9883fe3429f46809d9d0baecf7f0, type: 3}
+    - {fileID: 1031876066096598382, guid: 01ba63ab5f740fa439b232d5b3ac5b72, type: 3}
+    - {fileID: -3402376114357586730, guid: e8208ac514da76e4abc45f0cc635354b, type: 3}
+  - stateName: run
+    frames:
+    - {fileID: 8762378123169026558, guid: 424ee309ee17c1f469e6fae0570be7e4, type: 3}
+    - {fileID: 4800495113749455374, guid: 2629a64cce65e9d4cb0a973ee77501a6, type: 3}
+    - {fileID: -674348324797979943, guid: 7debcb2beaa187c44b7c5b352719c5da, type: 3}
+    - {fileID: 4908326418380041932, guid: 3521aecd3ab1c9e4e8ece2fbf0ff39d1, type: 3}

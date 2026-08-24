@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4a5e633c2e4e1c4a9443aaccc4e3b8b, type: 3}
+  m_Name: skelet
+  m_EditorClassIdentifier: Assembly-CSharp::SpriteFrameSet
+  objectName: skelet
+  states:
+  - stateName: idle
+    frames:
+    - {fileID: -3801395117379775012, guid: bff76e4f94d864d4195ddc48a9fe39b2, type: 3}
+    - {fileID: -9220170934936323435, guid: 119bd08f2354fea45b5bcd27a5b52788, type: 3}
+    - {fileID: 6042680455125406518, guid: b7ef122c47a241f46846e1656aac39a6, type: 3}
+    - {fileID: 2932469630006617533, guid: d7f03b0259b9fb64db97df3c2a5b1cbb, type: 3}
+  - stateName: run
+    frames:
+    - {fileID: -4604387559850027499, guid: af655f96de63035429780e124f3e2393, type: 3}
+    - {fileID: -9091610501002314651, guid: 7206b500380d5f44b943ccad50f45ed5, type: 3}
+    - {fileID: -5093054398897925809, guid: c526d34b7e2d35443bee3abb72a58bff, type: 3}
+    - {fileID: 91344271923446119, guid: 53b1146450e488d46835b449faa6529d, type: 3}

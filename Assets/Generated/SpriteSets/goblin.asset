@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4a5e633c2e4e1c4a9443aaccc4e3b8b, type: 3}
+  m_Name: goblin
+  m_EditorClassIdentifier: Assembly-CSharp::SpriteFrameSet
+  objectName: goblin
+  states:
+  - stateName: idle
+    frames:
+    - {fileID: -3209854092255693953, guid: 26ce37446a192f441a66cdd022a3e202, type: 3}
+    - {fileID: 8015379323698766220, guid: b3a28e3df5e656e4cb5c2af1deec8d67, type: 3}
+    - {fileID: 6470109789897308448, guid: 6935dc32c75b9294db65c04c48372931, type: 3}
+    - {fileID: -2283576249738149108, guid: a6de266f057f3184794f9b9c4343b123, type: 3}
+  - stateName: run
+    frames:
+    - {fileID: 8178381991375796574, guid: cd64f7015acc7d14ca7d680e611c3668, type: 3}
+    - {fileID: 8933914077713969451, guid: dba1286e73702ef44a61ad5e2fdcddfc, type: 3}
+    - {fileID: -764269787195223391, guid: 8d602bc1aba51644cafc47abfc59da55, type: 3}
+    - {fileID: 7054442283714001616, guid: d8166d751e6f4d943a37f1a6d53795c4, type: 3}

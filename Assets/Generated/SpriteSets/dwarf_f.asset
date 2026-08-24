@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4a5e633c2e4e1c4a9443aaccc4e3b8b, type: 3}
+  m_Name: dwarf_f
+  m_EditorClassIdentifier: Assembly-CSharp::SpriteFrameSet
+  objectName: dwarf_f
+  states:
+  - stateName: hit
+    frames:
+    - {fileID: -2171300445362133100, guid: 53cce97bbdf26ac488b65ee9e0c92788, type: 3}
+  - stateName: idle
+    frames:
+    - {fileID: 7452456610094171237, guid: b1f0d5e5a9baae9419f0672f185d5510, type: 3}
+    - {fileID: -6363409827653326696, guid: 0789288b1a8029f47917270ba6e91694, type: 3}
+    - {fileID: 5642463876641616875, guid: 99c35785591d2254c8a9ef93b9e0fd21, type: 3}
+    - {fileID: -8374856403932398002, guid: f1d9879ba91c44044b963776a4603696, type: 3}
+  - stateName: run
+    frames:
+    - {fileID: 7771300500278826182, guid: 67ee70fec757abe4e879f4c39c4d10d8, type: 3}
+    - {fileID: -9081072420496142638, guid: cd52bffd0269f2d4bb5e36abd48e7273, type: 3}
+    - {fileID: 2708931945818916774, guid: 3773e9186f2b38f4d9df8c18fe8b369f, type: 3}
+    - {fileID: 3208693814678332403, guid: 5d470a0fb7e11ce4a8159e99da3b2833, type: 3}

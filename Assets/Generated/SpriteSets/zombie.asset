@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4a5e633c2e4e1c4a9443aaccc4e3b8b, type: 3}
+  m_Name: zombie
+  m_EditorClassIdentifier: Assembly-CSharp::SpriteFrameSet
+  objectName: zombie
+  states:
+  - stateName: anim
+    frames:
+    - {fileID: -2856441567249909997, guid: db96d346a14345244a5bf19dc46b2aee, type: 3}
+    - {fileID: -1484694808219678131, guid: 7945ed41a943c094aa58b64a38f6631e, type: 3}
+    - {fileID: 8880239457213929409, guid: 9523f38fbb0d30448a1d3439151bddda, type: 3}
+    - {fileID: 4680982094814736339, guid: 4b8c1e4152f8b61458a286105b43500e, type: 3}

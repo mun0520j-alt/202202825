@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4a5e633c2e4e1c4a9443aaccc4e3b8b, type: 3}
+  m_Name: tiny_slug
+  m_EditorClassIdentifier: Assembly-CSharp::SpriteFrameSet
+  objectName: tiny_slug
+  states:
+  - stateName: anim
+    frames:
+    - {fileID: -1584674359443149197, guid: 3e0ced6a3a26cbc44975b74c29539f68, type: 3}
+    - {fileID: -8938582736360078820, guid: 8cfb947eb0c91614dbc88fc0287a03ef, type: 3}
+    - {fileID: -4770219576034665883, guid: 9440a64697f0f324f9b8ab0010086dbc, type: 3}
+    - {fileID: -6870263189603159055, guid: 10e707b1b66ba574eb92ee9f96c06de8, type: 3}

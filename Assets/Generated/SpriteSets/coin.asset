@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4a5e633c2e4e1c4a9443aaccc4e3b8b, type: 3}
+  m_Name: coin
+  m_EditorClassIdentifier: Assembly-CSharp::SpriteFrameSet
+  objectName: coin
+  states:
+  - stateName: anim
+    frames:
+    - {fileID: -8581138250487090976, guid: e43b11bea361bdc4d86ccb3a403327d3, type: 3}
+    - {fileID: 1528701205709900085, guid: 50021e8b4135ce34e90f8db8e001c60e, type: 3}
+    - {fileID: 5264763353053897623, guid: dfd88509d3909be4796486a5d4911dd2, type: 3}
+    - {fileID: -4980889795198203003, guid: 0d5d5acc6b612a54a8c7407fb8caa70a, type: 3}

@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4a5e633c2e4e1c4a9443aaccc4e3b8b, type: 3}
+  m_Name: chort
+  m_EditorClassIdentifier: Assembly-CSharp::SpriteFrameSet
+  objectName: chort
+  states:
+  - stateName: idle
+    frames:
+    - {fileID: 2257904016204196439, guid: 53d45d5f1950ebb4297a8e84bd7703e8, type: 3}
+    - {fileID: 5565363347694979420, guid: 616db2a7a409f64478bf35454451367f, type: 3}
+    - {fileID: -7564668308375390351, guid: 7115d1427039ebc4bb9d7f738c4f45ad, type: 3}
+    - {fileID: 5312555880066355837, guid: 6f128933f294c7c41aec348b58b34640, type: 3}
+  - stateName: run
+    frames:
+    - {fileID: 3738908858051609881, guid: 3d366c51e1b773145bb243ba5926c1f0, type: 3}
+    - {fileID: -731626320381420278, guid: 3b00247e9cd345c4db3283c4e1f2361f, type: 3}
+    - {fileID: -8964827395825748428, guid: d8db6a067b47b2c40bbd2e5199497fdf, type: 3}
+    - {fileID: 5098777560019250460, guid: 873349cc44b0946489ec8b698f8ec6dd, type: 3}

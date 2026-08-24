@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4a5e633c2e4e1c4a9443aaccc4e3b8b, type: 3}
+  m_Name: orc_shaman
+  m_EditorClassIdentifier: Assembly-CSharp::SpriteFrameSet
+  objectName: orc_shaman
+  states:
+  - stateName: idle
+    frames:
+    - {fileID: 7401542709101262181, guid: ad4c8e545bb976f409f7fff493575f77, type: 3}
+    - {fileID: -2681946076671298804, guid: 2c529b45f4e7d01478422d121b071033, type: 3}
+    - {fileID: -6714278746616603413, guid: 2889f2ee475aba34bb89bacd1a20d9b2, type: 3}
+    - {fileID: 3762078184512424268, guid: 4d7e5602d5dccab45be48f336dc91453, type: 3}
+  - stateName: run
+    frames:
+    - {fileID: 1873975265150480943, guid: f3a0f2bc19e9e664696932b8bbdce526, type: 3}
+    - {fileID: -6051959805640960417, guid: bb4eb9623f998114f92e573af1ef4d99, type: 3}
+    - {fileID: -3539389262571342319, guid: 2ff740ff4c57f284a9f5bed2ccf20ae8, type: 3}
+    - {fileID: 8633874884202038303, guid: 5d3c5cbd354eb244ebbbb34809720c99, type: 3}

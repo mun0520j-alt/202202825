@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4a5e633c2e4e1c4a9443aaccc4e3b8b, type: 3}
+  m_Name: muddy
+  m_EditorClassIdentifier: Assembly-CSharp::SpriteFrameSet
+  objectName: muddy
+  states:
+  - stateName: anim
+    frames:
+    - {fileID: 6628885074908135177, guid: 86a0cff5ffa3b9840b20339d9f3f95a4, type: 3}
+    - {fileID: 4887431803917933335, guid: c9693ec833a7e45409cea58588f3bc9b, type: 3}
+    - {fileID: -1729894566451998315, guid: 5e7cb97ce5f059343989cd4fb5c59e1d, type: 3}
+    - {fileID: -1780124802873774526, guid: 61f8a9d8aa59c3349a23c97f73fa0052, type: 3}

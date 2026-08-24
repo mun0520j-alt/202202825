@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4a5e633c2e4e1c4a9443aaccc4e3b8b, type: 3}
+  m_Name: pumpkin_dude
+  m_EditorClassIdentifier: Assembly-CSharp::SpriteFrameSet
+  objectName: pumpkin_dude
+  states:
+  - stateName: idle
+    frames:
+    - {fileID: 801836815628676836, guid: 42d2baff106d0854a89e130a026e28bc, type: 3}
+    - {fileID: -748910592834371303, guid: bfefc287e5d3b0347b822d09bbb531ba, type: 3}
+    - {fileID: 59793362110918056, guid: 859ecc10879f8f3429a6f8d39d621dcf, type: 3}
+    - {fileID: -8424956285917644483, guid: a49ad7db0558b364aa26967ce2f507e8, type: 3}
+  - stateName: run
+    frames:
+    - {fileID: 9118112242793926859, guid: 34c7e5cdc130ba34c93b7b6b87f64c41, type: 3}
+    - {fileID: 3430409238846472636, guid: 8ef5b34f8f8a6ae489db89af6b5f21c9, type: 3}
+    - {fileID: -4882913175357521974, guid: 9d6c2bdc1f410b844bbd8e8752fcbdb3, type: 3}
+    - {fileID: -1133998446210080971, guid: 2a0ab71bcc0564747a801b41a3fe5ad5, type: 3}

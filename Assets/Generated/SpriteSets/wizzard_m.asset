@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4a5e633c2e4e1c4a9443aaccc4e3b8b, type: 3}
+  m_Name: wizzard_m
+  m_EditorClassIdentifier: Assembly-CSharp::SpriteFrameSet
+  objectName: wizzard_m
+  states:
+  - stateName: hit
+    frames:
+    - {fileID: 8551248584065959642, guid: 621f659b988a3e34d90196486cee7190, type: 3}
+  - stateName: idle
+    frames:
+    - {fileID: -2968867086249429800, guid: 6f510a2ee654d784586f512152962ec3, type: 3}
+    - {fileID: 3919174867957437746, guid: d674a02276387904fb4505caf7f58870, type: 3}
+    - {fileID: 1435791240291674391, guid: b5dc6fa47b0273545a6fbc99f92ddbfc, type: 3}
+    - {fileID: -2245682301408669832, guid: a554316971d64e542aacc6bc835810dc, type: 3}
+  - stateName: run
+    frames:
+    - {fileID: -5034115418236982084, guid: 50645e3b20aa0084f94526e4f919fda3, type: 3}
+    - {fileID: -8108683024659116804, guid: 6497ad9463c440d4d92eee27c08cea12, type: 3}
+    - {fileID: 2014453800706172781, guid: 90e21c1811453be4f865244d5bdbe769, type: 3}
+    - {fileID: -62427121598111063, guid: 0082bfee93932f24c972729eb059e1ea, type: 3}

@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4a5e633c2e4e1c4a9443aaccc4e3b8b, type: 3}
+  m_Name: floor_spikes
+  m_EditorClassIdentifier: Assembly-CSharp::SpriteFrameSet
+  objectName: floor_spikes
+  states:
+  - stateName: anim
+    frames:
+    - {fileID: 3032241974121846738, guid: ef76d60b7c92c7c409340ff017073aae, type: 3}
+    - {fileID: 2417845897605264601, guid: dd33550a7d27c63469ebca39a86f7ef2, type: 3}
+    - {fileID: 3197009277849462069, guid: e10f9d646f674a446aa048a64e79f952, type: 3}
+    - {fileID: -7945936929742752817, guid: 261fb952bce23594fb2eb7bb824539ab, type: 3}

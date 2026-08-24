@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4a5e633c2e4e1c4a9443aaccc4e3b8b, type: 3}
+  m_Name: lizard_f
+  m_EditorClassIdentifier: Assembly-CSharp::SpriteFrameSet
+  objectName: lizard_f
+  states:
+  - stateName: hit
+    frames:
+    - {fileID: 3146367380971986726, guid: c20e6f582b22b7d469ea211c431c21cd, type: 3}
+  - stateName: idle
+    frames:
+    - {fileID: -6890270688227256474, guid: 849a181d1a64d364f85451307a435cce, type: 3}
+    - {fileID: 1950173637673723410, guid: c614fe0f14e16ba459df10c607d69ba9, type: 3}
+    - {fileID: 7411420224833914066, guid: 0bcba58a70d915d4296e2fe5534a4c4c, type: 3}
+    - {fileID: 7192042544938816155, guid: 437826a4fc6d388418a2ff25088662c0, type: 3}
+  - stateName: run
+    frames:
+    - {fileID: -8596030093364375801, guid: 27da4b03f0ca77b4eb1ca91f289c0afe, type: 3}
+    - {fileID: -3802948274711187594, guid: faa513c935c036f488a2c42f68b275db, type: 3}
+    - {fileID: -856933028977476699, guid: 4fbdca98aca9b4d4a9011d3fd36d3f08, type: 3}
+    - {fileID: 2928449520850231519, guid: 79b798c40684cb34b9cd96b44d662821, type: 3}
