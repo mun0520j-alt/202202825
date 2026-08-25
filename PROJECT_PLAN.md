@@ -68,10 +68,13 @@
 - 런타임 헬퍼: `Assets/Scripts/Debug/DebugAnimatorStatePlayer.cs` (Animator에 지정한 state를 Start 시 재생)
   - **최근 이슈**: 이 파일이 노트북↔홈PC 간 git 커밋 누락으로 CS0246 에러 발생 → 홈PC에 직접 재생성 후 push로 해결됨 (2026-08-24 기준 정상)
 
-### Step 3 — 아이템 데이터베이스 ⏳ 대기 중 (사용자 명령 대기)
+### Step 3 — 아이템 데이터베이스 🟡 설계/약식 데이터 완료, Unity 반영은 대기
 - 목표: 아이템 데이터를 database 형태로 정리, 각 아이템 data값을 약식으로 정리
-- **아직 시작 안 함** — 사용자가 Kyrise 아이콘 검토를 마치고 명시적으로 명령을 줄 때 착수
-- 선행 필요: 포션/활·화살 선별 결정 확정
+- **설계 논의 문서 `ITEM_SYSTEM_DESIGN.md` + 약식 데이터표 `ITEM_DATA_DRAFT.xlsx` 완성** (노트북 대화에서 진행)
+  - 슬롯 구조, 무기(검/지팡이/활)+방패, 반지(5스탯 종류: 힘/체력/속도/방어력/치명타), 목걸이(5종 고유능력 + 휴대 1개 제한), 포션 8종, 스크롤 4종 전부 확정
+  - 스탯 수치는 v1 초안(실플레이 조정 예정), 카테고리↔슬롯 매핑 확정
+- **아직 Unity 코드/ScriptableObject로는 안 옮김** — 사용자 명령 대기 (코드 작성 전 확인 필수, 표준 규칙 준수)
+- 남은 미정: 시작 tick 상향폭(아키텍처 문서와 연동), 무기 스킬 시스템(별도 엑셀로 분리 예정)
 
 ### Step 4 — 맵 제너레이터 ⏳ 대기 중
 - 목표: 규격에 맞는 맵을 절차적으로 생성
@@ -95,13 +98,20 @@
 
 ## 5. 다음 할 일 (Next Actions) — 매 세션마다 갱신
 
-- [ ] `OrganizeKyriseIcons.cs` 실행 결과 확인
-- [ ] 포션 선별 기준 확정 (색상/개수)
-- [ ] 활/화살 처리 방침 확정 (보류 vs 01시리즈 3종 추림)
-- [ ] (확정되면) 포션/활·화살용 정리 스크립트 추가
-- [ ] 사용자 검토 후 Step 3 (아이템 데이터베이스) 착수 명령
-- [ ] Step 3 완료 후 Step 4 (맵 제너레이터) 착수
+- [ ] `OrganizeKyriseIcons.cs` 실행 결과 확인 (포션/목걸이 반영해서 스크립트 업데이트 필요할 수 있음)
+- [x] 포션 선별 기준 확정 → `potion_01a~h` 8종, 효과 확정
+- [x] 활/화살 처리 방침 확정 → `bow_01a/b/cc` 3종만, 화살 미사용
+- [x] 목걸이 선별 기준 확정 → `necklace_01a~e` 5종, 반지와 다른 고유능력 컨셉
+- [x] `ITEM_SYSTEM_DESIGN.md` + `ITEM_DATA_DRAFT.xlsx` 로 Step 3 설계/약식 데이터 완료
+- [ ] `ITEM_DATA_DRAFT.xlsx`의 v1 스탯 초안 실플레이 조정
+- [x] 시작 tick 값 확정 → **1 Tick = 5분 = 이동 5타일, 288 Tick = 24시간(MIA 상한)**. 이동/공격/스왑/아이템사용/상호작용 전부 기본 1 tick으로 통일
+- [x] Step 4 (맵 제너레이터) 설계 착수 → `MAP_GENERATOR_DESIGN.md` — BSP 방+복도 생성, 24x24 그리드 v4 제안, 0x72 타일 매핑 정리
+- [x] 시간대 시스템 + 5층 보스/NPC/제단 기획 착수 → `ALTAR_AND_TIME_SYSTEM_DESIGN.md` — 아침/낮/저녁/심야 4단계, "월식의 제단" 첫 제단 해금 퀘스트 흐름 설계
+- [ ] 승인 시 Unity ScriptableObject/데이터 파일로 옮기는 코드 작업 착수 명령 대기 (아이템/맵제너레이터 공통)
+- [ ] 홈PC 쪽 `DUNGEON_RUNTIME_ARCHITECTURE.md`(층 배치/씬 전환)와 `MAP_GENERATOR_DESIGN.md`/`ALTAR_AND_TIME_SYSTEM_DESIGN.md` 내용 서로 맞춰보기 — 두 대화가 따로 진행 중이라 동기화 필요
 
 ## 6. 변경 이력 (Changelog)
 
 - **2026-08-24**: 노트북→홈PC 전환 중 `DebugAnimatorStatePlayer.cs` git 미커밋으로 인한 CS0246 에러 발생 및 해결. 이 진행 문서(PROJECT_PLAN.md) 최초 작성.
+- **2026-08-25**: 노트북 대화에서 아이템 시스템 설계 논의 진행 — 슬롯/무기/방패/반지/목걸이/포션/스크롤 구조 전부 확정. `ITEM_SYSTEM_DESIGN.md`(설계 근거) + `ITEM_DATA_DRAFT.xlsx`(약식 데이터, v1 초안) 작성. 홈PC 대화 쪽에서는 별도로 `DUNGEON_RUNTIME_ARCHITECTURE.md`(Tick/이동/카메라 설계 논의) 진행 중.
+- **2026-08-25 (계속)**: 같은 노트북 대화에서 맵 제너레이터 설계(`MAP_GENERATOR_DESIGN.md`) + 시간대/제단 시스템 기획(`ALTAR_AND_TIME_SYSTEM_DESIGN.md`) 착수. 핵심 확정: tick 시스템 실제 수치(1tick=5분=5타일, 288tick=24h MIA), 게임 내 모든 기본 행동(이동/공격/스왑/아이템/상호작용)이 1tick으로 통일, 10층 완주는 비정석(중간 탈출이 기본값), 5층 보스 이후 "월식의 제단" 첫 제단 해금 퀘스트 흐름 설계.
