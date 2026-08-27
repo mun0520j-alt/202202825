@@ -471,3 +471,8 @@ FodyWeavers.xsd
 # Keep Unity Package Manager manifests in the repository for reproducible setup.
 !/[Pp]ackages/
 !/[Pp]ackages/**
+# NOTE: 위쪽 "Build results" 섹션의 [Dd]ebug/ 규칙(비주얼스튜디오 빌드 산출물용)이 이름이 같은
+# Unity 코드 폴더 Assets/Scripts/Debug/ 도 같이 무시해버려서, 아래 예외 규칙으로 되살림
+# (이 프로젝트에서는 Assets/Scripts/Debug/가 실제 게임/테스트용 C# 스크립트 폴더임 — VS 빌드 산출물 아님).
+!/Assets/Scripts/Debug/
+!/Assets/Scripts/Debug/**
