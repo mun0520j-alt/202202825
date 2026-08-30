@@ -15,6 +15,13 @@ public class TickQueueTestActor : MonoBehaviour, ITurnActor
     // 리포트를 찍는지도 이 액터로 같이 검증한다(TickQueueTestBootstrapper 참고).
     public bool SuppressStuckTurnWarning => false;
 
+    // ITurnActor.CurrentCell 구현 — 이 더미 액터는 실제 맵 위를 이동하지 않는 순수 스케줄러
+    // 검증용이라 진짜 좌표가 없다. TickManager.IsCellOccupied()가 셀 점유 조회 때 모든 등록된
+    // 액터를 순회하며 이 값을 읽긴 하지만(2026-08-28 추가, ITurnActor.cs 주석 참고), 이 더미가
+    // Test Scene에서 Player/Enemy와 같이 등록되는 일은 없어서(TickQueueTestBootstrapper 전용
+    // 시나리오) 항상 원점을 반환해도 실제로 영향은 없다.
+    public Vector3Int CurrentCell => Vector3Int.zero;
+
     public void Initialize(TickQueueTestBootstrapper owner, string label, float costPerTurn)
     {
         bootstrapper = owner;

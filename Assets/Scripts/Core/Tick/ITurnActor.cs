@@ -1,3 +1,5 @@
+using UnityEngine;
+
 // Dungeon Tools 7) Tick 스케줄러(TickManager) 큐에 참여하는 모든 행동 주체(Player/Enemy 공통)가
 // 구현하는 인터페이스. "차례가 오면 콜백을 받는다"는 계약만 정의하고, 실제로 뭘 할지(입력 대기 /
 // AI 판단)는 구현체 책임이다 — 이 인터페이스는 그 판단 로직을 전혀 모른다.
@@ -9,8 +11,15 @@ public interface ITurnActor
     // 호출을 빠뜨리는 버그가 생기면 바로 경고 로그가 뜨게 한다.
     bool SuppressStuckTurnWarning { get; }
 
+    // 이 액터가 지금 논리적으로 서 있는 셀(타일 좌표). 이동은 물리엔진이 아니라 transform.position을
+    // 직접 찍어서 처리하는 구조라(2026-08-27~28 확정), Player/Enemy가 서로 겹치는 걸 막으려면
+    // "그 셀에 이미 누가 있는지"를 콜라이더가 아니라 이 값으로 직접 조회해야 한다(TickManager.
+    // IsCellOccupied 참고, 2026-08-28 추가) — 콜라이더는 물리 기반 이동에만 의미가 있어서
+    // 지금 구조에선 겹침 방지에 관여하지 않는다.
+    Vector3Int CurrentCell { get; }
+
     // 이 액터의 차례가 됐을 때 TickManager가 호출한다.
-    // 구현체는 행동을 정하고 나면 반드시 TickManager.Instance.CompleteTurn(this, cost)를 호출해서
+    // 구현체는 행동을 정하고 나면 반드시 TickManager.Instance.CompleteTurn(this, tickCost)를 호출해서
     // 차례를 다음 액터에게 넘겨줘야 한다 — 호출을 빠뜨리면 스케줄러가 이 액터에서 멈춘다.
     void OnTurnStart();
 }
