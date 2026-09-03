@@ -35,6 +35,15 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     [Tooltip("이 몹이 Player를 감지할 수 있는 최대 거리(칸, 원형 반경) — 이 범위 밖이면 시야가 안 막혀도 못 본다.")]
     [SerializeField] private int sightRangeInTiles = 5;
 
+    // [2026-09-03 신규] 전투 스탯 — PlayerTurnActor와 동일한 placeholder 목적(3단계 아이템/스탯
+    // 시스템이 들어오기 전까지 임시). 몹마다 스탯만 다르게(2~3종) 두는 버티컬 슬라이스 방침이라
+    // Inspector에서 몹 프리팹별로 값을 다르게 세팅하면 그대로 난이도 차등이 됨.
+    [Header("전투 (2026-09-03 신규, placeholder — 인스펙터에서 확인용)")]
+    [SerializeField] private int maxHP = 5;
+    [SerializeField] private int currentHP = 5;
+    [SerializeField] private int attackPower = 2;
+    [SerializeField] private int defensePower = 0;
+
     // 발 위치 보정(Y)에 쓴다 — 아래 GetCellFootWorldPosition() 주석 참고.
     private SpriteRenderer spriteRenderer;
 
@@ -177,7 +186,11 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     // 목표 자체가 계속 바뀌니까, 옛 경로를 그대로 쓰면 엉뚱한 길로 갈 수 있다.
     private void TryTraceTowards(Vector3Int targetCell)
     {
-        var path = TilePathfinder.FindPath(currentCell, targetCell, wallsTilemap, floorTilemap);
+        // [2026-09-03 버그 수정] Player.HandleMouseClick과 동일한 이유로 점유 칸을 우회해서
+        // 경로를 짠다(TilePathfinder.cs 주석 참고) — 몹이 여러 마리로 늘어났을 때 서로를
+        // 뚫고 지나가는 경로를 짜지 않도록 한다.
+        var path = TilePathfinder.FindPath(currentCell, targetCell, wallsTilemap, floorTilemap,
+            cell => TickManager.Instance.IsCellOccupied(cell, this));
         if (path.Count == 0)
         {
             // 갈 방법이 없음(완전히 막혔거나 이미 그 칸에 있음) — 추적을 포기하고 이번 턴은
@@ -189,11 +202,21 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
         }
 
         var nextCell = path[0];
-        if (TickManager.Instance.IsCellOccupied(nextCell, this))
+        var blocker = TickManager.Instance.GetActorAt(nextCell, this);
+        if (blocker is PlayerTurnActor player)
         {
-            // 다음 칸에 이미 누가 있다(대개는 Player 본인 — 바로 옆까지 쫓아온 상태). 아직
-            // 공격 시스템이 없어서(Player도 없음, 2026-08-28 기준) 일단 제자리에서 턴만
-            // 소비한다 — "따라잡으면 그 자리에서 대기"가 요구사항.
+            // [2026-09-03 신규] 다음 칸이 곧 Player가 서있는 칸이라는 뜻 — 이미 인접했으니
+            // 이동 대신 공격으로 전환한다. 이동 없이 그 자리에서 데미지 판정만 하고 턴 소비.
+            // 비용은 CompleteMyTurn()(이동/대기용 PerTileMove)이 아니라 TickCost.Attack — 공격은
+            // Player.AttackEnemy()와 동일하게 항상 고정 비용(TickCost.cs 주석 참고, 속도 배율 영향 없음).
+            player.TakeDamage(attackPower);
+            TickManager.Instance.CompleteTurn(this, TickCost.Attack);
+            return;
+        }
+        if (blocker != null)
+        {
+            // Player가 아닌 다른 액터(예: 다른 Enemy)가 막고 있음 — 몹끼리 상호작용은 아직
+            // 범위 밖이라, 예전처럼 제자리에서 턴만 소비하고 넘어간다.
             CompleteMyTurn();
             return;
         }
@@ -299,5 +322,29 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     private void CompleteMyTurn()
     {
         TickManager.Instance.CompleteTurn(this, TickCost.PerTileMove);
+    }
+
+    // [2026-09-03 신규] Player.AttackEnemy()가 호출한다. 데미지 공식은 PlayerTurnActor와 동일하게
+    // "공격력 - 방어력"(0 밑으로는 안 내려감). HP가 0 이하가 되면 즉시 제거한다 — Player 쪽처럼
+    // 한 프레임 미룰 필요가 없는 이유: 이 호출은 Player.Update()(수동 입력 처리) 안에서 오는
+    // 거라 TickManager.AdvanceSchedule 반복문 도중이 아니고, 여기서 죽어도 이어서 실행되는 건
+    // "내 턴을 넘긴다"가 아니라 Player 쪽 로직뿐이라 안전하다.
+    //
+    // UnregisterActor를 Destroy가 트리거하는 OnDisable 타이밍에 맡기지 않고 여기서 바로 부르는
+    // 이유: Destroy()는 실제 파괴를 프레임 끝으로 미루는데, 그 사이 이 액터가 다시 차례를 받으려
+    // 하면(등록이 아직 안 풀렸으니) 죽은 채로 OnTurnStart가 불릴 위험이 있다 — 즉시 해제해서 막는다.
+    public void TakeDamage(int incomingAttackPower)
+    {
+        int damage = Mathf.Max(0, incomingAttackPower - defensePower);
+        currentHP = Mathf.Max(0, currentHP - damage);
+
+        if (currentHP <= 0)
+        {
+            if (TickManager.Instance != null)
+            {
+                TickManager.Instance.UnregisterActor(this);
+            }
+            Destroy(gameObject);
+        }
     }
 }

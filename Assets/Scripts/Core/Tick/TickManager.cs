@@ -217,6 +217,20 @@ public class TickManager : MonoBehaviour
         return false;
     }
 
+    // [2026-09-03 전투 신규] IsCellOccupied는 "누가 있는지" bool만 주지만, 공격 판정에는 실제
+    // 그 액터가 누구인지(Player가 클릭한 칸의 Enemy 참조, Enemy가 다음 칸으로 가려는데 그게
+    // Player인지)가 필요해서 추가. 같은 registeredActors 순회 로직이라 IsCellOccupied 바로
+    // 옆에 둔다 — 위 "임시 위치" 주석의 책임 분리 리팩터링 때 같이 옮길 예정.
+    public ITurnActor GetActorAt(UnityEngine.Vector3Int cell, ITurnActor excludingSelf = null)
+    {
+        foreach (var entry in registeredActors)
+        {
+            if (entry.Actor == excludingSelf) continue;
+            if (entry.Actor.CurrentCell == cell) return entry.Actor;
+        }
+        return null;
+    }
+
     private ScheduledActor FindEarliestActor()
     {
         ScheduledActor earliest = null;

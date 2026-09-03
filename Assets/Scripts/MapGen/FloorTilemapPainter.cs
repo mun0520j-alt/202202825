@@ -49,6 +49,77 @@ public class FloorTilemapPainter
                 OpenDoorway(pair.Item1, pair.Item2);
             }
         }
+
+        OpenMergedRoomWalls(layout);
+    }
+
+    // [2026-09-03 버그 수정] FloorLayoutGenerator.MergeRooms()가 "합쳐져서 큰 방 하나로 취급된다"고
+    // 표시해둔 방 쌍(MergeGroupId)을 이 클래스가 지금까지 전혀 안 읽고 있었다 — 그래서 병합된
+    // 방도 그냥 일반 연결처럼 폭 3짜리 문 하나만 뚫려있고, 실제로는 "합쳐진 큰 방"처럼 안 보이는
+    // 버그가 있었다. 여기서 그룹별로 경계 전체(OpenDoorway처럼 가운데만이 아니라 ChunkSize
+    // 전체)를 터서 진짜 하나의 방처럼 만든다.
+    private void OpenMergedRoomWalls(FloorLayout layout)
+    {
+        var groups = new Dictionary<int, List<Vector2Int>>();
+        foreach (var kvp in layout.MergeGroupId)
+        {
+            if (!groups.TryGetValue(kvp.Value, out var list))
+            {
+                list = new List<Vector2Int>();
+                groups[kvp.Value] = list;
+            }
+            list.Add(kvp.Key);
+        }
+
+        foreach (var pairCells in groups.Values)
+        {
+            // MergeRooms()는 항상 인접한 두 방만 짝짓는 설계라(2칸짜리 그룹만 존재) 그 외
+            // 크기는 나오지 않아야 정상이지만, 혹시 모를 데이터 불일치에 방어적으로 대응한다.
+            if (pairCells.Count != 2) continue;
+            OpenFullBorder(pairCells[0], pairCells[1]);
+        }
+    }
+
+    // 두 방 사이의 경계를 문 폭(DoorWidth)만이 아니라 전체를 터서 벽을 완전히 없앤다 —
+    // 병합된 방 쌍 전용(일반 연결은 OpenDoorway를 그대로 씀).
+    //
+    // [2026-09-03 버그 수정] y(또는 x) 범위를 0..ChunkSize-1 전체로 돌리면, 양 끝(0과
+    // ChunkSize-1)은 이 두 방의 "북/남"(또는 "동/서") 벽 링과 동시에 겹치는 모서리 칸이라서,
+    // 여기를 지우면 그 모서리에서 직각으로 이어지는 다른 쪽 벽에도 의도치 않은 구멍이 뚫린다
+    // (실제로 Test.unity에 저장된 타일 데이터를 직접 읽어서 확인함 — 병합된 두 방의 대각
+    // 모서리 4칸이 전부 뚫려있었음. 그 칸을 통해 문/병합 범위 바깥에서 벽을 그냥 넘어가는
+    // 버그로 나타났다). OpenDoorway가 애초에 mid±half로 모서리 근처를 절대 안 건드리는 것과
+    // 같은 이유로, 여기서도 양 끝 한 칸씩(0, ChunkSize-1)은 남겨서 직각 벽의 모서리를
+    // 건드리지 않는다 — 병합된 방 경계에는 아주 얇은(1칸) 기둥이 양 끝에만 남지만, 실질적으로
+    // "하나의 큰 방"으로 보이고 걷는 데는 전혀 지장 없다.
+    private void OpenFullBorder(Vector2Int a, Vector2Int b)
+    {
+        var pair = OrderedPair(a, b);
+        a = pair.Item1;
+        b = pair.Item2;
+
+        if (b.x == a.x + 1 && b.y == a.y) // b가 a의 동쪽
+        {
+            int wallColA = a.x * ChunkSize + ChunkSize - 1;
+            int wallColB = b.x * ChunkSize;
+            int baseY = a.y * ChunkSize;
+            for (int y = 1; y < ChunkSize - 1; y++)
+            {
+                ClearWall(wallColA, baseY + y);
+                ClearWall(wallColB, baseY + y);
+            }
+        }
+        else if (b.y == a.y + 1 && b.x == a.x) // b가 a의 북쪽
+        {
+            int wallRowA = a.y * ChunkSize + ChunkSize - 1;
+            int wallRowB = b.y * ChunkSize;
+            int baseX = a.x * ChunkSize;
+            for (int x = 1; x < ChunkSize - 1; x++)
+            {
+                ClearWall(baseX + x, wallRowA);
+                ClearWall(baseX + x, wallRowB);
+            }
+        }
     }
 
     private void FillRoomFloor(Vector2Int cell)

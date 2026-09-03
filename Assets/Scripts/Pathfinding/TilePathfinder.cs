@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
@@ -33,11 +34,30 @@ public static class TilePathfinder
     // 막힌 칸 판정: Walls 타일맵에 타일이 있으면 못 지나감 + Floor 타일맵에 타일이 아예
     // 없으면(방/통로 바깥 허공) 못 지나감 — 이렇게 두 개를 같이 봐야 "방 밖 허공"으로
     // 새는 걸 막을 수 있다(Walls만 보면 애초에 타일이 없는 빈 공간은 안 막힌 걸로 오판함).
-    public static List<Vector3Int> FindPath(Vector3Int start, Vector3Int goal, Tilemap wallsTilemap, Tilemap floorTilemap)
+    //
+    // [2026-09-03 버그 수정] isBlockedExtra: 벽/바닥 타일맵만으로는 "지금 그 칸에 다른 액터
+    // (Enemy 등)가 서있는지"를 알 수 없어서, 예전엔 이 함수가 몹이 서있는 칸도 그냥 통과
+    // 가능한 바닥으로 보고 경로를 그려버렸다. 그러면 플레이어가 클릭한 목적지 자체는 멀쩡히
+    // 뚫려있는데, 실제로 그 경로를 따라 걷다가 몹이 서있는 칸에서 TryStep이 막혀서
+    // "경로 중간에서 갑자기 멈추는" 버그가 났다(PlayerTurnActor에 남아있던 디버그 로그가 이
+    // 증상을 추적하려던 흔적). 호출하는 쪽(Player/Enemy)이 TickManager.IsCellOccupied 같은
+    // 점유 판정을 델리게이트로 넘겨주면, 이 함수가 애초에 그 칸을 우회해서 경로를 짠다 —
+    // TilePathfinder는 여전히 TickManager를 몰라도 되니 계층 분리는 그대로 유지된다.
+    public static List<Vector3Int> FindPath(Vector3Int start, Vector3Int goal, Tilemap wallsTilemap, Tilemap floorTilemap,
+        Func<Vector3Int, bool> isBlockedExtra = null)
     {
+        // [2026-09-03 전투 준비 중 발견/수정] 목적지(goal) 자체는 isBlockedExtra를 안 본다 —
+        // 지형(벽/바닥)만 확인한다. 이유: Enemy가 Player를 쫓아갈 때 goal이 정확히 "Player가
+        // 서있는 칸" 자체인데, 위 isBlockedExtra 방식으로 goal까지 점유 여부를 검사해버리면
+        // Player가 서있는 칸은 항상 "점유중=못감"으로 막혀서 goal 자체가 영원히 도달 불가 판정이
+        // 나고, 그 결과 FindPath가 매번 빈 경로만 반환해서 추적(Trace)이 아예 동작을 안 하게
+        // 된다(플레이어 공격 기능을 붙이려다가 발견함). 실제로 "점유된 칸을 밟지 않는다"는
+        // 규칙은 중간 경유지(아래 BFS 확장 부분)에만 적용하면 충분하다 — 목적지에 거의 다
+        // 도착해서 마지막 한 칸을 실제로 밟을지 말지는 호출하는 쪽(TryStep/TryTraceTowards의
+        // IsCellOccupied 체크)이 이미 별도로 방어하고 있다.
         var result = new List<Vector3Int>();
         if (start == goal) return result;
-        if (!IsWalkable(goal, wallsTilemap, floorTilemap)) return result; // 목적지 자체가 막혀있으면 바로 포기
+        if (!IsWalkableTerrain(goal, wallsTilemap, floorTilemap)) return result; // 목적지 자체가 막혀있으면 바로 포기
 
         // previousCellOnPath: "이 칸에 처음 도달했을 때 바로 직전에 있던 칸이 어디였는지" 기록하는
         // 발자국 딕셔너리(key=도착한 칸, value=거기 오기 직전 칸). BFS가 사방으로 퍼져나가는 동안
@@ -81,7 +101,7 @@ public static class TilePathfinder
             {
                 var next = current + dir;
                 if (visitedCells.Contains(next)) continue;
-                if (!IsWalkable(next, wallsTilemap, floorTilemap)) continue;
+                if (!IsWalkable(next, wallsTilemap, floorTilemap, isBlockedExtra)) continue;
 
                 visitedCells.Add(next);
                 previousCellOnPath[next] = current;
@@ -105,10 +125,19 @@ public static class TilePathfinder
         return result;
     }
 
-    private static bool IsWalkable(Vector3Int cell, Tilemap wallsTilemap, Tilemap floorTilemap)
+    // 지형만 확인(벽/맵 바깥) — 점유 여부는 안 봄. goal 판정 전용(위 FindPath 주석 참고).
+    private static bool IsWalkableTerrain(Vector3Int cell, Tilemap wallsTilemap, Tilemap floorTilemap)
     {
         if (wallsTilemap.HasTile(cell)) return false;
         if (!floorTilemap.HasTile(cell)) return false;
+        return true;
+    }
+
+    // 지형 + 점유 여부까지 확인 — BFS가 경유지를 확장할 때 씀(goal 자체에는 안 씀).
+    private static bool IsWalkable(Vector3Int cell, Tilemap wallsTilemap, Tilemap floorTilemap, Func<Vector3Int, bool> isBlockedExtra)
+    {
+        if (!IsWalkableTerrain(cell, wallsTilemap, floorTilemap)) return false;
+        if (isBlockedExtra != null && isBlockedExtra(cell)) return false; // 다른 액터가 점유 중인 칸
         return true;
     }
 }
