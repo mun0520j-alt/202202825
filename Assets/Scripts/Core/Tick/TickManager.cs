@@ -24,7 +24,21 @@ public class TickManager : MonoBehaviour
     public static TickManager Instance { get; private set; }
 
     // 액터가 행동을 완료 보고할 때마다 발행 — DungeonClock 등 "누적 시간이 필요한 쪽"이 구독해서 쓴다.
-    // 인자: 이번에 소비된 tick 비용.
+    //
+    // [2026-09-04 버그 수정] 인자를 "이번에 소비된 tick 비용(cost)"에서 "그 액터의 갱신된
+    // NextActionTime(절대 시각)"으로 바꿨다 — 예전엔 DungeonClock이 이 cost를 매번 그냥 더하기만
+    // 해서, Player가 한 칸 움직일 때마다(cost=1) 그 직후 스케줄러가 곧바로 Enemy 차례를 진행시켜
+    // Enemy도 자기 행동(cost=1)을 보고하면 그것까지 더해져서 실제로는 "1분"만 흘러야 할 게 화면
+    // 시계에서 "2분"씩 뛰는 버그가 있었다(플레이어 1번 움직임 = 2분 경과, 사용자 리포트).
+    // 근본 원인: NextActionTime은 Player/Enemy가 각자 따로 쌓는 값이 아니라, 한 스케줄러 큐 안에
+    // 다 같이 놓인 "공유된 하나의 시간축" 좌표다(FindEarliestActor가 그 축 위에서 제일 이른 액터를
+    // 고르는 구조가 이미 그 증거). 그래서 "지금까지 실제로 흐른 던전 시간"은 "각 액터가 보고한
+    // cost를 전부 더한 값"이 아니라 "그 시간축 위에서 지금까지 도달한 가장 앞선 지점"이어야
+    // 맞다 — 즉 모든 액터의 NextActionTime 중 관측된 최댓값. 이렇게 하면 Player가 1칸 움직이고
+    // (자기 NextActionTime 0→1) 그 사이 Enemy가 대기 행동으로 자기 몫을 처리해도(0→1) 시간축의
+    // "도달 지점"은 여전히 1이라 시계는 정확히 1분만 움직인다. 인자: 이번 행동을 마친 액터의
+    // 갱신된 NextActionTime(절대 시각, tick 단위) — "이번에 얼마나 썼는지"가 아니라 "그 액터가
+    // 지금 시간축 어디에 있는지".
     public event Action<float> OnTimeAdvanced;
 
     // ============================================================================================
@@ -83,6 +97,11 @@ public class TickManager : MonoBehaviour
     private bool isAdvancingSchedule;
     private bool turnJustCompletedInsideLoop;
 
+    // [2026-09-04 버그 수정] CompleteTurn에 tickCost<=0이 들어왔을 때 강제로 승격시킬 최소값.
+    // 실제 게임 밸런스(몇 분 걸리는 행동인지)는 호출하는 쪽(TickCost.cs)의 책임이고, 이건
+    // 어디까지나 NextActionTime이 절대 제자리걸음하지 않게 막는 스케줄러 안전장치일 뿐이다.
+    private const float MinimumTickCost = 0.01f;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -119,6 +138,23 @@ public class TickManager : MonoBehaviour
         if (currentTurnActor != null && currentTurnActor.Actor == actor)
         {
             currentTurnActor = null;
+
+            // [2026-09-04 버그 수정] 자기 차례 도중(CompleteTurn 호출 없이) 스스로를 Unregister하는
+            // 액터가 생기면(예: 함정을 밟아 즉사) 예전엔 여기서 그냥 null만 넣고 끝났다 — 그러면
+            // 이후 아무도 AdvanceSchedule()을 다시 호출하지 않아서(외부 호출부는 CompleteTurn뿐)
+            // 스케줄러가 영구 정지했다. CompleteTurn과 동일한 "반복문 안/밖" 구분을 그대로 적용:
+            // AdvanceSchedule의 do-while 도중(=OnTurnStart 콜백 안)에서 불린 거면 재귀 없이
+            // 플래그만 세워 그 반복문이 이어서 다음 액터를 찾게 하고, 반복문 밖(예: 다른 액터가
+            // 행동을 처리하다가 비동기로 이 액터를 제거한 경우)에서 불린 거면 새로
+            // AdvanceSchedule()을 호출해 스케줄을 재개한다.
+            if (isAdvancingSchedule)
+            {
+                turnJustCompletedInsideLoop = true;
+            }
+            else
+            {
+                AdvanceSchedule();
+            }
         }
     }
 
@@ -161,8 +197,21 @@ public class TickManager : MonoBehaviour
             return;
         }
 
+        // [2026-09-04 버그 수정] tickCost가 0 이하로 들어오면(예: 나중에 생길 "무료 행동" 스킬이
+        // 실수로 0을 보고) NextActionTime이 그대로라 FindEarliestActor가 매번 같은 액터를 다시
+        // 뽑아서 AdvanceSchedule의 do-while이 절대 안 끝나는 무한루프(행 프리즈)가 된다. 아주
+        // 작은 양수로 강제 클램프해서 시간축이 항상 앞으로만 진행되게 막는다.
+        if (tickCost <= 0f)
+        {
+            Debug.LogWarning($"[TickManager] {actor}가 tickCost={tickCost}(0 이하)로 CompleteTurn을 " +
+                              "호출했습니다 — 무한루프 방지를 위해 최소값으로 강제 조정합니다. 호출하는 쪽 로직을 확인해주세요.");
+            tickCost = MinimumTickCost;
+        }
+
         currentTurnActor.NextActionTime += tickCost;
-        OnTimeAdvanced?.Invoke(tickCost);
+        // [2026-09-04 버그 수정] tickCost가 아니라 갱신된 절대 시각(NextActionTime)을 보고한다 —
+        // 위 OnTimeAdvanced 선언부 주석 참고.
+        OnTimeAdvanced?.Invoke(currentTurnActor.NextActionTime);
 
         if (isAdvancingSchedule)
         {

@@ -101,7 +101,20 @@ public static class TilePathfinder
             {
                 var next = current + dir;
                 if (visitedCells.Contains(next)) continue;
-                if (!IsWalkable(next, wallsTilemap, floorTilemap, isBlockedExtra)) continue;
+
+                // [2026-09-04 버그 수정] 여기서도 next가 goal 자신인 경우엔 지형만 본다(isBlockedExtra
+                // 무시) — 위쪽 "목적지 자체는 isBlockedExtra 무시" 사전 체크(IsWalkableTerrain(goal,...))
+                // 는 BFS 시작 전 딱 한 번만 실행되는 별개 체크라서, 정작 BFS가 사방으로 퍼지다가 goal을
+                // "이웃 칸"으로 처음 발견하는 이 지점에는 적용이 안 되고 있었다. 그 결과 이 줄이 계속
+                // IsWalkable(next, ..., isBlockedExtra)를 썼는데, goal은 항상 Player 자신이 서있는
+                // 칸이라 isBlockedExtra(goal)이 항상 true가 되어 goal이 큐에 아예 안 들어가고, 그래서
+                // "current == goal"이 될 일이 영원히 없어서 추적 경로가 100% 실패하고 있었다(거리/위치
+                // 무관하게 항상 path.Count==0 — 로그로 확인, "감지는 성공하는데 매번 바로 추적이
+                // 풀리는" 증상의 진짜 원인).
+                bool nextIsWalkable = (next == goal)
+                    ? IsWalkableTerrain(next, wallsTilemap, floorTilemap)
+                    : IsWalkable(next, wallsTilemap, floorTilemap, isBlockedExtra);
+                if (!nextIsWalkable) continue;
 
                 visitedCells.Add(next);
                 previousCellOnPath[next] = current;

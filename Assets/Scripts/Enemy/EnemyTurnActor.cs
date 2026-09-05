@@ -74,6 +74,17 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     private bool isTracing;
     private Vector3Int? lastKnownPlayerCell;
 
+    // [2026-09-04 신규] "방금 새로 감지됨"을 표시하는 머리 위 "!" — 별도 스프라이트 에셋 없이
+    // TextMesh(유니티 기본 3D 텍스트 컴포넌트)로 즉석에서 만든다(2026-09-04, 사용자 요청:
+    // "인식된 그 1tick 동안 위에 ! 나오는 것도 추가"). OnTurnStart 맨 위에서 항상 껐다가
+    // 이번 턴에 신규 감지됐을 때만 다시 켜므로, 결과적으로 "감지된 바로 그 1틱 동안만" 보인다.
+    private GameObject alertIndicatorObject;
+
+    // [2026-09-04 신규] 머리 위 HP바 — Player와 통일된 막대 형식(ProceduralHealthBar.cs 참고,
+    // 사용자 요청: "enemy하고 player 통일해야하잖아"). AlertIndicator와 같은 완전 자체 생성
+    // 컴포넌트라 Inspector 세팅 없이 Awake에서 AddComponent만 하면 된다.
+    private ProceduralHealthBar healthBar;
+
     private void Awake()
     {
         if (wallsTilemap == null || floorTilemap == null)
@@ -92,6 +103,42 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
         {
             Debug.LogWarning("[EnemyTurnActor] SpriteRenderer를 못 찾아서 발 위치 보정(Y) 없이 셀 바닥에 그대로 배치됩니다.");
         }
+
+        CreateAlertIndicator();
+
+        // [2026-09-04 신규] HP바 생성 + 초기값 반영.
+        healthBar = gameObject.AddComponent<ProceduralHealthBar>();
+        healthBar.SetFill((float)currentHP / maxHP);
+    }
+
+    // 자식 오브젝트로 TextMesh "!" 하나를 만들어서 머리 위에 배치한다 — 프로젝트에 이미 있는
+    // 스프라이트/폰트 에셋에 의존하지 않도록 유니티 기본 3D 텍스트 컴포넌트만 쓴다(임시 UI 목적이라
+    // TextMeshPro 패키지 설치 여부와 무관하게 항상 동작하는 쪽을 택함). 평소엔 꺼둔다.
+    private void CreateAlertIndicator()
+    {
+        alertIndicatorObject = new GameObject("AlertIndicator(!)");
+        alertIndicatorObject.transform.SetParent(transform);
+        // [2026-09-04 수정] HP바(ProceduralHealthBar, localOffset 기본값 0.9)와 같은 높이에
+        // 겹치지 않도록 그보다 더 위(1.15)에 배치한다 — 순서상 "!" 표시가 HP바 위에 뜨는 게
+        // 자연스럽다(감지 알림이 체력보다 더 눈에 띄어야 함).
+        alertIndicatorObject.transform.localPosition = new Vector3(0f, 1.15f, 0f); // 머리 위, HP바보다 더 위
+
+        var textMesh = alertIndicatorObject.AddComponent<TextMesh>();
+        textMesh.text = "!";
+        textMesh.characterSize = 0.15f;
+        textMesh.fontSize = 80;
+        textMesh.anchor = TextAnchor.LowerCenter;
+        textMesh.alignment = TextAlignment.Center;
+        textMesh.color = Color.yellow;
+
+        var meshRenderer = alertIndicatorObject.GetComponent<MeshRenderer>();
+        if (meshRenderer != null)
+        {
+            // 몹 스프라이트보다 항상 위에 그려지도록 정렬 순서를 넉넉히 높게 준다.
+            meshRenderer.sortingOrder = 100;
+        }
+
+        alertIndicatorObject.SetActive(false);
     }
 
     // PlayerTurnActor.OnEnable()/OnDisable()과 동일한 self-register 패턴(2026-08-28로 확정,
@@ -121,8 +168,22 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     // 3) 둘 다 아니면 → 평소 기본 행동(Idle/Wander).
     public void OnTurnStart()
     {
+        // [2026-09-04] 새 턴이 시작되면 일단 "!" 표시를 꺼둔다 — 아래에서 "이번 턴에 새로
+        // 감지됐음"이 확인되면 그때만 다시 켠다. 이렇게 하면 표시가 "감지된 그 1틱 동안만" 떠있게
+        // 된다(다음 턴 맨 위에서 항상 리셋되니까).
+        if (alertIndicatorObject != null) alertIndicatorObject.SetActive(false);
+
         if (TryDetectPlayer(out var playerCell))
         {
+            // isTracing이 이번 턴 이전엔 false였다가 지금 true가 되는 경우 = "방금 새로 감지됨".
+            // 계속 추적 중이던 경우(매 턴 다시 감지되는 게 정상)에는 뜨지 않게 구분한다.
+            bool isNewlyDetected = !isTracing;
+
+            if (isNewlyDetected && alertIndicatorObject != null)
+            {
+                alertIndicatorObject.SetActive(true);
+            }
+
             isTracing = true;
             lastKnownPlayerCell = playerCell;
             TryTraceTowards(playerCell);
@@ -191,6 +252,7 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
         // 뚫고 지나가는 경로를 짜지 않도록 한다.
         var path = TilePathfinder.FindPath(currentCell, targetCell, wallsTilemap, floorTilemap,
             cell => TickManager.Instance.IsCellOccupied(cell, this));
+
         if (path.Count == 0)
         {
             // 갈 방법이 없음(완전히 막혔거나 이미 그 칸에 있음) — 추적을 포기하고 이번 턴은
@@ -209,6 +271,7 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
             // 이동 대신 공격으로 전환한다. 이동 없이 그 자리에서 데미지 판정만 하고 턴 소비.
             // 비용은 CompleteMyTurn()(이동/대기용 PerTileMove)이 아니라 TickCost.Attack — 공격은
             // Player.AttackEnemy()와 동일하게 항상 고정 비용(TickCost.cs 주석 참고, 속도 배율 영향 없음).
+            UpdateFacingDirection(nextCell - currentCell);
             player.TakeDamage(attackPower);
             TickManager.Instance.CompleteTurn(this, TickCost.Attack);
             return;
@@ -221,7 +284,18 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
             return;
         }
 
+        UpdateFacingDirection(nextCell - currentCell);
         StartCoroutine(HopTo(nextCell));
+    }
+
+    // [2026-09-04 신규] PlayerTurnActor.UpdateFacingDirection과 동일한 로직 — 좌우로 움직일
+    // 때만 스프라이트를 반전해서 바라보는 방향을 표현한다(위/아래 이동은 직전 좌우 방향 유지).
+    // 지금까지 Enemy는 이 반전이 아예 없어서(사용자 지적, 2026-09-04) 실제로 추적 중이어도
+    // 방향 전환이 안 보여서 "움직이는지 안 움직이는지" 헷갈리는 원인 중 하나였다.
+    private void UpdateFacingDirection(Vector3Int step)
+    {
+        if (spriteRenderer == null || step.x == 0) return;
+        spriteRenderer.flipX = step.x < 0;
     }
 
     // 4방향 중 무작위 순서로 하나씩 시도해서 처음 갈 수 있는 칸으로 이동한다. 최대
@@ -241,6 +315,7 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
             // PlayerTurnActor.TryStep()의 동일 체크와 같은 이유(콜라이더로는 안 막힘, 2026-08-28).
             if (TickManager.Instance.IsCellOccupied(targetCell, this)) continue;
 
+            UpdateFacingDirection(dir);
             StartCoroutine(HopTo(targetCell));
             return; // 이동 성공 — 턴 소비/CompleteTurn 호출은 애니메이션이 끝난 뒤 HopTo 안에서 처리
         }
@@ -337,6 +412,16 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     {
         int damage = Mathf.Max(0, incomingAttackPower - defensePower);
         currentHP = Mathf.Max(0, currentHP - damage);
+        healthBar?.SetFill((float)currentHP / maxHP);
+
+        // [2026-09-04 신규] 맞는 순간 시각 피드백 — HitImpactVfx.cs 참고. 죽어서 바로
+        // Destroy되더라도 충격 이펙트 자체는 독립 오브젝트라 문제없이 재생된다(스프라이트 색
+        // 복구 코루틴만 host(this)가 파괴되기 전에 시작해두면 됨 — 어차피 이 프레임엔 아직 살아있음).
+        HitImpactVfx.Spawn(transform.position, Color.white);
+        if (spriteRenderer != null)
+        {
+            HitImpactVfx.FlashSprite(this, spriteRenderer, Color.red);
+        }
 
         if (currentHP <= 0)
         {

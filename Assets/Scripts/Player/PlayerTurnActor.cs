@@ -36,20 +36,35 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     [Tooltip("Player가 실제로 볼 수 있는 최대 거리(칸, 원형 반경). FogOfWarController가 이 값으로 안개를 걷는다.")]
     [SerializeField] private int sightRangeInTiles = 6;
 
-    // [2026-09-03 신규] 전투 스탯 — Dev Sequence 2단계(전투 계산 기초) placeholder. 아직 아이템/
-    // 스탯 시스템(3단계)이 없어서 여기 직접 박아둠. 데미지 공식은 "공격력 - 방어력"(0 밑으로는
-    // 안 내려감)으로 확정 — 3단계에서 실제 장비 스탯이 들어오면 이 필드들을 장비 합산값으로
-    // 교체하면 된다(단일 책임: 이 클래스는 여전히 "지금 내 공격력/방어력이 얼마인지"만 알면 됨,
-    // 그 값이 어디서 왔는지는 몰라도 됨). Inspector에서 실시간 확인 가능하도록 SerializeField.
-    [Header("전투 (2026-09-03 신규, placeholder — 인스펙터에서 확인용)")]
+    // [2026-09-03 신규] 전투 스탯 — Dev Sequence 2단계(전투 계산 기초) placeholder로 시작한
+    // 필드들. [2026-09-04] 3단계(아이템 데이터) 착수로 PlayerEquipment가 추가되면서, 이 값들은
+    // 이제 "장비 보너스를 더하기 전의 기본 스탯"이라는 의미로 바뀌었다 — 실제 전투 계산에는
+    // 아래 EffectiveAttackPower/EffectiveDefensePower(기본값 + 장비 보너스 합)를 쓴다. 데미지
+    // 공식은 여전히 "공격력 - 방어력"(0 밑으로는 안 내려감)으로 동일.
+    [Header("전투 (기본 스탯 — 장비 보너스는 EffectiveAttackPower/EffectiveDefensePower에서 합산됨)")]
     [SerializeField] private int maxHP = 10;
     [SerializeField] private int currentHP = 10;
     [SerializeField] private int attackPower = 3;
     [SerializeField] private int defensePower = 1;
 
+    // [2026-09-04 신규] 장착 장비 — 보너스 합계만 여기서 더해서 쓰고, "무엇을 장착했는지"
+    // 자체의 관리는 PlayerEquipment 책임(단일 책임 유지). InventoryPanel도 이 프로퍼티를 통해
+    // 장착 아이템을 조회해서 아이콘을 그린다.
+    private PlayerEquipment equipment;
+    public PlayerEquipment Equipment => equipment;
+
+    // 실제 전투 계산(공격/피격)에 쓰는 값 — 기본 스탯 + 장비 보너스 합계.
+    private int EffectiveAttackPower => attackPower + (equipment != null ? equipment.TotalAttackBonus : 0);
+    private int EffectiveDefensePower => defensePower + (equipment != null ? equipment.TotalDefenseBonus : 0);
+
     // HP가 0 이하가 된 다음 프레임에 영지(BaseCamp)로 씬 전환한다 — TakeDamage 호출 시점에서
     // 바로 SceneManager.LoadScene을 부르지 않는 이유는 아래 Update() 주석 참고.
     private bool isDead;
+
+    // [2026-09-04 신규] 머리 위 HP바 — Enemy와 통일된 막대 형식(ProceduralHealthBar.cs 참고,
+    // 사용자 요청: "enemy하고 player 통일해야하잖아"). 완전 자체 생성 컴포넌트라 Inspector
+    // 세팅 없이 Awake에서 AddComponent만 하면 되고, HP가 바뀔 때마다 SetFill을 호출해서 갱신한다.
+    private ProceduralHealthBar healthBar;
 
     // 다른 컴포넌트(EnemyTurnActor 등)가 "지금 Player가 어디 있는지"를 조회할 수 있게 하는
     // 싱글턴 — TickManager.Instance와 같은 패턴(2026-08-28 추가). Player는 씬에 항상 하나만
@@ -116,6 +131,14 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
             Debug.LogWarning("[PlayerTurnActor] SpriteRenderer를 못 찾아서 좌우 반전 연출은 생략됩니다.");
         }
 
+        // [2026-09-04 신규] HP바 생성 + 초기값 반영 — AlertIndicator와 동일하게 Awake에서
+        // 붙여서 씬에 배치만 하면 자동으로 준비되게 한다.
+        healthBar = gameObject.AddComponent<ProceduralHealthBar>();
+        healthBar.SetFill((float)currentHP / maxHP);
+
+        // [2026-09-04 신규] 장비 컴포넌트 부착 — PlayerEquipment.Awake()가 자체적으로 테스트용
+        // 기본 장비를 자동 장착해준다(에셋 없이도 바로 확인 가능, PlayerEquipment.cs 참고).
+        equipment = gameObject.AddComponent<PlayerEquipment>();
     }
 
     private void OnDestroy()
@@ -262,7 +285,11 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     // 애니메이션(홉 등)은 지금 단계 범위 밖 — 데미지 판정 자체가 먼저(placeholder 목표).
     private void AttackEnemy(EnemyTurnActor enemy)
     {
-        enemy.TakeDamage(attackPower);
+        // [2026-09-04 신규] 공격 대상 쪽으로 바라보기 — 이동할 때(UpdateFacingDirection)와 동일한
+        // 좌우 반전 로직을 그대로 재사용한다. 지금까지는 공격해도 캐릭터가 원래 보던 방향 그대로라
+        // "누굴 때리는지" 시각적으로 안 와닿는 문제가 있었다(사용자 지적, 2026-09-04).
+        UpdateFacingDirection(enemy.CurrentCell - currentCell);
+        enemy.TakeDamage(EffectiveAttackPower);
         TickManager.Instance.CompleteTurn(this, TickCost.Attack);
     }
 
@@ -273,8 +300,18 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     {
         if (isDead) return;
 
-        int damage = Mathf.Max(0, incomingAttackPower - defensePower);
+        int damage = Mathf.Max(0, incomingAttackPower - EffectiveDefensePower);
         currentHP = Mathf.Max(0, currentHP - damage);
+        healthBar?.SetFill((float)currentHP / maxHP);
+
+        // [2026-09-04 신규] 맞는 순간 시각 피드백 — EnemyTurnActor.TakeDamage와 동일한 방식
+        // (HitImpactVfx.cs 참고). Player는 죽어도 Update()에서 한 프레임 뒤에 씬 전환이라 이
+        // 프레임엔 여전히 살아있으니 코루틴 host로 안전하게 this를 쓸 수 있다.
+        HitImpactVfx.Spawn(transform.position, Color.white);
+        if (spriteRenderer != null)
+        {
+            HitImpactVfx.FlashSprite(this, spriteRenderer, Color.red);
+        }
 
         if (currentHP <= 0)
         {
