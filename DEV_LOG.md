@@ -18,6 +18,7 @@
 - 최초 구현 후 실제 `InDungeon` 씬이 `DungeonSceneBootstrapper/PlayerTurnActor`가 아니라 `_to_delete`의 `DungeonRunManager/GridMover/Tick`을 계속 참조 중인 사실을 확인
 - 실제 씬 진입점에 M1용 3층 생성, 보스방 중앙 계단, 층 이동, 탈출, 누적 Tick 및 MIA 처리를 직접 연결
 - BaseCamp 최초 진입에서도 결과 UI가 생성되도록 런타임 초기화 경로를 보강
+- `_to_delete`는 Unity 컴파일 대상이 아니므로 실제 씬이 참조하던 `DungeonRunManager`, `GridMover`, 기존 `Tick`을 GUID 보존 상태로 `Assets/Scripts`에 이동
 
 ---
 
