@@ -173,6 +173,21 @@ public class TickManager : MonoBehaviour
         AdvanceSchedule();
     }
 
+    // 층 씬을 다시 불러온 뒤 새 액터들의 시간축을 원정 누적 Tick에 맞춘다.
+    // DungeonClock만 복원하면 액터가 0부터 과거 시간을 다시 따라잡는 동안 시계가 멈추므로
+    // 스케줄러와 시계를 반드시 같은 기준점으로 복원해야 한다.
+    public void SynchronizeTimeline(float absoluteTime)
+    {
+        if (schedulerRunning)
+        {
+            Debug.LogWarning("[TickManager] 실행 중인 스케줄의 시간축은 변경할 수 없습니다.");
+            return;
+        }
+
+        float safeTime = Mathf.Max(0f, absoluteTime);
+        foreach (var entry in registeredActors) entry.NextActionTime = safeTime;
+    }
+
     // 현재 차례인 액터가 행동을 끝냈을 때 호출. Player/Enemy 둘 다 결국 이 함수 하나로 턴을
     // 넘긴다 — 실제 게임에서 이걸 부르는 건 Player/Enemy ITurnActor 구현체뿐이다.
     //

@@ -91,6 +91,15 @@ public class DungeonClock : MonoBehaviour
         IsDisplayLocked = false;
     }
 
+    // 층 이동으로 InDungeon 씬을 다시 불러올 때 같은 원정의 누적 시간을 복원한다.
+    public void RestoreForActiveRun(float elapsedTicks)
+    {
+        ElapsedTicks = Mathf.Max(0f, elapsedTicks);
+        IsMIA = ElapsedTicks >= MIAThresholdTicks;
+        IsDisplayLocked = false;
+        OnClockChanged?.Invoke(ElapsedTicks);
+    }
+
     // 월식의 제단 전용 확장 포인트 — 표시 시각만 자정(00:00)으로 고정한다.
     // 원래는 임의의 시(hour)를 받는 LockDisplayToHour(int hour)였는데, 실제로 이 기능을 쓰는 곳이
     // "항상 자정 고정"뿐이라(ALTAR_AND_TIME_SYSTEM_DESIGN.md) 굳이 아무 시각이나 받게 열어두는 게

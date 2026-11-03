@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
 // Dungeon Tools 9) 실제 플레이어의 턴 참여 + 이동 담당. TickManager 큐에서 자기 차례
@@ -78,6 +77,8 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     // ITurnActor.CurrentCell 구현 — TickManager.IsCellOccupied()가 Player/Enemy 겹침 방지를 위해
     // 조회한다(2026-08-28 추가, ITurnActor.cs 주석 참고).
     public Vector3Int CurrentCell => currentCell;
+    public Tilemap FloorTilemap => floorTilemap;
+    public Tilemap WallsTilemap => wallsTilemap;
 
     // 방향키 -> 이동 방향(셀 단위) 매핑. 4방향만(대각선 없음, 2026-08-27 확정).
     private static readonly Dictionary<KeyCode, Vector3Int> DirectionKeys = new Dictionary<KeyCode, Vector3Int>
@@ -199,7 +200,14 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         if (isDead)
         {
             enabled = false; // 다음 프레임부터 또 호출되는 것 방지(씬 전환은 즉시 시작되지만 방어적으로)
-            SceneManager.LoadScene("BaseCamp");
+            if (ExpeditionManager.Instance != null)
+            {
+                ExpeditionManager.Instance.CompleteDeath();
+            }
+            else
+            {
+                Debug.LogError("[PlayerTurnActor] ExpeditionManager가 없어 사망 결과를 처리할 수 없습니다.");
+            }
             return;
         }
 
@@ -291,6 +299,17 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         UpdateFacingDirection(enemy.CurrentCell - currentCell);
         enemy.TakeDamage(EffectiveAttackPower);
         TickManager.Instance.CompleteTurn(this, TickCost.Attack);
+    }
+
+    // 계단/탈출구가 플레이어의 현재 차례를 정상적인 Tick 행동으로 소비할 때 사용한다.
+    public bool TrySpendInteraction(float tickCost)
+    {
+        if (!isMyTurn || isAnimating || isDead || TickManager.Instance == null) return false;
+
+        ClearQueuedAutoPath();
+        isMyTurn = false;
+        TickManager.Instance.CompleteTurn(this, tickCost);
+        return true;
     }
 
     // Enemy.TryTraceTowards()가 인접해서 공격할 때 호출한다. 데미지 공식은 "공격력 - 방어력"
