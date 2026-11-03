@@ -64,7 +64,15 @@ public class MinimapController : MonoBehaviour
         {
             if (minimapCamera != null) minimapCamera.targetTexture = null;
             renderTexture.Release();
-            Destroy(renderTexture);
+            if (Application.isPlaying)
+            {
+                Destroy(renderTexture);
+            }
+            else
+            {
+                DestroyImmediate(renderTexture);
+            }
+            renderTexture = null;
         }
     }
 
