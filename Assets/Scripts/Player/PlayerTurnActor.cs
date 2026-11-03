@@ -206,6 +206,11 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         if (!floorTilemap.HasTile(clickedCell) || wallsTilemap.HasTile(clickedCell)) return;
 
         var path = TilePathfinder.FindPath(currentCell, clickedCell, wallsTilemap, floorTilemap);
+        // [임시 디버그 로그 — 2026-08-30] 목적지 칸 자체는 멀쩡한데(floor=True, wall=False) 이동이
+        // 안 되는 증상 추적용 — BFS가 경로를 아예 못 찾는 건지(path.Count==0), 현재 위치
+        // (currentCell)가 이상한 건지 확인하려고 추가함. 원인 확인 끝나면 지워도 되는 라인.
+        Debug.Log($"[DEBUG 경로탐색] currentCell={currentCell} → clickedCell={clickedCell} — " +
+                  $"path.Count={path.Count}");
         if (path.Count == 0) return; // 갈 수 없는 칸(도달 불가) — 무시
 
         queuedAutoPath = new Queue<Vector3Int>(path);
@@ -268,9 +273,6 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
 
         if (wallsTilemap.HasTile(targetCell))
         {
-            // [임시 디버그 로그 — 2026-08-28] "목적지는 뚫려있는데 경로 중간에서 멈춘다" 증상
-            // 원인 추적용. StepAlongAutoPath()가 실패 이유를 안 찍고 조용히 자동 이동만 취소해서
-            // 셋 중 어느 이유로 막혔는지 안 보였음 — 확인 끝나면 이 세 로그는 지워도 됨.
             Debug.Log($"[DEBUG 이동실패] {targetCell} — 벽에 막힘");
             return false;
         }
