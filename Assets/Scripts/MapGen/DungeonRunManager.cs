@@ -26,6 +26,13 @@ public class DungeonRunManager : MonoBehaviour
     [Header("M1 Temporary Balance")]
     [SerializeField, Min(1)] private int escapeProcedureTickCost = 10;
 
+    [Header("Test Scene Visual Settings")]
+    [SerializeField] private float playerCellOffsetX = 0.5f;
+    [SerializeField] private float playerCellOffsetY = 0f;
+    [SerializeField, Min(0.01f)] private float playerMoveDuration = 0.1f;
+    [SerializeField, Min(0.1f)] private float cameraOrthographicSize = 11.25f;
+    [SerializeField] private float cameraZ = -10f;
+
     [Header("Placeholder Tiles (RuleTile 붙이기 전까지 임시 — Assets/Generated/PlaceholderTiles/ 참고)")]
     [SerializeField] private TileBase floorTile;
     [SerializeField] private TileBase wallTile;
@@ -107,7 +114,8 @@ public class DungeonRunManager : MonoBehaviour
             layout.StartCell.x * chunkSize + chunkSize / 2,
             layout.StartCell.y * chunkSize + chunkSize / 2,
             0);
-        Vector3 worldPos = floorTilemap.CellToWorld(startTilePos);
+        Vector3 worldPos = floorTilemap.CellToWorld(startTilePos) +
+                           new Vector3(playerCellOffsetX, playerCellOffsetY, 0f);
 
         if (playerPrefab == null)
         {
@@ -117,9 +125,14 @@ public class DungeonRunManager : MonoBehaviour
 
         player = Instantiate(playerPrefab, worldPos, Quaternion.identity);
         player.name = "Player";
+        player.tag = "Player";
+
+        var playerRenderer = player.GetComponentInChildren<SpriteRenderer>();
+        if (playerRenderer != null) playerRenderer.sortingOrder = 2;
 
         var mover = player.GetComponent<GridMover>();
         if (mover == null) mover = player.AddComponent<GridMover>();
+        mover.SetMoveDuration(playerMoveDuration);
         mover.SetWallTilemap(wallTilemap);
         mover.SnapTo(worldPos);
 
@@ -131,10 +144,11 @@ public class DungeonRunManager : MonoBehaviour
 
         var follow = targetCamera.GetComponent<CameraFollow>();
         if (follow == null) follow = targetCamera.gameObject.AddComponent<CameraFollow>();
+        follow.SetCameraZ(cameraZ);
         follow.SetTarget(player.transform);
 
-        float safeZ = targetCamera.transform.position.z <= -1f ? targetCamera.transform.position.z : -10f;
-        targetCamera.transform.position = new Vector3(worldPos.x, worldPos.y, safeZ);
+        targetCamera.orthographicSize = cameraOrthographicSize;
+        targetCamera.transform.position = new Vector3(worldPos.x, worldPos.y, cameraZ);
     }
 
     private void CreateFloorExits()
@@ -185,7 +199,8 @@ public class DungeonRunManager : MonoBehaviour
             layout.StartCell.x * chunkSize + chunkSize / 2,
             layout.StartCell.y * chunkSize + chunkSize / 2,
             0);
-        Vector3 worldPosition = floorTilemap.CellToWorld(startCell);
+        Vector3 worldPosition = floorTilemap.CellToWorld(startCell) +
+                                new Vector3(playerCellOffsetX, playerCellOffsetY, 0f);
 
         var mover = player.GetComponent<GridMover>();
         mover.SetWallTilemap(floorWallTilemaps[floorIndex]);
@@ -193,8 +208,8 @@ public class DungeonRunManager : MonoBehaviour
 
         if (targetCamera != null)
         {
-            float safeZ = targetCamera.transform.position.z <= -1f ? targetCamera.transform.position.z : -10f;
-            targetCamera.transform.position = new Vector3(worldPosition.x, worldPosition.y, safeZ);
+            targetCamera.orthographicSize = cameraOrthographicSize;
+            targetCamera.transform.position = new Vector3(worldPosition.x, worldPosition.y, cameraZ);
         }
         Debug.Log($"[DungeonRunManager] {ExpeditionSession.CurrentFloor}층으로 하강 — 누적 {Tick.Current} Tick.");
     }

@@ -20,6 +20,11 @@ public class GridMover : MonoBehaviour
         wallTilemap = tilemap;
     }
 
+    public void SetMoveDuration(float duration)
+    {
+        moveDuration = Mathf.Max(0.01f, duration);
+    }
+
     // 생성 직후 등, 애니메이션 없이 즉시 특정 위치로 맞춰 세울 때 사용.
     public void SnapTo(Vector3 worldPos)
     {

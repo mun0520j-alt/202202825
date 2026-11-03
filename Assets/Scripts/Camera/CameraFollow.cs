@@ -16,7 +16,7 @@ public class CameraFollow : MonoBehaviour
               "카메라 Z는 이 값으로 고정한다(FloorTilemapPreviewWindow.CenterMainCameraOn의 -10 관례와 동일).")]
     [SerializeField] private float cameraZ = -10f;
 
-    private void Awake()
+    private void Start()
     {
         if (target == null)
         {
@@ -29,6 +29,11 @@ public class CameraFollow : MonoBehaviour
     {
         target = followTarget;
         enabled = target != null;
+    }
+
+    public void SetCameraZ(float z)
+    {
+        cameraZ = z;
     }
 
     private void LateUpdate()

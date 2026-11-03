@@ -20,6 +20,7 @@
 - BaseCamp 최초 진입에서도 결과 UI가 생성되도록 런타임 초기화 경로를 보강
 - `_to_delete`는 Unity 컴파일 대상이 아니므로 실제 씬이 참조하던 `DungeonRunManager`, `GridMover`, 기존 `Tick`을 GUID 보존 상태로 `Assets/Scripts`에 이동
 - BUG-003 수정: 탈출 비용을 1Tick씩 처리해 적 행동 기회를 보장하고, 절차 완료 시점에 Dead/MIA/Escaped 우선순위를 판정
+- Test 씬 사용자 조정값을 InDungeon 런타임 생성에 반영: 카메라 Orthographic Size 11.25/Z -10, 플레이어 X +0.5/Y 정수, 이동 0.1초, Sprite 정렬 2
 
 ---
 
