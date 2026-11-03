@@ -29,9 +29,11 @@ public class TickQueueTestBootstrapper : MonoBehaviour
             Debug.Log($"[TickQueueTest] DungeonClock 갱신 — 누적 {elapsedTicks:0.0} tick, 실시계 {dungeonClock.GetClockString()}");
         dungeonClock.OnMIA += () => Debug.LogWarning("[TickQueueTest] MIA 조건(288 tick) 도달!");
 
-        SpawnTestActor("Fast(0.2tick/턴)", TickCost.PerTileMove);
-        SpawnTestActor("Medium(1tick/턴)", TickCost.Attack);
-        SpawnTestActor("Slow(2tick/턴)", 2f);
+        // [2026-09-03] TickCost 단위 재정의(1tick=1분)에 맞춰 라벨/값 갱신 — 실제 비용은 항상
+        // TickCost 상수를 그대로 참조하니 나중에 또 스케일이 바뀌어도 여기서 값이 안 썩는다.
+        SpawnTestActor($"Fast({TickCost.PerTileMove}tick/턴)", TickCost.PerTileMove);
+        SpawnTestActor($"Medium({TickCost.Attack}tick/턴)", TickCost.Attack);
+        SpawnTestActor("Slow(10tick/턴)", 10f);
 
         tickManager.BeginSchedule();
     }

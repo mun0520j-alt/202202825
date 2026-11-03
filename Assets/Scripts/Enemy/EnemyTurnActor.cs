@@ -35,6 +35,15 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     [Tooltip("이 몹이 Player를 감지할 수 있는 최대 거리(칸, 원형 반경) — 이 범위 밖이면 시야가 안 막혀도 못 본다.")]
     [SerializeField] private int sightRangeInTiles = 5;
 
+    // [2026-09-03 신규] 전투 스탯 — PlayerTurnActor와 동일한 placeholder 목적(3단계 아이템/스탯
+    // 시스템이 들어오기 전까지 임시). 몹마다 스탯만 다르게(2~3종) 두는 버티컬 슬라이스 방침이라
+    // Inspector에서 몹 프리팹별로 값을 다르게 세팅하면 그대로 난이도 차등이 됨.
+    [Header("전투 (2026-09-03 신규, placeholder — 인스펙터에서 확인용)")]
+    [SerializeField] private int maxHP = 5;
+    [SerializeField] private int currentHP = 5;
+    [SerializeField] private int attackPower = 2;
+    [SerializeField] private int defensePower = 0;
+
     // 발 위치 보정(Y)에 쓴다 — 아래 GetCellFootWorldPosition() 주석 참고.
     private SpriteRenderer spriteRenderer;
 
@@ -65,6 +74,17 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     private bool isTracing;
     private Vector3Int? lastKnownPlayerCell;
 
+    // [2026-09-04 신규] "방금 새로 감지됨"을 표시하는 머리 위 "!" — 별도 스프라이트 에셋 없이
+    // TextMesh(유니티 기본 3D 텍스트 컴포넌트)로 즉석에서 만든다(2026-09-04, 사용자 요청:
+    // "인식된 그 1tick 동안 위에 ! 나오는 것도 추가"). OnTurnStart 맨 위에서 항상 껐다가
+    // 이번 턴에 신규 감지됐을 때만 다시 켜므로, 결과적으로 "감지된 바로 그 1틱 동안만" 보인다.
+    private GameObject alertIndicatorObject;
+
+    // [2026-09-04 신규] 머리 위 HP바 — Player와 통일된 막대 형식(ProceduralHealthBar.cs 참고,
+    // 사용자 요청: "enemy하고 player 통일해야하잖아"). AlertIndicator와 같은 완전 자체 생성
+    // 컴포넌트라 Inspector 세팅 없이 Awake에서 AddComponent만 하면 된다.
+    private ProceduralHealthBar healthBar;
+
     private void Awake()
     {
         if (wallsTilemap == null || floorTilemap == null)
@@ -83,6 +103,42 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
         {
             Debug.LogWarning("[EnemyTurnActor] SpriteRenderer를 못 찾아서 발 위치 보정(Y) 없이 셀 바닥에 그대로 배치됩니다.");
         }
+
+        CreateAlertIndicator();
+
+        // [2026-09-04 신규] HP바 생성 + 초기값 반영.
+        healthBar = gameObject.AddComponent<ProceduralHealthBar>();
+        healthBar.SetFill((float)currentHP / maxHP);
+    }
+
+    // 자식 오브젝트로 TextMesh "!" 하나를 만들어서 머리 위에 배치한다 — 프로젝트에 이미 있는
+    // 스프라이트/폰트 에셋에 의존하지 않도록 유니티 기본 3D 텍스트 컴포넌트만 쓴다(임시 UI 목적이라
+    // TextMeshPro 패키지 설치 여부와 무관하게 항상 동작하는 쪽을 택함). 평소엔 꺼둔다.
+    private void CreateAlertIndicator()
+    {
+        alertIndicatorObject = new GameObject("AlertIndicator(!)");
+        alertIndicatorObject.transform.SetParent(transform);
+        // [2026-09-04 수정] HP바(ProceduralHealthBar, localOffset 기본값 0.9)와 같은 높이에
+        // 겹치지 않도록 그보다 더 위(1.15)에 배치한다 — 순서상 "!" 표시가 HP바 위에 뜨는 게
+        // 자연스럽다(감지 알림이 체력보다 더 눈에 띄어야 함).
+        alertIndicatorObject.transform.localPosition = new Vector3(0f, 1.15f, 0f); // 머리 위, HP바보다 더 위
+
+        var textMesh = alertIndicatorObject.AddComponent<TextMesh>();
+        textMesh.text = "!";
+        textMesh.characterSize = 0.15f;
+        textMesh.fontSize = 80;
+        textMesh.anchor = TextAnchor.LowerCenter;
+        textMesh.alignment = TextAlignment.Center;
+        textMesh.color = Color.yellow;
+
+        var meshRenderer = alertIndicatorObject.GetComponent<MeshRenderer>();
+        if (meshRenderer != null)
+        {
+            // 몹 스프라이트보다 항상 위에 그려지도록 정렬 순서를 넉넉히 높게 준다.
+            meshRenderer.sortingOrder = 100;
+        }
+
+        alertIndicatorObject.SetActive(false);
     }
 
     // PlayerTurnActor.OnEnable()/OnDisable()과 동일한 self-register 패턴(2026-08-28로 확정,
@@ -112,8 +168,22 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     // 3) 둘 다 아니면 → 평소 기본 행동(Idle/Wander).
     public void OnTurnStart()
     {
+        // [2026-09-04] 새 턴이 시작되면 일단 "!" 표시를 꺼둔다 — 아래에서 "이번 턴에 새로
+        // 감지됐음"이 확인되면 그때만 다시 켠다. 이렇게 하면 표시가 "감지된 그 1틱 동안만" 떠있게
+        // 된다(다음 턴 맨 위에서 항상 리셋되니까).
+        if (alertIndicatorObject != null) alertIndicatorObject.SetActive(false);
+
         if (TryDetectPlayer(out var playerCell))
         {
+            // isTracing이 이번 턴 이전엔 false였다가 지금 true가 되는 경우 = "방금 새로 감지됨".
+            // 계속 추적 중이던 경우(매 턴 다시 감지되는 게 정상)에는 뜨지 않게 구분한다.
+            bool isNewlyDetected = !isTracing;
+
+            if (isNewlyDetected && alertIndicatorObject != null)
+            {
+                alertIndicatorObject.SetActive(true);
+            }
+
             isTracing = true;
             lastKnownPlayerCell = playerCell;
             TryTraceTowards(playerCell);
@@ -177,7 +247,12 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     // 목표 자체가 계속 바뀌니까, 옛 경로를 그대로 쓰면 엉뚱한 길로 갈 수 있다.
     private void TryTraceTowards(Vector3Int targetCell)
     {
-        var path = TilePathfinder.FindPath(currentCell, targetCell, wallsTilemap, floorTilemap);
+        // [2026-09-03 버그 수정] Player.HandleMouseClick과 동일한 이유로 점유 칸을 우회해서
+        // 경로를 짠다(TilePathfinder.cs 주석 참고) — 몹이 여러 마리로 늘어났을 때 서로를
+        // 뚫고 지나가는 경로를 짜지 않도록 한다.
+        var path = TilePathfinder.FindPath(currentCell, targetCell, wallsTilemap, floorTilemap,
+            cell => TickManager.Instance.IsCellOccupied(cell, this));
+
         if (path.Count == 0)
         {
             // 갈 방법이 없음(완전히 막혔거나 이미 그 칸에 있음) — 추적을 포기하고 이번 턴은
@@ -189,16 +264,38 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
         }
 
         var nextCell = path[0];
-        if (TickManager.Instance.IsCellOccupied(nextCell, this))
+        var blocker = TickManager.Instance.GetActorAt(nextCell, this);
+        if (blocker is PlayerTurnActor player)
         {
-            // 다음 칸에 이미 누가 있다(대개는 Player 본인 — 바로 옆까지 쫓아온 상태). 아직
-            // 공격 시스템이 없어서(Player도 없음, 2026-08-28 기준) 일단 제자리에서 턴만
-            // 소비한다 — "따라잡으면 그 자리에서 대기"가 요구사항.
+            // [2026-09-03 신규] 다음 칸이 곧 Player가 서있는 칸이라는 뜻 — 이미 인접했으니
+            // 이동 대신 공격으로 전환한다. 이동 없이 그 자리에서 데미지 판정만 하고 턴 소비.
+            // 비용은 CompleteMyTurn()(이동/대기용 PerTileMove)이 아니라 TickCost.Attack — 공격은
+            // Player.AttackEnemy()와 동일하게 항상 고정 비용(TickCost.cs 주석 참고, 속도 배율 영향 없음).
+            UpdateFacingDirection(nextCell - currentCell);
+            player.TakeDamage(attackPower);
+            TickManager.Instance.CompleteTurn(this, TickCost.Attack);
+            return;
+        }
+        if (blocker != null)
+        {
+            // Player가 아닌 다른 액터(예: 다른 Enemy)가 막고 있음 — 몹끼리 상호작용은 아직
+            // 범위 밖이라, 예전처럼 제자리에서 턴만 소비하고 넘어간다.
             CompleteMyTurn();
             return;
         }
 
+        UpdateFacingDirection(nextCell - currentCell);
         StartCoroutine(HopTo(nextCell));
+    }
+
+    // [2026-09-04 신규] PlayerTurnActor.UpdateFacingDirection과 동일한 로직 — 좌우로 움직일
+    // 때만 스프라이트를 반전해서 바라보는 방향을 표현한다(위/아래 이동은 직전 좌우 방향 유지).
+    // 지금까지 Enemy는 이 반전이 아예 없어서(사용자 지적, 2026-09-04) 실제로 추적 중이어도
+    // 방향 전환이 안 보여서 "움직이는지 안 움직이는지" 헷갈리는 원인 중 하나였다.
+    private void UpdateFacingDirection(Vector3Int step)
+    {
+        if (spriteRenderer == null || step.x == 0) return;
+        spriteRenderer.flipX = step.x < 0;
     }
 
     // 4방향 중 무작위 순서로 하나씩 시도해서 처음 갈 수 있는 칸으로 이동한다. 최대
@@ -218,6 +315,7 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
             // PlayerTurnActor.TryStep()의 동일 체크와 같은 이유(콜라이더로는 안 막힘, 2026-08-28).
             if (TickManager.Instance.IsCellOccupied(targetCell, this)) continue;
 
+            UpdateFacingDirection(dir);
             StartCoroutine(HopTo(targetCell));
             return; // 이동 성공 — 턴 소비/CompleteTurn 호출은 애니메이션이 끝난 뒤 HopTo 안에서 처리
         }
@@ -299,5 +397,39 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     private void CompleteMyTurn()
     {
         TickManager.Instance.CompleteTurn(this, TickCost.PerTileMove);
+    }
+
+    // [2026-09-03 신규] Player.AttackEnemy()가 호출한다. 데미지 공식은 PlayerTurnActor와 동일하게
+    // "공격력 - 방어력"(0 밑으로는 안 내려감). HP가 0 이하가 되면 즉시 제거한다 — Player 쪽처럼
+    // 한 프레임 미룰 필요가 없는 이유: 이 호출은 Player.Update()(수동 입력 처리) 안에서 오는
+    // 거라 TickManager.AdvanceSchedule 반복문 도중이 아니고, 여기서 죽어도 이어서 실행되는 건
+    // "내 턴을 넘긴다"가 아니라 Player 쪽 로직뿐이라 안전하다.
+    //
+    // UnregisterActor를 Destroy가 트리거하는 OnDisable 타이밍에 맡기지 않고 여기서 바로 부르는
+    // 이유: Destroy()는 실제 파괴를 프레임 끝으로 미루는데, 그 사이 이 액터가 다시 차례를 받으려
+    // 하면(등록이 아직 안 풀렸으니) 죽은 채로 OnTurnStart가 불릴 위험이 있다 — 즉시 해제해서 막는다.
+    public void TakeDamage(int incomingAttackPower)
+    {
+        int damage = Mathf.Max(0, incomingAttackPower - defensePower);
+        currentHP = Mathf.Max(0, currentHP - damage);
+        healthBar?.SetFill((float)currentHP / maxHP);
+
+        // [2026-09-04 신규] 맞는 순간 시각 피드백 — HitImpactVfx.cs 참고. 죽어서 바로
+        // Destroy되더라도 충격 이펙트 자체는 독립 오브젝트라 문제없이 재생된다(스프라이트 색
+        // 복구 코루틴만 host(this)가 파괴되기 전에 시작해두면 됨 — 어차피 이 프레임엔 아직 살아있음).
+        HitImpactVfx.Spawn(transform.position, Color.white);
+        if (spriteRenderer != null)
+        {
+            HitImpactVfx.FlashSprite(this, spriteRenderer, Color.red);
+        }
+
+        if (currentHP <= 0)
+        {
+            if (TickManager.Instance != null)
+            {
+                TickManager.Instance.UnregisterActor(this);
+            }
+            Destroy(gameObject);
+        }
     }
 }

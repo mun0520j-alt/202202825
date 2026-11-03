@@ -3,8 +3,11 @@ using UnityEngine;
 
 // ================================================================================================
 // [Summary] DungeonClock
-// TickManager가 발행하는 "이번에 tick이 얼마나 소비됐는지" 이벤트(OnTimeAdvanced)를 구독해서
-// 누적하는 역할만 담당한다. 두 가지 결과물을 만든다:
+// TickManager가 발행하는 "액터의 갱신된 절대 시각(NextActionTime)" 이벤트(OnTimeAdvanced)를
+// 구독해서, 시간축 위에서 지금까지 도달한 가장 앞선 지점(최댓값)을 추적하는 역할만 담당한다
+// (2026-09-04 수정 — 예전엔 매번 cost를 더하기만 해서 Player 한 번 움직일 때 그 직후 자동으로
+// 처리되는 Enemy 행동분까지 같이 더해져 시계가 2배로 빠르게 흐르는 버그가 있었다, 아래
+// HandleTimeAdvanced 주석 참고). 두 가지 결과물을 만든다:
 //   1) 던전 안에서 지금 몇 시인지("HH:mm" 문자열, GetClockString())
 //   2) 288tick(=24시간) 넘게 던전에 있으면 MIA(실종/귀환 실패) 판정
 //
@@ -22,18 +25,23 @@ public class DungeonClock : MonoBehaviour
     // "MIA 판정까지 필요한 tick 총량(임계값)" — 이름에 Per가 붙어서 "~당 비율"처럼 보일 수 있는데
     // 그런 뜻이 아니다. "MIA 하나 찍는 데 필요한 tick 수"라기보다는 "이 값 이상 쌓이면 MIA"라는
     // 상한선(threshold)이라서, 이름만 보고 헷갈리지 않게 Threshold로 바꿨다.
-    // 5분/tick * 288tick = 1440분 = 24시간이라 값 자체는 그대로 유지.
-    public const float MIAThresholdTicks = 288f; // 24시간 = 288tick
+    // [2026-09-03] MinutesPerTick이 5 → 1로 바뀌면서(TickCost.cs 참고) 같이 5배 재조정됨:
+    // 1분/tick * 1440tick = 1440분 = 24시간 — 실제 게임 내 24시간이라는 밸런스는 그대로 유지.
+    public const float MIAThresholdTicks = 1440f; // 24시간 = 1440tick(신규 기준, 구 기준으로는 288tick)
 
     // "tick 하나가 게임 내 시간으로 몇 분인지"의 환산 비율. 이건 진짜 "~당(Per)" 관계라 이름 그대로 둔다.
-    public const float MinutesPerTick = 5f;
+    // [2026-09-03] 5 → 1로 변경 — "1tick = 1분 = 이동 1타일"로 기준 단위를 바꾼 결정(TickCost.cs 참고).
+    public const float MinutesPerTick = 1f;
 
     [Tooltip("던전 출격 시각(시). 기본 06:00 — MAP_GENERATOR_DESIGN.md 예시 기준.")]
     [SerializeField] private int departureHour = 6;
 
-    // "던전 진입 후 지금까지 누적된 tick 수"를 뜻한다(=Elapsed: 경과했다/흘러갔다).
-    // 매 CompleteTurn마다 TickManager가 OnTimeAdvanced로 소비량을 보고하면 그만큼씩 여기 더해진다.
-    // 예) 5칸 이동(0.2 tick * 5) 하면 ElapsedTicks가 1.0만큼 늘어남 = 게임 내 5분 경과.
+    // "던전 진입 후 지금까지 실제로 흐른 tick 수"를 뜻한다(=Elapsed: 경과했다/흘러갔다). 매
+    // CompleteTurn마다 TickManager가 OnTimeAdvanced로 보고하는 절대 시각들 중 최댓값으로
+    // 갱신된다(2026-09-04 수정, HandleTimeAdvanced 주석 참고) — "각 액터가 보고한 값을 전부
+    // 더한 값"이 아니다. 예) Player가 1칸 이동하면(비용 1) Player의 시각이 0→1이 되고, 그
+    // 직후 스케줄러가 처리하는 Enemy의 대기 행동(비용 1)으로 Enemy의 시각도 0→1이 되는데,
+    // 이 값은 여전히 1(둘 다 같은 지점에 도달했을 뿐, 시간이 2번 흐른 게 아님)로 정확히 표시된다.
     public float ElapsedTicks { get; private set; }
 
     // MIAThresholdTicks(288tick=24h) 이상 누적되면 true로 바뀐다 — "던전에서 못 돌아왔다" 판정.
@@ -92,15 +100,22 @@ public class DungeonClock : MonoBehaviour
         IsDisplayLocked = true;
     }
 
-    // TickManager.OnTimeAdvanced 구독 콜백 — "이번 행동에 tick이 얼마나 소비됐는지(cost)"를 받아서
-    // 누적하고, 구독자들에게 갱신을 알리고, 임계값을 넘었으면 MIA를 발생시킨다.
-    private void HandleTimeAdvanced(float cost)
+    // TickManager.OnTimeAdvanced 구독 콜백 — [2026-09-04 버그 수정] 인자가 "이번에 소비된
+    // cost"에서 "그 액터의 갱신된 절대 시각(NextActionTime)"으로 바뀌었다(TickManager.cs
+    // OnTimeAdvanced 선언부 주석 참고). 예전처럼 매번 더하면(+=) Player 한 번 움직일 때 그
+    // 직후 스케줄러가 곧바로 처리하는 Enemy의 행동분까지 같이 더해져서 "1분당 2분씩 흐르는"
+    // 버그가 났었다 — Player/Enemy의 NextActionTime은 서로 독립된 값이 아니라 하나의 공유된
+    // 시간축 좌표이기 때문에, "지금까지 실제로 흐른 시간"은 그 축 위에서 지금까지 관측된
+    // 가장 앞선 지점(=최댓값)이어야 한다. 그래서 += 대신 Mathf.Max로 바꿨다 — 여러 액터가
+    // 번갈아 보고해도 시간축이 이미 도달한 지점보다 뒤로는 절대 안 줄어들고(최댓값이라
+    // 단조증가), 같은 지점을 여러 액터가 나눠서 채워도 중복으로 안 쌓인다.
+    private void HandleTimeAdvanced(float actorNextActionTime)
     {
-        // 이미 MIA 판정이 난 뒤에는(예: 이미 24시간 넘겨서 못 돌아온 상태) 더 쌓아봤자 의미가
+        // 이미 MIA 판정이 난 뒤에는(예: 이미 24시간 넘겨서 못 돌아온 상태) 더 갱신해봤자 의미가
         // 없어서 여기서 조용히 무시한다 — OnMIA가 중복으로 여러 번 발생하는 것도 막아준다.
         if (IsMIA) return;
 
-        ElapsedTicks += cost;
+        ElapsedTicks = Mathf.Max(ElapsedTicks, actorNextActionTime);
         OnClockChanged?.Invoke(ElapsedTicks);
 
         if (ElapsedTicks >= MIAThresholdTicks)

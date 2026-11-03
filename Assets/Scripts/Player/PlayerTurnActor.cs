@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
 // Dungeon Tools 9) 실제 플레이어의 턴 참여 + 이동 담당. TickManager 큐에서 자기 차례
@@ -34,6 +35,36 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     [Header("시야 (Fog of War, 2026-08-28 추가)")]
     [Tooltip("Player가 실제로 볼 수 있는 최대 거리(칸, 원형 반경). FogOfWarController가 이 값으로 안개를 걷는다.")]
     [SerializeField] private int sightRangeInTiles = 6;
+
+    // [2026-09-03 신규] 전투 스탯 — Dev Sequence 2단계(전투 계산 기초) placeholder로 시작한
+    // 필드들. [2026-09-04] 3단계(아이템 데이터) 착수로 PlayerEquipment가 추가되면서, 이 값들은
+    // 이제 "장비 보너스를 더하기 전의 기본 스탯"이라는 의미로 바뀌었다 — 실제 전투 계산에는
+    // 아래 EffectiveAttackPower/EffectiveDefensePower(기본값 + 장비 보너스 합)를 쓴다. 데미지
+    // 공식은 여전히 "공격력 - 방어력"(0 밑으로는 안 내려감)으로 동일.
+    [Header("전투 (기본 스탯 — 장비 보너스는 EffectiveAttackPower/EffectiveDefensePower에서 합산됨)")]
+    [SerializeField] private int maxHP = 10;
+    [SerializeField] private int currentHP = 10;
+    [SerializeField] private int attackPower = 3;
+    [SerializeField] private int defensePower = 1;
+
+    // [2026-09-04 신규] 장착 장비 — 보너스 합계만 여기서 더해서 쓰고, "무엇을 장착했는지"
+    // 자체의 관리는 PlayerEquipment 책임(단일 책임 유지). InventoryPanel도 이 프로퍼티를 통해
+    // 장착 아이템을 조회해서 아이콘을 그린다.
+    private PlayerEquipment equipment;
+    public PlayerEquipment Equipment => equipment;
+
+    // 실제 전투 계산(공격/피격)에 쓰는 값 — 기본 스탯 + 장비 보너스 합계.
+    private int EffectiveAttackPower => attackPower + (equipment != null ? equipment.TotalAttackBonus : 0);
+    private int EffectiveDefensePower => defensePower + (equipment != null ? equipment.TotalDefenseBonus : 0);
+
+    // HP가 0 이하가 된 다음 프레임에 영지(BaseCamp)로 씬 전환한다 — TakeDamage 호출 시점에서
+    // 바로 SceneManager.LoadScene을 부르지 않는 이유는 아래 Update() 주석 참고.
+    private bool isDead;
+
+    // [2026-09-04 신규] 머리 위 HP바 — Enemy와 통일된 막대 형식(ProceduralHealthBar.cs 참고,
+    // 사용자 요청: "enemy하고 player 통일해야하잖아"). 완전 자체 생성 컴포넌트라 Inspector
+    // 세팅 없이 Awake에서 AddComponent만 하면 되고, HP가 바뀔 때마다 SetFill을 호출해서 갱신한다.
+    private ProceduralHealthBar healthBar;
 
     // 다른 컴포넌트(EnemyTurnActor 등)가 "지금 Player가 어디 있는지"를 조회할 수 있게 하는
     // 싱글턴 — TickManager.Instance와 같은 패턴(2026-08-28 추가). Player는 씬에 항상 하나만
@@ -100,6 +131,14 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
             Debug.LogWarning("[PlayerTurnActor] SpriteRenderer를 못 찾아서 좌우 반전 연출은 생략됩니다.");
         }
 
+        // [2026-09-04 신규] HP바 생성 + 초기값 반영 — AlertIndicator와 동일하게 Awake에서
+        // 붙여서 씬에 배치만 하면 자동으로 준비되게 한다.
+        healthBar = gameObject.AddComponent<ProceduralHealthBar>();
+        healthBar.SetFill((float)currentHP / maxHP);
+
+        // [2026-09-04 신규] 장비 컴포넌트 부착 — PlayerEquipment.Awake()가 자체적으로 테스트용
+        // 기본 장비를 자동 장착해준다(에셋 없이도 바로 확인 가능, PlayerEquipment.cs 참고).
+        equipment = gameObject.AddComponent<PlayerEquipment>();
     }
 
     private void OnDestroy()
@@ -151,6 +190,19 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
 
     private void Update()
     {
+        // [2026-09-03 신규] 사망 처리는 TakeDamage() 안에서 바로 씬 전환을 부르지 않고 여기
+        // Update()에서 한 프레임 늦게 실행한다 — TakeDamage가 Enemy의 OnTurnStart 안(TickManager.
+        // AdvanceSchedule 반복문 도중)에서 호출될 수도 있는데, 그 호출 스택 한가운데서 바로
+        // SceneManager.LoadScene을 부르면 지금 씬(TickManager 포함)이 그 자리에서 통째로 파괴돼서
+        // 반복문이 계속 이어지려는 순간 TickManager.Instance가 null이 되어 죽어버린다. Player
+        // 자신의 Update()로 한 프레임 미뤄서 그 호출 스택과 완전히 분리시키면 이 문제가 없다.
+        if (isDead)
+        {
+            enabled = false; // 다음 프레임부터 또 호출되는 것 방지(씬 전환은 즉시 시작되지만 방어적으로)
+            SceneManager.LoadScene("BaseCamp");
+            return;
+        }
+
         if (!isMyTurn || isAnimating) return;
 
         // 수동 입력(방향키/클릭)은 항상 자동 이동보다 우선한다 — 자동 이동 중에 방향키를
@@ -197,24 +249,74 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         worldPoint.z = 0f;
         var clickedCell = floorTilemap.WorldToCell(worldPoint);
 
-        // [임시 디버그 로그 — 2026-08-28] 특정 모서리 칸이 왜 막혀있는지 확인하려고 좌표 확인용으로
-        // 잠깐 추가함. 원인 확인 끝나면 지워도 되는 라인.
-        Debug.Log($"[DEBUG 좌표확인] 클릭한 셀 {clickedCell} — floor={floorTilemap.HasTile(clickedCell)}, " +
-                  $"wall={wallsTilemap.HasTile(clickedCell)}");
-
         // 클릭한 칸 자체가 바닥이 아니면(벽이거나 맵 바깥) 그냥 무시 — 아무 반응 없음.
         if (!floorTilemap.HasTile(clickedCell) || wallsTilemap.HasTile(clickedCell)) return;
 
-        var path = TilePathfinder.FindPath(currentCell, clickedCell, wallsTilemap, floorTilemap);
-        // [임시 디버그 로그 — 2026-08-30] 목적지 칸 자체는 멀쩡한데(floor=True, wall=False) 이동이
-        // 안 되는 증상 추적용 — BFS가 경로를 아예 못 찾는 건지(path.Count==0), 현재 위치
-        // (currentCell)가 이상한 건지 확인하려고 추가함. 원인 확인 끝나면 지워도 되는 라인.
-        Debug.Log($"[DEBUG 경로탐색] currentCell={currentCell} → clickedCell={clickedCell} — " +
-                  $"path.Count={path.Count}");
-        if (path.Count == 0) return; // 갈 수 없는 칸(도달 불가) — 무시
+        // [2026-09-03 신규] 클릭한 칸에 Enemy가 서있으면 이동이 아니라 공격 — 녹픽던처럼 "적 칸을
+        // 클릭하면 자동으로 공격 전환"(예전에 이미 확정된 입력 규칙). 지금은 인접 1칸(근접)만
+        // 지원하기로 확정(2026-09-03) — 원거리 무기/스킬은 나중 범위. 인접이 아니면 그냥 무시하고
+        // 끝낸다 — "다가가서 자동으로 공격까지" 하는 건 이번 단계 범위 밖.
+        var occupant = TickManager.Instance.GetActorAt(clickedCell, this);
+        if (occupant is EnemyTurnActor enemyOccupant)
+        {
+            var deltaToEnemy = clickedCell - currentCell;
+            bool isAdjacent = Mathf.Abs(deltaToEnemy.x) + Mathf.Abs(deltaToEnemy.y) == 1;
+            if (isAdjacent)
+            {
+                ClearQueuedAutoPath();
+                AttackEnemy(enemyOccupant);
+            }
+            return;
+        }
+
+        // [2026-09-03 버그 수정] 점유 칸(다른 액터가 서있는 칸)을 우회해서 경로를 짜도록
+        // isBlockedExtra 델리게이트를 넘긴다 — 안 넘기면 몹이 서있는 칸도 그냥 바닥으로 보고
+        // 경로가 그 위를 지나가버려서, 실제로 걷다가 그 칸에서 TryStep이 막혀 "목적지는 뚫려있는데
+        // 경로 중간에서 멈추는" 버그가 났었다(TilePathfinder.cs 주석 참고).
+        var path = TilePathfinder.FindPath(currentCell, clickedCell, wallsTilemap, floorTilemap,
+            cell => TickManager.Instance.IsCellOccupied(cell, this));
+        if (path.Count == 0) return; // 갈 수 없는 칸(도달 불가, 또는 점유 중) — 무시
 
         queuedAutoPath = new Queue<Vector3Int>(path);
         StepAlongAutoPath(); // 클릭한 프레임에 바로 첫 걸음을 내딛어서 반응성을 높인다.
+    }
+
+    // [2026-09-03 신규] 인접한 Enemy를 공격한다 — 이동 없이 즉시 데미지를 주고 턴을 소비한다.
+    // 애니메이션(홉 등)은 지금 단계 범위 밖 — 데미지 판정 자체가 먼저(placeholder 목표).
+    private void AttackEnemy(EnemyTurnActor enemy)
+    {
+        // [2026-09-04 신규] 공격 대상 쪽으로 바라보기 — 이동할 때(UpdateFacingDirection)와 동일한
+        // 좌우 반전 로직을 그대로 재사용한다. 지금까지는 공격해도 캐릭터가 원래 보던 방향 그대로라
+        // "누굴 때리는지" 시각적으로 안 와닿는 문제가 있었다(사용자 지적, 2026-09-04).
+        UpdateFacingDirection(enemy.CurrentCell - currentCell);
+        enemy.TakeDamage(EffectiveAttackPower);
+        TickManager.Instance.CompleteTurn(this, TickCost.Attack);
+    }
+
+    // Enemy.TryTraceTowards()가 인접해서 공격할 때 호출한다. 데미지 공식은 "공격력 - 방어력"
+    // (0 밑으로는 안 내려감, 사용자 확정). HP가 0 이하가 되면 즉시 죽이지 않고 isDead만 세팅 —
+    // 실제 씬 전환은 Update()에서 한 프레임 늦게 처리한다(위 Update() 주석 참고, 호출 스택 분리 목적).
+    public void TakeDamage(int incomingAttackPower)
+    {
+        if (isDead) return;
+
+        int damage = Mathf.Max(0, incomingAttackPower - EffectiveDefensePower);
+        currentHP = Mathf.Max(0, currentHP - damage);
+        healthBar?.SetFill((float)currentHP / maxHP);
+
+        // [2026-09-04 신규] 맞는 순간 시각 피드백 — EnemyTurnActor.TakeDamage와 동일한 방식
+        // (HitImpactVfx.cs 참고). Player는 죽어도 Update()에서 한 프레임 뒤에 씬 전환이라 이
+        // 프레임엔 여전히 살아있으니 코루틴 host로 안전하게 this를 쓸 수 있다.
+        HitImpactVfx.Spawn(transform.position, Color.white);
+        if (spriteRenderer != null)
+        {
+            HitImpactVfx.FlashSprite(this, spriteRenderer, Color.red);
+        }
+
+        if (currentHP <= 0)
+        {
+            isDead = true;
+        }
     }
 
     // 예약된 경로를 한 칸 진행한다. 몹을 발견하면(지금은 항상 false — 몹 시스템 붙기 전까지의
@@ -258,12 +360,30 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     // 일부러 다르게 잡는다(2026-08-27 피드백) — Tilemap.GetCellCenterWorld()는 X/Y를 둘 다
     // 중앙(+0.5)으로 주는데, Y까지 .5가 되면 캐릭터의 발밑 Collider가 타일 경계와 안 맞아서
     // 아래/위 타일과 어긋나게 겹치는 문제가 생긴다. 그래서 X만 중앙에 맞추고 Y는 Tilemap의
-    // 셀 원점(바닥 경계, CellToWorld가 주는 값)을 그대로 써서 정수로 남긴다.
+    // 셀 원점(바닥 경계, CellToWorld가 주는 값)을 기준으로 삼는다.
+    //
+    // [2026-09-03 버그 수정] 그런데 이 프로젝트 스프라이트는 전부 pivot이 Center(0.5, 0.5)로
+    // 통일되어 있어서(PixelArtImportFixer.cs 임포트 규칙, EnemyTurnActor.GetCellFootWorldPosition
+    // 주석 참고), transform.position을 셀 바닥 경계에 그대로 찍으면 스프라이트가 그 지점을
+    // "중심"으로 그려져서 절반은 위 칸(현재 칸), 절반은 아래 칸으로 삐져나가 버린다. 그 결과
+    // +Y로 벽에 다가가면 스프라이트 윗부분이 칸 절반만큼 못 미쳐서 "벽에 못 붙는" 것처럼
+    // 보이고, -Y로 이동하면 스프라이트 아랫부분이 아래 칸(벽일 수도 있음)까지 파고들어서
+    // "벽을 넘는" 것처럼 보이는 시각적 버그가 났다(논리 좌표 currentCell 자체는 항상 정확했음
+    // — 순수하게 렌더링 위치만 어긋난 문제). EnemyTurnActor가 이미 쓰고 있는 것과 동일한
+    // 방식으로, 스프라이트의 실제 세로 반높이(footOffsetY)만큼 위로 올려서 발이 칸 바닥선에
+    // 오도록 보정한다 — 스프라이트 크기가 몹마다/캐릭터마다 달라도 자동으로 맞는다.
     private Vector3 GetCellFootWorldPosition(Vector3Int cell)
     {
         Vector3 cellOrigin = floorTilemap.CellToWorld(cell); // 셀의 바닥-왼쪽 모서리(정수 좌표)
         Vector3 cellSize = floorTilemap.cellSize;
-        return cellOrigin + new Vector3(cellSize.x * 0.5f, 0f, 0f);
+
+        float footOffsetY = 0f;
+        if (spriteRenderer != null && spriteRenderer.sprite != null)
+        {
+            footOffsetY = spriteRenderer.sprite.bounds.extents.y;
+        }
+
+        return cellOrigin + new Vector3(cellSize.x * 0.5f, footOffsetY, 0f);
     }
 
     // 한 칸 이동을 시도한다. 벽이면 false(턴 소모 없음), 성공하면 애니메이션 코루틴을 시작하고 true.
@@ -271,24 +391,14 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     {
         var targetCell = currentCell + step;
 
-        if (wallsTilemap.HasTile(targetCell))
-        {
-            Debug.Log($"[DEBUG 이동실패] {targetCell} — 벽에 막힘");
-            return false;
-        }
-        if (!floorTilemap.HasTile(targetCell)) // 맵 바깥으로는 못 나감
-        {
-            Debug.Log($"[DEBUG 이동실패] {targetCell} — 바닥 타일 없음(맵 바깥)");
-            return false;
-        }
+        if (wallsTilemap.HasTile(targetCell)) return false;
+        if (!floorTilemap.HasTile(targetCell)) return false; // 맵 바깥으로는 못 나감
         // 벽/바닥과 같은 자격으로 "이미 다른 액터가 서 있는 칸"도 막는다 — 콜라이더가 아니라
         // TickManager에 직접 물어보는 이유는 이동을 물리엔진 없이 transform.position으로 직접
-        // 처리하는 구조라서다(2026-08-28 발견, ITurnActor.cs 주석 참고).
-        if (TickManager.Instance.IsCellOccupied(targetCell, this))
-        {
-            Debug.Log($"[DEBUG 이동실패] {targetCell} — 다른 액터가 점유 중(IsCellOccupied)");
-            return false;
-        }
+        // 처리하는 구조라서다(2026-08-28 발견, ITurnActor.cs 주석 참고). 자동 이동 경로 자체가
+        // 이제 이 점유 칸을 피해서 짜이므로(HandleMouseClick 참고, 2026-09-03 수정) 여기 걸리는
+        // 경우는 방향키 수동 이동, 또는 경로 계산 이후 몹이 움직여 상황이 바뀐 예외 상황뿐이다.
+        if (TickManager.Instance.IsCellOccupied(targetCell, this)) return false;
 
         UpdateFacingDirection(step);
         StartCoroutine(HopTo(targetCell));

@@ -34,6 +34,21 @@ public class DungeonSceneBootstrapper : MonoBehaviour
 
         tickManager.BeginSchedule();
 
-        Debug.Log("[DungeonSceneBootstrapper] 던전 씬 스케줄 시작 — TickManager/DungeonClock 준비 완료.");
+        // [2026-09-04 신규] HUD(시계/인벤토리/미니맵) 부착 — 전부 "완전 자체 생성" 컴포넌트라
+        // (ScreenSpaceCanvasProvider.cs 참고) 여기서 AddComponent만 해주면 Canvas부터 텍스트/
+        // 카메라까지 알아서 만들어진다. Player/Enemy에 HP바를 붙이는 것과 동일한 이유로, 씬에
+        // 미리 배치해둘 필요 없이 이 부트스트래퍼가 자동으로 붙여준다 — 매 씬마다 수동으로
+        // GameObject를 만들어 컴포넌트를 드래그할 필요가 없다.
+        //
+        // [2026-09-04 하이라키 배치 지원] 이제 BuildHudInScene.cs(에디터 메뉴)로 이 셋을 씬에
+        // 미리 배치해둘 수도 있게 됐다 — 그렇게 미리 배치된 경우 여기서 또 AddComponent를 하면
+        // 같은 오브젝트에 컴포넌트가 중복으로 붙어서 Awake가 두 번 도는 꼴이 된다(각 컴포넌트의
+        // Build()가 자체적으로 멱등하게 짜여있어도,애초에 중복 컴포넌트 자체가 지저분하다).
+        // FindObjectOfType으로 이미 있는지 먼저 확인해서 없을 때만 새로 붙인다.
+        if (FindObjectOfType<DungeonClockDisplay>() == null) gameObject.AddComponent<DungeonClockDisplay>();
+        if (FindObjectOfType<InventoryPanel>() == null) gameObject.AddComponent<InventoryPanel>();
+        if (FindObjectOfType<MinimapController>() == null) gameObject.AddComponent<MinimapController>();
+
+        Debug.Log("[DungeonSceneBootstrapper] 던전 씬 스케줄 시작 — TickManager/DungeonClock/HUD 준비 완료.");
     }
 }
