@@ -6,7 +6,7 @@
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Open (재현 확인) |
+| 상태 | Closed (수정 확인) |
 | 심각도 | Minor |
 | 우선순위 | P2 |
 | 발견 단계 | M0 기반 정리 |
@@ -71,7 +71,8 @@ else
 
 ### 비고
 
-- 수정은 별도 `fix/BUG-001-minimap-destroy` 브랜치에서 진행한다.
+- `fix/BUG-001-minimap-destroy` 브랜치에서 Play/Edit Mode별 파괴 방식을 분리했다.
+- 사용자 재확인 결과 BUG-001 경고는 사라지고 BUG-002 패키지 오류만 남았다.
 
 ---
 
@@ -79,7 +80,7 @@ else
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Open (재현 확인) |
+| 상태 | Accepted (Won't Fix) |
 | 심각도 | Minor |
 | 우선순위 | P2 |
 | 발견 단계 | M0 기반 정리 |
@@ -129,3 +130,8 @@ An error occurred while resolving packages:
 - 새 터미널에서 `git --version`이 정상 출력되는지 확인한다.
 - Unity와 Unity Hub 재시작 후 Package Manager 오류가 사라지는지 확인한다.
 - MCP 패키지가 없어도 게임 코드 컴파일과 Play가 가능한지 별도로 확인한다.
+
+### 처리 결정
+
+- MCP는 지속적으로 업데이트되는 개발 도구이며, Git 연결이 준비된 환경에서는 바로 사용할 수 있다.
+- 게임 런타임 결함이 아니므로 현재 프로젝트에서 패키지 구조를 변경하지 않고 알려진 개발 환경 제약으로 수용한다.
