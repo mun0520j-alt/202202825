@@ -236,6 +236,11 @@ public class TickManager : MonoBehaviour
         // [2026-09-04 버그 수정] tickCost가 아니라 갱신된 절대 시각(NextActionTime)을 보고한다 —
         // 위 OnTimeAdvanced 선언부 주석 참고.
         OnTimeAdvanced?.Invoke(currentTurnActor.NextActionTime);
+        string action = Mathf.Approximately(tickCost, TickCost.Attack) ? "Attack"
+            : Mathf.Approximately(tickCost, TickCost.Interact) ? "Interact"
+            : Mathf.Approximately(tickCost, TickCost.PerTileMove) ? "Move/Wait"
+            : "Action";
+        Debug.Log($"[{currentTurnActor.NextActionTime:0.##}] {actor}/{action}/{tickCost:0.##}");
 
         if (isAdvancingSchedule)
         {

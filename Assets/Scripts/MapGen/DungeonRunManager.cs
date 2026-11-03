@@ -39,6 +39,11 @@ public class DungeonRunManager : MonoBehaviour
     [Header("Player")]
     [SerializeField] private GameObject playerPrefab;
 
+    [Header("Enemy (M1 Runtime)")]
+    [SerializeField, Min(1)] private int enemiesPerFloor = 3;
+    [SerializeField, Min(0.01f)] private float enemyMoveDuration = 0.1f;
+    [SerializeField, Min(0f)] private float enemyHopHeight = 0.4f;
+
     [Header("Camera")]
     [SerializeField] private Camera targetCamera;
 
@@ -59,8 +64,10 @@ public class DungeonRunManager : MonoBehaviour
 
         if (!ExpeditionSession.IsActive) ExpeditionSession.BeginNewRun();
         GenerateAllFloors();
-        SpawnPlayerAtFloor(ExpeditionSession.CurrentFloor - 1);
-        CreateFogForFloor(ExpeditionSession.CurrentFloor - 1);
+        int activeFloorIndex = ExpeditionSession.CurrentFloor - 1;
+        SpawnPlayerAtFloor(activeFloorIndex);
+        SpawnEnemiesAtFloor(activeFloorIndex);
+        CreateFogForFloor(activeFloorIndex);
         if (GetComponent<DungeonSceneBootstrapper>() == null) gameObject.AddComponent<DungeonSceneBootstrapper>();
     }
 
@@ -155,6 +162,70 @@ public class DungeonRunManager : MonoBehaviour
 
         var fog = fogObject.AddComponent<FogOfWarController>();
         fog.ConfigureRuntime(floorTilemap, floorWallTilemaps[floorIndex], fogTilemap);
+    }
+
+    private void SpawnEnemiesAtFloor(int floorIndex)
+    {
+        if (floorIndex < 0 || floorIndex >= floors.Count || player == null) return;
+
+        var floorTilemap = floorTileTilemaps[floorIndex];
+        var wallTilemap = floorWallTilemaps[floorIndex];
+        var playerActor = player.GetComponent<PlayerTurnActor>();
+        Vector3Int playerCell = playerActor != null
+            ? playerActor.CurrentCell
+            : floorTilemap.WorldToCell(player.transform.position);
+
+        var candidates = new List<Vector3Int>();
+        foreach (var cell in floorTilemap.cellBounds.allPositionsWithin)
+        {
+            if (!floorTilemap.HasTile(cell) || wallTilemap.HasTile(cell) || cell == playerCell) continue;
+            if (Mathf.Abs(cell.x - playerCell.x) + Mathf.Abs(cell.y - playerCell.y) < 6) continue;
+            candidates.Add(cell);
+        }
+        candidates.Sort((a, b) =>
+        {
+            int distanceA = Mathf.Abs(a.x - playerCell.x) + Mathf.Abs(a.y - playerCell.y);
+            int distanceB = Mathf.Abs(b.x - playerCell.x) + Mathf.Abs(b.y - playerCell.y);
+            return distanceB.CompareTo(distanceA);
+        });
+
+        var occupied = new List<Vector3Int> { playerCell };
+        int spawned = 0;
+        foreach (var cell in candidates)
+        {
+            bool tooClose = occupied.Exists(other => Mathf.Abs(other.x - cell.x) + Mathf.Abs(other.y - cell.y) < 3);
+            if (tooClose) continue;
+
+            CreateRuntimeEnemy(floorIndex, spawned, cell, floorTilemap, wallTilemap);
+            occupied.Add(cell);
+            spawned++;
+            if (spawned >= enemiesPerFloor) break;
+        }
+
+        Debug.Log($"[DungeonRunManager] {floorIndex + 1}층 Enemy {spawned}개 배치 및 TickManager 등록 완료.");
+    }
+
+    private void CreateRuntimeEnemy(int floorIndex, int enemyIndex, Vector3Int cell, Tilemap floorTilemap, Tilemap wallTilemap)
+    {
+        var enemy = new GameObject($"Enemy_F{floorIndex + 1}_{enemyIndex + 1}");
+        enemy.SetActive(false);
+        enemy.transform.SetParent(floorTilemap.transform.parent, false);
+
+        var renderer = enemy.AddComponent<SpriteRenderer>();
+        renderer.sprite = ProceduralSprite.GetWhiteSpriteCenterPivot();
+        renderer.color = new Color(0.35f, 0.85f, 0.3f, 1f);
+        renderer.sortingOrder = 2;
+        enemy.transform.localScale = new Vector3(0.75f, 0.75f, 1f);
+
+        var collider = enemy.AddComponent<BoxCollider2D>();
+        collider.size = Vector2.one;
+
+        Vector3 cellOrigin = floorTilemap.CellToWorld(cell);
+        enemy.transform.position = cellOrigin + new Vector3(floorTilemap.cellSize.x * 0.5f, 0.375f, 0f);
+
+        var actor = enemy.AddComponent<EnemyTurnActor>();
+        actor.ConfigureRuntime(wallTilemap, floorTilemap, EnemyBehaviorType.Wander, enemyMoveDuration, enemyHopHeight);
+        enemy.SetActive(true);
     }
 
     private Tilemap CreateTilemapChild(Transform parent, string name, int sortingOrder)

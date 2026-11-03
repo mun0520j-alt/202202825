@@ -83,6 +83,7 @@ public class DungeonSceneBootstrapper : MonoBehaviour
         foreach (var position in floor.cellBounds.allPositionsWithin)
         {
             if (!floor.HasTile(position) || (walls != null && walls.HasTile(position))) continue;
+            if (TickManager.Instance != null && TickManager.Instance.IsCellOccupied(position)) continue;
             int distance = Mathf.Abs(position.x - playerCell.x) + Mathf.Abs(position.y - playerCell.y);
             if (distance <= farthestDistance) continue;
             farthestDistance = distance;

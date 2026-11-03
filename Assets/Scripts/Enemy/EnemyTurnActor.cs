@@ -64,6 +64,7 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
 
     private Vector3Int currentCell;
     private bool isAnimating;
+    private bool isInitialized;
 
     // behaviorType(Idle/Wander)은 "Player를 못 봤을 때의 평소 기본 행동"이고, 추적은 그 위에
     // 얹히는 임시 상태다(2026-08-28 결정, "감지 -> 추적 -> 놓치면 마지막 위치 -> 배회 복귀"
@@ -87,13 +88,30 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
 
     private void Awake()
     {
-        if (wallsTilemap == null || floorTilemap == null)
-        {
-            Debug.LogError("[EnemyTurnActor] wallsTilemap/floorTilemap이 Inspector에 연결 안 돼있습니다 — " +
-                            "MapGenPreview 하위의 Walls/Floor 타일맵을 드래그해서 연결해주세요.");
-            enabled = false;
-            return;
-        }
+        TryInitialize();
+    }
+
+    private void Start()
+    {
+        if (TryInitialize()) return;
+        Debug.LogError("[EnemyTurnActor] wallsTilemap/floorTilemap이 연결되지 않아 Enemy를 비활성화합니다.");
+        enabled = false;
+    }
+
+    public void ConfigureRuntime(Tilemap walls, Tilemap floor, EnemyBehaviorType behavior, float moveDuration, float moveHeight)
+    {
+        wallsTilemap = walls;
+        floorTilemap = floor;
+        behaviorType = behavior;
+        hopDuration = moveDuration;
+        hopHeight = moveHeight;
+        TryInitialize();
+    }
+
+    private bool TryInitialize()
+    {
+        if (isInitialized) return true;
+        if (wallsTilemap == null || floorTilemap == null) return false;
 
         // 배치된 월드 좌표를 논리 좌표(셀)로 역산 — PlayerTurnActor.Awake()와 동일한 방식.
         currentCell = floorTilemap.WorldToCell(transform.position);
@@ -109,6 +127,8 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
         // [2026-09-04 신규] HP바 생성 + 초기값 반영.
         healthBar = gameObject.AddComponent<ProceduralHealthBar>();
         healthBar.SetFill((float)currentHP / maxHP);
+        isInitialized = true;
+        return true;
     }
 
     // 자식 오브젝트로 TextMesh "!" 하나를 만들어서 머리 위에 배치한다 — 프로젝트에 이미 있는
@@ -357,7 +377,7 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
         float footOffsetY = 0f;
         if (spriteRenderer != null && spriteRenderer.sprite != null)
         {
-            footOffsetY = spriteRenderer.sprite.bounds.extents.y;
+            footOffsetY = spriteRenderer.sprite.bounds.extents.y * Mathf.Abs(transform.lossyScale.y);
         }
 
         return cellOrigin + new Vector3(cellSize.x * 0.5f, footOffsetY, 0f);
