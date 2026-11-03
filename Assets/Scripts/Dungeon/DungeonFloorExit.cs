@@ -40,7 +40,7 @@ public sealed class DungeonFloorExit : MonoBehaviour
     {
         if (requestSent || !PlayerIsOnExit()) return;
         string label = floorNumber >= ExpeditionSession.FinalFloor
-            ? "E: 탈출 절차 (30 Tick)"
+            ? $"E: 탈출 절차 ({runManager.EscapeProcedureTickCost} Tick)"
             : $"E: {floorNumber + 1}층으로 하강 ({TickCost.Interact:0} Tick)";
         GUI.Box(new Rect(Screen.width * 0.5f - 180f, Screen.height - 90f, 360f, 40f), label);
     }

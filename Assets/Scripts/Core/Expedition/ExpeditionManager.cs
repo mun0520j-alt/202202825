@@ -9,7 +9,7 @@ public sealed class ExpeditionManager : MonoBehaviour
 
     [Header("미확정 임시값 (Inspector에서 조정)")]
     [SerializeField, Min(1f)] private float floorChangeTickCost = TickCost.Interact;
-    [SerializeField, Min(1f)] private float escapeProcedureTickCost = 30f;
+    [SerializeField, Min(1f)] private float escapeProcedureTickCost = 10f;
 
     private DungeonClock dungeonClock;
     private bool transitionRequested;

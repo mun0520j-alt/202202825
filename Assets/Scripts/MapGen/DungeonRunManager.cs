@@ -23,6 +23,9 @@ public class DungeonRunManager : MonoBehaviour
     [SerializeField] private int chunkSize = 16;
     [SerializeField] private float floorSpacingMargin = 32f;
 
+    [Header("M1 Temporary Balance")]
+    [SerializeField, Min(1)] private int escapeProcedureTickCost = 10;
+
     [Header("Placeholder Tiles (RuleTile 붙이기 전까지 임시 — Assets/Generated/PlaceholderTiles/ 참고)")]
     [SerializeField] private TileBase floorTile;
     [SerializeField] private TileBase wallTile;
@@ -38,6 +41,8 @@ public class DungeonRunManager : MonoBehaviour
     private readonly List<Tilemap> floorWallTilemaps = new List<Tilemap>();
     private GameObject player;
     private bool resultRequested;
+
+    public int EscapeProcedureTickCost => escapeProcedureTickCost;
 
     private void Awake()
     {
@@ -155,7 +160,7 @@ public class DungeonRunManager : MonoBehaviour
     {
         if (resultRequested || !ExpeditionSession.IsActive || floorNumber != ExpeditionSession.CurrentFloor) return;
 
-        int cost = floorNumber >= ExpeditionSession.FinalFloor ? 30 : Mathf.RoundToInt(TickCost.Interact);
+        int cost = floorNumber >= ExpeditionSession.FinalFloor ? escapeProcedureTickCost : Mathf.RoundToInt(TickCost.Interact);
         Tick.Advance(cost);
         if (!ExpeditionSession.IsActive) return; // 비용 적용으로 MIA
 
