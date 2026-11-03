@@ -1,0 +1,18 @@
+# CHANGELOG
+
+형식: 마일스톤 태그 단위. 추가 / 수정 / 알려진 문제 / 테스트 요약.
+
+## v0.1-m0 — 2026-11-03
+### 추가
+- `VERSIONING.md` 버전 관리 규칙, `MILESTONES.md` 기획×QA 마일스톤, `.gitattributes` 줄바꿈 규칙
+- `QA/BUGS.md` 결함 기록
+### 수정
+- BUG-001: Edit Mode에서 `MinimapController.OnDestroy`가 `Destroy`를 호출하던 경고 수정 (eea623e)
+### 알려진 문제
+- BUG-002: Git이 PATH에 없는 환경에서 `com.coplaydev.unity-mcp` 패키지 해석 실패 — 개발 환경 제약으로 수용
+### 테스트 요약
+- 컴파일·Play(이동·공격) 확인, BUG-001 수정 확인. Edit Mode 재로드·오브젝트 제거 및 Play 진입·종료 3회 반복 회귀 검증 통과.
+
+## v0.0-base — 2026-11-03
+- 9.3·9.5 원격 작업 병합(264ff28) + 줄바꿈 정규화(b28aace). 기준선.
+- 포함: Tick 코어(1Tick=1분, 이동 1·공격 5·MIA 1,440), 플레이어 이동·전투·사망, 장비·인벤토리, HUD 시계·미니맵·HP바, 맵 생성·시야

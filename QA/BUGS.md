@@ -6,7 +6,7 @@
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Open (재현 확인) |
+| 상태 | Closed (수정 확인) |
 | 심각도 | Minor |
 | 우선순위 | P2 |
 | 발견 단계 | M0 기반 정리 |
@@ -34,7 +34,7 @@
 
 ### 실제 결과
 
-- `OnDestroy()`가 실행 환경과 관계없이 `Destroy(renderTexture)`를 호출한다.
+- (수정 전) `OnDestroy()`가 실행 환경과 관계없이 `Destroy(renderTexture)`를 호출했다.
 - Play Mode 정지 과정에서 Edit Mode의 `OnDestroy()`가 실행되며 다음 경고가 발생한다.
 
 ```text
@@ -47,7 +47,7 @@ MinimapController:OnDestroy () (at Assets/Scripts/UI/MinimapController.cs:67)
 ### 원인 분석
 
 - 클래스에 `[ExecuteAlways]`가 적용되어 `OnDestroy()`가 Edit Mode에서도 호출될 수 있다.
-- 현재 구현은 `Application.isPlaying` 분기 없이 `Destroy(renderTexture)`만 사용한다.
+- 수정 전 구현은 `Application.isPlaying` 분기 없이 `Destroy(renderTexture)`만 사용했다.
 - `RenderTexture.Release()`는 GPU 리소스를 해제하지만 Unity 오브젝트 자체 파괴를 대신하지 않는다.
 
 ### 수정 후보
@@ -71,7 +71,23 @@ else
 
 ### 비고
 
-- 수정은 별도 `fix/BUG-001-minimap-destroy` 브랜치에서 진행한다.
+- `fix/BUG-001-minimap-destroy` 브랜치에서 Play/Edit Mode별 파괴 방식을 분리했다.
+- 사용자 재확인 결과 BUG-001 경고는 사라지고 BUG-002 패키지 오류만 남았다.
+
+### 수정 및 검증 기록
+
+| 날짜 | 단계 | 내용 | 커밋 |
+|---|---|---|---|
+| 2026-11-03 | 등록 | 정적 분석으로 등록 | 80f58ef |
+| 2026-11-03 | 재현 확인 | Play Mode 정지 시 Console 경고 재현, 로그 첨부 | b8cfb8d |
+| 2026-11-03 | 수정 | `Application.isPlaying` 분기로 `Destroy` / `DestroyImmediate` 분리 | eea623e |
+| 2026-11-03 | 수정 확인 | 사용자 재확인: Play 진입→정지 시 BUG-001 경고 사라짐 | 217bcbe |
+
+| 검증 항목 | 결과 |
+|---|---|
+| Play Mode 종료 시 경고 없음 | 통과 (사용자 확인) |
+| Edit Mode 씬 재로드·오브젝트 제거 시 경고 없음 | 통과 (사용자 확인, 2026-11-03) |
+| Play 진입·종료 3회 반복 시 고아 카메라/RenderTexture 누적 없음 | 통과 (사용자 확인, 2026-11-03) |
 
 ---
 
@@ -79,7 +95,7 @@ else
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Open (재현 확인) |
+| 상태 | Accepted (Won't Fix) |
 | 심각도 | Minor |
 | 우선순위 | P2 |
 | 발견 단계 | M0 기반 정리 |
@@ -129,3 +145,8 @@ An error occurred while resolving packages:
 - 새 터미널에서 `git --version`이 정상 출력되는지 확인한다.
 - Unity와 Unity Hub 재시작 후 Package Manager 오류가 사라지는지 확인한다.
 - MCP 패키지가 없어도 게임 코드 컴파일과 Play가 가능한지 별도로 확인한다.
+
+### 처리 결정
+
+- MCP는 지속적으로 업데이트되는 개발 도구이며, Git 연결이 준비된 환경에서는 바로 사용할 수 있다.
+- 게임 런타임 결함이 아니므로 현재 프로젝트에서 패키지 구조를 변경하지 않고 알려진 개발 환경 제약으로 수용한다.
