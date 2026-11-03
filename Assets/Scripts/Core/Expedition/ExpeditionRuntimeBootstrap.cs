@@ -11,7 +11,18 @@ public static class ExpeditionRuntimeBootstrap
         SceneManager.sceneLoaded += HandleSceneLoaded;
     }
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void EnsureInitialScene()
+    {
+        EnsureForScene(SceneManager.GetActiveScene());
+    }
+
     private static void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        EnsureForScene(scene);
+    }
+
+    private static void EnsureForScene(Scene scene)
     {
         if (scene.name != "BaseCamp" || Object.FindObjectOfType<ExpeditionResultPanel>() != null) return;
         new GameObject("ExpeditionResultPanel(AutoCreated)").AddComponent<ExpeditionResultPanel>();

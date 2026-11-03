@@ -15,6 +15,9 @@
 - 탈출 비용 적용 완료 시점에 결과를 판정하며, 그 비용으로 1,440Tick에 도달하면 생환보다 MIA가 우선
 - BaseCamp에 생환/사망/MIA, 경과 Tick, 도달 층, 획득 아이템을 표시하는 임시 결과 화면과 재출격 버튼 추가
 - `BaseCamp`를 Build Settings에 추가. 상자 루팅 미구현 상태이므로 획득 아이템은 M1에서 없음으로 표시
+- 최초 구현 후 실제 `InDungeon` 씬이 `DungeonSceneBootstrapper/PlayerTurnActor`가 아니라 `_to_delete`의 `DungeonRunManager/GridMover/Tick`을 계속 참조 중인 사실을 확인
+- 실제 씬 진입점에 M1용 3층 생성, 보스방 중앙 계단, 층 이동, 탈출, 누적 Tick 및 MIA 처리를 직접 연결
+- BaseCamp 최초 진입에서도 결과 UI가 생성되도록 런타임 초기화 경로를 보강
 
 ---
 

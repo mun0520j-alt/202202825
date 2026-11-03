@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
 // Dungeon Tools 7) DungeonScene(InDungeon)이 로드되면 Awake에서 자동으로 10개 층을 전부
@@ -33,6 +35,8 @@ public class DungeonRunManager : MonoBehaviour
     private readonly List<FloorLayout> floors = new List<FloorLayout>();
     private readonly List<Tilemap> floorTileTilemaps = new List<Tilemap>();
     private readonly List<Tilemap> floorWallTilemaps = new List<Tilemap>();
+    private GameObject player;
+    private bool resultRequested;
 
     private void Awake()
     {
@@ -42,9 +46,18 @@ public class DungeonRunManager : MonoBehaviour
             return;
         }
 
+        if (!ExpeditionSession.IsActive) ExpeditionSession.BeginNewRun();
         Tick.ResetForNewRun();
+        Tick.OnTick -= HandleTickAdvanced;
+        Tick.OnTick += HandleTickAdvanced;
         GenerateAllFloors();
-        SpawnPlayerAtFloor(0);
+        SpawnPlayerAtFloor(ExpeditionSession.CurrentFloor - 1);
+        CreateFloorExits();
+    }
+
+    private void OnDestroy()
+    {
+        Tick.OnTick -= HandleTickAdvanced;
     }
 
     private void GenerateAllFloors()
@@ -52,7 +65,8 @@ public class DungeonRunManager : MonoBehaviour
         float spacing = gridWidth * chunkSize + floorSpacingMargin;
         var rng = new System.Random(); // 시드 고정 안 함 — 런마다 다르게
 
-        for (int i = 0; i < floorCount; i++)
+        int m1FloorCount = Mathf.Min(floorCount, ExpeditionSession.FinalFloor);
+        for (int i = 0; i < m1FloorCount; i++)
         {
             int seed = rng.Next();
             var layout = FloorLayoutGenerator.Generate(gridWidth, gridHeight, minRooms, maxRooms, seed);
@@ -72,7 +86,7 @@ public class DungeonRunManager : MonoBehaviour
             floorWallTilemaps.Add(wallTilemap);
         }
 
-        Debug.Log($"[DungeonRunManager] {floorCount}개 층 생성 완료.");
+        Debug.Log($"[DungeonRunManager] M1용 {m1FloorCount}개 층 생성 완료.");
     }
 
     private void SpawnPlayerAtFloor(int floorIndex)
@@ -95,7 +109,7 @@ public class DungeonRunManager : MonoBehaviour
             return;
         }
 
-        var player = Instantiate(playerPrefab, worldPos, Quaternion.identity);
+        player = Instantiate(playerPrefab, worldPos, Quaternion.identity);
         player.name = "Player";
 
         var mover = player.GetComponent<GridMover>();
@@ -115,6 +129,83 @@ public class DungeonRunManager : MonoBehaviour
 
         float safeZ = targetCamera.transform.position.z <= -1f ? targetCamera.transform.position.z : -10f;
         targetCamera.transform.position = new Vector3(worldPos.x, worldPos.y, safeZ);
+    }
+
+    private void CreateFloorExits()
+    {
+        for (int i = 0; i < floors.Count; i++)
+        {
+            var layout = floors[i];
+            var tilemap = floorTileTilemaps[i];
+            var exitCell = new Vector3Int(
+                layout.BossCell.x * chunkSize + chunkSize / 2,
+                layout.BossCell.y * chunkSize + chunkSize / 2,
+                0);
+            var exitObject = new GameObject(i == ExpeditionSession.FinalFloor - 1
+                ? "EscapeExit(AutoCreated)"
+                : $"DownStairs_Floor{i + 1}(AutoCreated)");
+            exitObject.transform.SetParent(tilemap.transform.parent, false);
+            exitObject.transform.position = tilemap.GetCellCenterWorld(exitCell);
+            exitObject.AddComponent<DungeonFloorExit>().Initialize(this, player.transform, i + 1);
+        }
+    }
+
+    public void UseFloorExit(int floorNumber)
+    {
+        if (resultRequested || !ExpeditionSession.IsActive || floorNumber != ExpeditionSession.CurrentFloor) return;
+
+        int cost = floorNumber >= ExpeditionSession.FinalFloor ? 30 : Mathf.RoundToInt(TickCost.Interact);
+        Tick.Advance(cost);
+        if (!ExpeditionSession.IsActive) return; // 비용 적용으로 MIA
+
+        if (floorNumber >= ExpeditionSession.FinalFloor)
+        {
+            resultRequested = true;
+            ExpeditionSession.Complete(ExpeditionResult.Escaped);
+            SceneManager.LoadScene("BaseCamp");
+            return;
+        }
+
+        if (!ExpeditionSession.TryAdvanceFloor()) return;
+        MovePlayerToFloor(ExpeditionSession.CurrentFloor - 1);
+    }
+
+    private void MovePlayerToFloor(int floorIndex)
+    {
+        var layout = floors[floorIndex];
+        var floorTilemap = floorTileTilemaps[floorIndex];
+        var startCell = new Vector3Int(
+            layout.StartCell.x * chunkSize + chunkSize / 2,
+            layout.StartCell.y * chunkSize + chunkSize / 2,
+            0);
+        Vector3 worldPosition = floorTilemap.CellToWorld(startCell);
+
+        var mover = player.GetComponent<GridMover>();
+        mover.SetWallTilemap(floorWallTilemaps[floorIndex]);
+        mover.SnapTo(worldPosition);
+
+        if (targetCamera != null)
+        {
+            float safeZ = targetCamera.transform.position.z <= -1f ? targetCamera.transform.position.z : -10f;
+            targetCamera.transform.position = new Vector3(worldPosition.x, worldPosition.y, safeZ);
+        }
+        Debug.Log($"[DungeonRunManager] {ExpeditionSession.CurrentFloor}층으로 하강 — 누적 {Tick.Current} Tick.");
+    }
+
+    private void HandleTickAdvanced(int currentTick)
+    {
+        ExpeditionSession.RecordElapsedTicks(currentTick);
+        if (resultRequested || currentTick < DungeonClock.MIAThresholdTicks) return;
+
+        resultRequested = true;
+        ExpeditionSession.Complete(ExpeditionResult.MIA);
+        StartCoroutine(LoadBaseCampNextFrame());
+    }
+
+    private static IEnumerator LoadBaseCampNextFrame()
+    {
+        yield return null;
+        SceneManager.LoadScene("BaseCamp");
     }
 
     private Tilemap CreateTilemapChild(Transform parent, string name, int sortingOrder)
