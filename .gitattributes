@@ -1,0 +1,30 @@
+# 줄바꿈 자동 정규화
+* text=auto
+
+# Unity YAML (Force Text) — 텍스트로 취급, 병합 시 Unity 도구 사용 가능
+*.unity     text eol=lf merge=unityyamlmerge
+*.prefab    text eol=lf merge=unityyamlmerge
+*.asset     text eol=lf merge=unityyamlmerge
+*.meta      text eol=lf
+*.mat       text eol=lf
+*.anim      text eol=lf
+*.controller text eol=lf
+*.inputactions text eol=lf
+
+# 코드·문서
+*.cs   text eol=crlf
+*.md   text
+*.json text
+
+# 바이너리
+*.png  binary
+*.jpg  binary
+*.psd  binary
+*.aseprite binary
+*.wav  binary
+*.mp3  binary
+*.ogg  binary
+*.ttf  binary
+*.otf  binary
+*.xlsx binary
+*.fbx  binary
