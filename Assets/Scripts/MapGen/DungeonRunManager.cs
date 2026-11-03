@@ -131,7 +131,7 @@ public class DungeonRunManager : MonoBehaviour
 
         var follow = targetCamera.GetComponent<CameraFollow>();
         if (follow == null) follow = targetCamera.gameObject.AddComponent<CameraFollow>();
-        follow.target = player.transform;
+        follow.SetTarget(player.transform);
 
         float safeZ = targetCamera.transform.position.z <= -1f ? targetCamera.transform.position.z : -10f;
         targetCamera.transform.position = new Vector3(worldPos.x, worldPos.y, safeZ);

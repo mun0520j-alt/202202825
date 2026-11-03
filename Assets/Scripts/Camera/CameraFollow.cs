@@ -25,6 +25,12 @@ public class CameraFollow : MonoBehaviour
         }
     }
 
+    public void SetTarget(Transform followTarget)
+    {
+        target = followTarget;
+        enabled = target != null;
+    }
+
     private void LateUpdate()
     {
         transform.position = new Vector3(target.position.x, target.position.y, cameraZ);
