@@ -188,6 +188,15 @@ public class TickManager : MonoBehaviour
         foreach (var entry in registeredActors) entry.NextActionTime = safeTime;
     }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    // QA 경계값 검증 전용. 현재 턴 소유권은 유지하고 모든 액터의 절대 시각만 같은 값으로 맞춘다.
+    public void DebugSetTimeline(float absoluteTime)
+    {
+        float safeTime = Mathf.Max(0f, absoluteTime);
+        foreach (var entry in registeredActors) entry.NextActionTime = safeTime;
+    }
+#endif
+
     // 현재 차례인 액터가 행동을 끝냈을 때 호출. Player/Enemy 둘 다 결국 이 함수 하나로 턴을
     // 넘긴다 — 실제 게임에서 이걸 부르는 건 Player/Enemy ITurnActor 구현체뿐이다.
     //

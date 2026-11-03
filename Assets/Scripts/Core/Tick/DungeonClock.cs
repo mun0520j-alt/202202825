@@ -100,6 +100,16 @@ public class DungeonClock : MonoBehaviour
         OnClockChanged?.Invoke(ElapsedTicks);
     }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    public void DebugSetElapsedTicks(float elapsedTicks)
+    {
+        ElapsedTicks = Mathf.Max(0f, elapsedTicks);
+        IsMIA = ElapsedTicks >= MIAThresholdTicks;
+        OnClockChanged?.Invoke(ElapsedTicks);
+        if (IsMIA) OnMIA?.Invoke();
+    }
+#endif
+
     // 월식의 제단 전용 확장 포인트 — 표시 시각만 자정(00:00)으로 고정한다.
     // 원래는 임의의 시(hour)를 받는 LockDisplayToHour(int hour)였는데, 실제로 이 기능을 쓰는 곳이
     // "항상 자정 고정"뿐이라(ALTAR_AND_TIME_SYSTEM_DESIGN.md) 굳이 아무 시각이나 받게 열어두는 게

@@ -57,6 +57,10 @@ public class DungeonSceneBootstrapper : MonoBehaviour
         if (FindObjectOfType<InventoryPanel>() == null) gameObject.AddComponent<InventoryPanel>();
         if (FindObjectOfType<MinimapController>() == null) gameObject.AddComponent<MinimapController>();
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (FindObjectOfType<ExpeditionDebugCommands>() == null) gameObject.AddComponent<ExpeditionDebugCommands>();
+#endif
+
         CreateFloorExit();
 
         Debug.Log($"[DungeonSceneBootstrapper] {ExpeditionSession.CurrentFloor}층 시작 — 누적 {ExpeditionSession.ElapsedTicks:0} Tick.");

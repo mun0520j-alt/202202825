@@ -38,6 +38,13 @@ public static class ExpeditionSession
         if (IsActive && elapsedTicks > ElapsedTicks) ElapsedTicks = elapsedTicks;
     }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    public static void DebugSetElapsedTicks(float elapsedTicks)
+    {
+        if (IsActive) ElapsedTicks = Mathf.Max(0f, elapsedTicks);
+    }
+#endif
+
     public static bool TryAdvanceFloor()
     {
         if (!IsActive || CurrentFloor >= FinalFloor) return false;
