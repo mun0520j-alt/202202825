@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-11-03
+
+**진행 상태**: M0 BUG-001 미니맵 Edit Mode 파괴 경고 수정, Unity 회귀 검증 대기
+
+- `MinimapController.OnDestroy()`가 실행 환경과 무관하게 `Destroy(renderTexture)`를 호출해 Play Mode 정지 시 Edit Mode 경고가 발생하는 문제를 수정
+- Play Mode에서는 지연 파괴 `Destroy`, Edit Mode에서는 즉시 파괴 `DestroyImmediate`를 사용하도록 분기
+- 카메라의 `targetTexture` 연결 해제와 `RenderTexture.Release()`는 기존 순서를 유지하고, 정리 후 필드 참조를 `null`로 초기화
+- 검증 대기: Play 진입/종료 3회 반복 시 Console 경고 없음, 고아 미니맵 카메라 및 RenderTexture 누적 없음 확인
+
+---
+
 ## 2026-08-28
 
 **진행 상태**: 플레이어 이동(`PlayerTurnActor`) 구현 + Tick 파이프라인 실전 연결 완료, 코드 리뷰 1라운드 완료
