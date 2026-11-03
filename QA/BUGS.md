@@ -6,24 +6,24 @@
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Open |
+| 상태 | Open (재현 확인) |
 | 심각도 | Minor |
 | 우선순위 | P2 |
 | 발견 단계 | M0 기반 정리 |
-| 영향 범위 | Unity Editor, `MinimapController`가 포함된 씬 편집 및 리로드 |
+| 영향 범위 | Unity Editor, `MinimapController`가 포함된 씬에서 Play Mode 종료 |
 | 관련 코드 | `Assets/Scripts/UI/MinimapController.cs:61-69` |
 
 ### 사전 조건
 
 - `[ExecuteAlways]`가 적용된 `MinimapController`가 씬에 존재한다.
 - `Build()`가 실행되어 런타임 생성 `RenderTexture`가 연결돼 있다.
-- Unity가 Play Mode가 아닌 Edit Mode다.
+- Unity Console이 열려 있다.
 
 ### 재현 절차
 
 1. `MinimapController`가 있는 던전 씬을 연다.
-2. Inspector 또는 미니맵 재구성 메뉴로 미니맵을 생성한다.
-3. Edit Mode에서 씬을 다시 불러오거나 `MinimapController` 오브젝트를 제거해 `OnDestroy()`를 실행한다.
+2. Play Mode에 진입한다.
+3. Play Mode를 정지한다.
 4. Console을 확인한다.
 
 ### 기대 결과
@@ -35,9 +35,16 @@
 ### 실제 결과
 
 - `OnDestroy()`가 실행 환경과 관계없이 `Destroy(renderTexture)`를 호출한다.
-- `Destroy`는 지연 파괴 방식이라 Edit Mode 오브젝트 정리에 적합하지 않으며 Unity 경고가 발생할 수 있다.
+- Play Mode 정지 과정에서 Edit Mode의 `OnDestroy()`가 실행되며 다음 경고가 발생한다.
 
-### 정적 분석 근거
+```text
+Destroy may not be called from edit mode! Use DestroyImmediate instead.
+Destroying an object in edit mode destroys it permanently.
+UnityEngine.Object:Destroy (UnityEngine.Object)
+MinimapController:OnDestroy () (at Assets/Scripts/UI/MinimapController.cs:67)
+```
+
+### 원인 분석
 
 - 클래스에 `[ExecuteAlways]`가 적용되어 `OnDestroy()`가 Edit Mode에서도 호출될 수 있다.
 - 현재 구현은 `Application.isPlaying` 분기 없이 `Destroy(renderTexture)`만 사용한다.
@@ -64,5 +71,61 @@ else
 
 ### 비고
 
-- 현재 단계에서는 정적 분석으로 등록했으며 Unity Console 재현 로그는 아직 첨부하지 않았다.
 - 수정은 별도 `fix/BUG-001-minimap-destroy` 브랜치에서 진행한다.
+
+---
+
+## BUG-002 — Git 실행 파일 미탐지로 Unity MCP 패키지 해석 실패
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Open (재현 확인) |
+| 심각도 | Minor |
+| 우선순위 | P2 |
+| 발견 단계 | M0 기반 정리 |
+| 영향 범위 | Git이 PATH에 등록되지 않은 개발 환경의 Unity Package Manager |
+| 관련 설정 | `Packages/manifest.json`의 `com.coplaydev.unity-mcp` Git URL 의존성 |
+
+### 사전 조건
+
+- `com.coplaydev.unity-mcp`가 Git URL 패키지로 등록돼 있다.
+- Unity와 Unity Hub가 실행하는 환경의 PATH에서 `git` 실행 파일을 찾을 수 없다.
+
+### 재현 절차
+
+1. Git이 설치되지 않았거나 PATH에서 탐지되지 않는 환경에서 프로젝트를 연다.
+2. Unity Package Manager가 프로젝트 의존성을 해석할 때까지 기다린다.
+3. Package Manager 오류 창 또는 Console을 확인한다.
+
+### 기대 결과
+
+- 프로젝트 패키지 의존성이 정상적으로 해석된다.
+- 개발용 MCP 패키지 문제 때문에 프로젝트 로드가 오류 상태가 되지 않는다.
+
+### 실제 결과
+
+Unity가 Git URL 의존성을 가져오지 못해 다음 오류를 표시한다.
+
+```text
+An error occurred while resolving packages:
+  Project has invalid dependencies:
+    com.coplaydev.unity-mcp: No 'git' executable was found. Please install Git on your system then restart Unity and Unity Hub
+```
+
+### 원인 분석
+
+- `com.coplaydev.unity-mcp`가 로컬 또는 Registry 패키지가 아니라 Git URL로 선언돼 있다.
+- Unity Package Manager가 해당 패키지를 내려받으려면 외부 `git` 실행 파일이 필요하다.
+- 게임 런타임 기능이 아니라 개발 도구 의존성 문제이므로 게임 플레이 결함과 분리해 추적한다.
+
+### 수정 후보
+
+- Unity와 Unity Hub를 실행하는 환경의 PATH에 Git을 등록하고 두 프로그램을 재시작한다.
+- 팀 공용 개발 환경 안내에 Git 설치 및 PATH 확인 절차를 추가한다.
+- MCP가 필수 개발 의존성이 아니라면 프로젝트 필수 패키지와 분리하는 방안을 검토한다.
+
+### 검증 항목
+
+- 새 터미널에서 `git --version`이 정상 출력되는지 확인한다.
+- Unity와 Unity Hub 재시작 후 Package Manager 오류가 사라지는지 확인한다.
+- MCP 패키지가 없어도 게임 코드 컴파일과 Play가 가능한지 별도로 확인한다.
