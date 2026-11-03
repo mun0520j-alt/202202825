@@ -1,7 +1,6 @@
 using System.Collections.Generic;
-using System.Collections;
 using UnityEngine;
-using UnityEngine.SceneManagement;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.Tilemaps;
 
 // 실제 InDungeon 씬이 GUID로 직접 참조하는 런타임 진입점이다.
@@ -47,7 +46,6 @@ public class DungeonRunManager : MonoBehaviour
     private readonly List<Tilemap> floorTileTilemaps = new List<Tilemap>();
     private readonly List<Tilemap> floorWallTilemaps = new List<Tilemap>();
     private GameObject player;
-    private bool resultRequested;
 
     public int EscapeProcedureTickCost => escapeProcedureTickCost;
 
@@ -60,17 +58,10 @@ public class DungeonRunManager : MonoBehaviour
         }
 
         if (!ExpeditionSession.IsActive) ExpeditionSession.BeginNewRun();
-        Tick.ResetForNewRun();
-        Tick.OnTick -= HandleTickAdvanced;
-        Tick.OnTick += HandleTickAdvanced;
         GenerateAllFloors();
         SpawnPlayerAtFloor(ExpeditionSession.CurrentFloor - 1);
-        CreateFloorExits();
-    }
-
-    private void OnDestroy()
-    {
-        Tick.OnTick -= HandleTickAdvanced;
+        CreateFogForFloor(ExpeditionSession.CurrentFloor - 1);
+        if (GetComponent<DungeonSceneBootstrapper>() == null) gameObject.AddComponent<DungeonSceneBootstrapper>();
     }
 
     private void GenerateAllFloors()
@@ -130,11 +121,12 @@ public class DungeonRunManager : MonoBehaviour
         var playerRenderer = player.GetComponentInChildren<SpriteRenderer>();
         if (playerRenderer != null) playerRenderer.sortingOrder = 2;
 
-        var mover = player.GetComponent<GridMover>();
-        if (mover == null) mover = player.AddComponent<GridMover>();
-        mover.SetMoveDuration(playerMoveDuration);
-        mover.SetWallTilemap(wallTilemap);
-        mover.SnapTo(worldPos);
+        var collider = player.GetComponent<BoxCollider2D>();
+        if (collider == null) collider = player.AddComponent<BoxCollider2D>();
+
+        var actor = player.GetComponent<PlayerTurnActor>();
+        if (actor == null) actor = player.AddComponent<PlayerTurnActor>();
+        actor.ConfigureRuntime(wallTilemap, floorTilemap, playerMoveDuration, 0.4f);
 
         if (targetCamera == null)
         {
@@ -147,87 +139,22 @@ public class DungeonRunManager : MonoBehaviour
         follow.SetCameraZ(cameraZ);
         follow.SetTarget(player.transform);
 
+        var pixelPerfect = targetCamera.GetComponent<PixelPerfectCamera>();
+        if (pixelPerfect != null) pixelPerfect.enabled = false;
         targetCamera.orthographicSize = cameraOrthographicSize;
         targetCamera.transform.position = new Vector3(worldPos.x, worldPos.y, cameraZ);
     }
 
-    private void CreateFloorExits()
+    private void CreateFogForFloor(int floorIndex)
     {
-        for (int i = 0; i < floors.Count; i++)
-        {
-            var layout = floors[i];
-            var tilemap = floorTileTilemaps[i];
-            var exitCell = new Vector3Int(
-                layout.BossCell.x * chunkSize + chunkSize / 2,
-                layout.BossCell.y * chunkSize + chunkSize / 2,
-                0);
-            var exitObject = new GameObject(i == ExpeditionSession.FinalFloor - 1
-                ? "EscapeExit(AutoCreated)"
-                : $"DownStairs_Floor{i + 1}(AutoCreated)");
-            exitObject.transform.SetParent(tilemap.transform.parent, false);
-            exitObject.transform.position = tilemap.GetCellCenterWorld(exitCell);
-            exitObject.AddComponent<DungeonFloorExit>().Initialize(this, player.transform, i + 1);
-        }
-    }
-
-    public void UseFloorExit(int floorNumber)
-    {
-        if (resultRequested || !ExpeditionSession.IsActive || floorNumber != ExpeditionSession.CurrentFloor) return;
-
-        int cost = floorNumber >= ExpeditionSession.FinalFloor ? escapeProcedureTickCost : Mathf.RoundToInt(TickCost.Interact);
-        // 절차 비용을 1 Tick씩 발행해 Tick 구독 적이 소비 시간만큼 행동하게 한다.
-        Tick.Advance(cost, () => ExpeditionSession.IsActive && !resultRequested);
-        if (!ExpeditionSession.IsActive) return; // 비용 적용으로 MIA
-
-        if (floorNumber >= ExpeditionSession.FinalFloor)
-        {
-            resultRequested = true;
-            ExpeditionSession.Complete(ExpeditionResult.Escaped);
-            SceneManager.LoadScene("BaseCamp");
-            return;
-        }
-
-        if (!ExpeditionSession.TryAdvanceFloor()) return;
-        MovePlayerToFloor(ExpeditionSession.CurrentFloor - 1);
-    }
-
-    private void MovePlayerToFloor(int floorIndex)
-    {
-        var layout = floors[floorIndex];
         var floorTilemap = floorTileTilemaps[floorIndex];
-        var startCell = new Vector3Int(
-            layout.StartCell.x * chunkSize + chunkSize / 2,
-            layout.StartCell.y * chunkSize + chunkSize / 2,
-            0);
-        Vector3 worldPosition = floorTilemap.CellToWorld(startCell) +
-                                new Vector3(playerCellOffsetX, playerCellOffsetY, 0f);
+        var fogObject = new GameObject("Fog", typeof(Tilemap), typeof(TilemapRenderer));
+        fogObject.transform.SetParent(floorTilemap.transform.parent, false);
+        var fogTilemap = fogObject.GetComponent<Tilemap>();
+        fogObject.GetComponent<TilemapRenderer>().sortingOrder = 10;
 
-        var mover = player.GetComponent<GridMover>();
-        mover.SetWallTilemap(floorWallTilemaps[floorIndex]);
-        mover.SnapTo(worldPosition);
-
-        if (targetCamera != null)
-        {
-            targetCamera.orthographicSize = cameraOrthographicSize;
-            targetCamera.transform.position = new Vector3(worldPosition.x, worldPosition.y, cameraZ);
-        }
-        Debug.Log($"[DungeonRunManager] {ExpeditionSession.CurrentFloor}층으로 하강 — 누적 {Tick.Current} Tick.");
-    }
-
-    private void HandleTickAdvanced(int currentTick)
-    {
-        ExpeditionSession.RecordElapsedTicks(currentTick);
-        if (resultRequested || currentTick < DungeonClock.MIAThresholdTicks) return;
-
-        resultRequested = true;
-        ExpeditionSession.Complete(ExpeditionResult.MIA);
-        StartCoroutine(LoadBaseCampNextFrame());
-    }
-
-    private static IEnumerator LoadBaseCampNextFrame()
-    {
-        yield return null;
-        SceneManager.LoadScene("BaseCamp");
+        var fog = fogObject.AddComponent<FogOfWarController>();
+        fog.ConfigureRuntime(floorTilemap, floorWallTilemaps[floorIndex], fogTilemap);
     }
 
     private Tilemap CreateTilemapChild(Transform parent, string name, int sortingOrder)

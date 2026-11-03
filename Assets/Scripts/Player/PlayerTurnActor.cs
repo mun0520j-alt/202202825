@@ -103,6 +103,7 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     private Vector3Int currentCell;
     private bool isMyTurn;
     private bool isAnimating;
+    private bool runtimeInitialized;
 
     // 마우스 클릭으로 예약된 자동 이동 경로. 비어있으면 자동 이동 없음.
     private Queue<Vector3Int> queuedAutoPath;
@@ -119,11 +120,27 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
 
         if (wallsTilemap == null || floorTilemap == null)
         {
-            Debug.LogError("[PlayerTurnActor] wallsTilemap/floorTilemap이 Inspector에 연결 안 돼있습니다 — " +
-                            "MapGenPreview 하위의 Walls/Floor 타일맵을 드래그해서 연결해주세요.");
             enabled = false;
             return;
         }
+
+        InitializeRuntimeComponents();
+    }
+
+    public void ConfigureRuntime(Tilemap walls, Tilemap floor, float moveDuration, float moveHopHeight)
+    {
+        wallsTilemap = walls;
+        floorTilemap = floor;
+        hopDuration = Mathf.Max(0.01f, moveDuration);
+        hopHeight = Mathf.Max(0f, moveHopHeight);
+        InitializeRuntimeComponents();
+        enabled = true;
+    }
+
+    private void InitializeRuntimeComponents()
+    {
+        if (runtimeInitialized || wallsTilemap == null || floorTilemap == null) return;
+        runtimeInitialized = true;
 
         // 시작 위치를 논리 좌표로 스냅 — 에디터 툴이 배치한 월드 좌표를 셀 좌표로 역산.
         currentCell = floorTilemap.WorldToCell(transform.position);
@@ -136,12 +153,14 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
 
         // [2026-09-04 신규] HP바 생성 + 초기값 반영 — AlertIndicator와 동일하게 Awake에서
         // 붙여서 씬에 배치만 하면 자동으로 준비되게 한다.
-        healthBar = gameObject.AddComponent<ProceduralHealthBar>();
+        healthBar = GetComponent<ProceduralHealthBar>();
+        if (healthBar == null) healthBar = gameObject.AddComponent<ProceduralHealthBar>();
         healthBar.SetFill((float)currentHP / maxHP);
 
         // [2026-09-04 신규] 장비 컴포넌트 부착 — PlayerEquipment.Awake()가 자체적으로 테스트용
         // 기본 장비를 자동 장착해준다(에셋 없이도 바로 확인 가능, PlayerEquipment.cs 참고).
-        equipment = gameObject.AddComponent<PlayerEquipment>();
+        equipment = GetComponent<PlayerEquipment>();
+        if (equipment == null) equipment = gameObject.AddComponent<PlayerEquipment>();
     }
 
     private void OnDestroy()
@@ -398,13 +417,7 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         Vector3 cellOrigin = floorTilemap.CellToWorld(cell); // 셀의 바닥-왼쪽 모서리(정수 좌표)
         Vector3 cellSize = floorTilemap.cellSize;
 
-        float footOffsetY = 0f;
-        if (spriteRenderer != null && spriteRenderer.sprite != null)
-        {
-            footOffsetY = spriteRenderer.sprite.bounds.extents.y;
-        }
-
-        return cellOrigin + new Vector3(cellSize.x * 0.5f, footOffsetY, 0f);
+        return cellOrigin + new Vector3(cellSize.x * 0.5f, 0f, 0f);
     }
 
     // 한 칸 이동을 시도한다. 벽이면 false(턴 소모 없음), 성공하면 애니메이션 코루틴을 시작하고 true.
