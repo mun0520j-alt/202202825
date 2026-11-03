@@ -13,6 +13,7 @@ public sealed class ExpeditionManager : MonoBehaviour
 
     private DungeonClock dungeonClock;
     private bool transitionRequested;
+    private PlayerTurnActor exitProcedurePlayer;
 
     public float FloorChangeTickCost => floorChangeTickCost;
     public float EscapeProcedureTickCost => escapeProcedureTickCost;
@@ -56,13 +57,14 @@ public sealed class ExpeditionManager : MonoBehaviour
         if (!player.TrySpendInteraction(cost)) return false;
 
         transitionRequested = true;
+        exitProcedurePlayer = player;
         StartCoroutine(ResolveExitAfterTick());
         return true;
     }
 
     public void CompleteDeath()
     {
-        if (transitionRequested || !ExpeditionSession.IsActive) return;
+        if (!ExpeditionSession.IsActive) return;
         transitionRequested = true;
         ExpeditionSession.Complete(ExpeditionResult.Dead);
         SceneManager.LoadScene("BaseCamp");
@@ -70,9 +72,21 @@ public sealed class ExpeditionManager : MonoBehaviour
 
     private IEnumerator ResolveExitAfterTick()
     {
-        // CompleteTurn/OnMIA 호출 스택이 모두 끝난 다음 씬을 바꾼다.
-        yield return null;
-        if (!ExpeditionSession.IsActive) yield break; // 절차 비용으로 MIA가 된 경우
+        // 비용만 지불하고 다음 프레임에 생환시키지 않는다. 해당 시간만큼 적 턴이 처리되고
+        // 플레이어 차례가 다시 돌아오거나 사망/MIA가 확정될 때까지 완료 판정을 보류한다.
+        do
+        {
+            yield return null;
+        }
+        while (ExpeditionSession.IsActive && exitProcedurePlayer != null &&
+               !exitProcedurePlayer.IsDead && !exitProcedurePlayer.IsReadyForInput);
+
+        if (!ExpeditionSession.IsActive) yield break;
+        if (exitProcedurePlayer != null && exitProcedurePlayer.IsDead)
+        {
+            CompleteDeath();
+            yield break;
+        }
 
         if (ExpeditionSession.CurrentFloor >= ExpeditionSession.FinalFloor)
         {
@@ -92,7 +106,7 @@ public sealed class ExpeditionManager : MonoBehaviour
 
     private void HandleMIA()
     {
-        if (transitionRequested || !ExpeditionSession.IsActive) return;
+        if (!ExpeditionSession.IsActive) return;
         transitionRequested = true;
         ExpeditionSession.RecordElapsedTicks(dungeonClock.ElapsedTicks);
         ExpeditionSession.Complete(ExpeditionResult.MIA);

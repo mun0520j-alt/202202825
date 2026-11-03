@@ -79,6 +79,8 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     public Vector3Int CurrentCell => currentCell;
     public Tilemap FloorTilemap => floorTilemap;
     public Tilemap WallsTilemap => wallsTilemap;
+    public bool IsDead => isDead;
+    public bool IsReadyForInput => isMyTurn && !isAnimating && !isDead;
 
     // 방향키 -> 이동 방향(셀 단위) 매핑. 4방향만(대각선 없음, 2026-08-27 확정).
     private static readonly Dictionary<KeyCode, Vector3Int> DirectionKeys = new Dictionary<KeyCode, Vector3Int>

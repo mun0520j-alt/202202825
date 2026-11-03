@@ -8,10 +8,15 @@ public static class Tick
     public static int Current { get; private set; }
     public static event Action<int> OnTick;
 
-    public static void Advance(int amount = 1)
+    public static void Advance(int amount = 1, Func<bool> continueCondition = null)
     {
-        Current += amount;
-        OnTick?.Invoke(Current);
+        int safeAmount = Math.Max(0, amount);
+        for (int i = 0; i < safeAmount; i++)
+        {
+            if (continueCondition != null && !continueCondition()) break;
+            Current++;
+            OnTick?.Invoke(Current);
+        }
     }
 
     public static void ResetForNewRun()

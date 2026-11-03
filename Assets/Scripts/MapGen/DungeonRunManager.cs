@@ -161,7 +161,8 @@ public class DungeonRunManager : MonoBehaviour
         if (resultRequested || !ExpeditionSession.IsActive || floorNumber != ExpeditionSession.CurrentFloor) return;
 
         int cost = floorNumber >= ExpeditionSession.FinalFloor ? escapeProcedureTickCost : Mathf.RoundToInt(TickCost.Interact);
-        Tick.Advance(cost);
+        // 절차 비용을 1 Tick씩 발행해 Tick 구독 적이 소비 시간만큼 행동하게 한다.
+        Tick.Advance(cost, () => ExpeditionSession.IsActive && !resultRequested);
         if (!ExpeditionSession.IsActive) return; // 비용 적용으로 MIA
 
         if (floorNumber >= ExpeditionSession.FinalFloor)
