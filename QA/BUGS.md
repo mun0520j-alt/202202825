@@ -268,3 +268,53 @@ An error occurred while resolving packages:
 | 2026-11-03 | 원인 확인 | 씬이 `_to_delete`의 컴파일 제외 스크립트 GUID를 참조 | 기록 목적 등록 |
 | 2026-11-03 | 수정 | GUID 보존 이동으로 컴파일 및 씬 참조 복구 | e47ec10 |
 | 2026-11-03 | 종료 | 타입 오류 해소 확인, Closed 처리 | 문서 커밋 |
+
+---
+
+## BUG-005 — 런타임 Enemy 생성 중 체력바 초기화 NullReferenceException
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Fixed (검증 대기) |
+| 심각도 | Major |
+| 우선순위 | P1 |
+| 발견 단계 | M1 원정 한 바퀴 |
+| 영향 범위 | `DungeonRunManager`의 층별 Enemy 런타임 생성 |
+| 관련 코드 | `ProceduralHealthBar.SetFill()`, `EnemyTurnActor.TryInitialize()` |
+
+### 재현 절차
+
+1. `InDungeon`에 진입해 `DungeonRunManager`가 Enemy를 생성하도록 한다.
+2. 비활성 상태로 생성된 Enemy에 `EnemyTurnActor.ConfigureRuntime()`이 호출될 때까지 기다린다.
+3. Console을 확인한다.
+
+### 기대 결과
+
+- Enemy의 Tilemap 참조와 체력바가 초기화된다.
+- Enemy가 활성화되어 TickManager에 등록된다.
+
+### 실제 결과 (수정 전)
+
+```text
+NullReferenceException: Object reference not set to an instance of an object
+ProceduralHealthBar.SetFill (System.Single ratio01) (at Assets/Scripts/UI/ProceduralHealthBar.cs:76)
+EnemyTurnActor.TryInitialize () (at Assets/Scripts/Enemy/EnemyTurnActor.cs:129)
+DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunManager.cs:227)
+```
+
+### 원인 분석
+
+- Enemy를 안전하게 구성하기 위해 GameObject를 비활성 상태로 만든 뒤 컴포넌트를 추가했다.
+- 비활성 GameObject의 `ProceduralHealthBar.Awake()`보다 `EnemyTurnActor`의 초기 `SetFill()` 호출이 먼저 실행됐다.
+- `fillTransform`과 `fillRenderer`가 아직 생성되지 않아 NullReferenceException이 발생했다.
+
+### 수정 내용
+
+- `ProceduralHealthBar.Build()`을 중복 호출 가능한 형태로 변경했다.
+- `SetFill()`이 내부 뷰를 먼저 지연 초기화하므로 Awake 호출 순서와 무관하게 동작한다. (`6c2b0b0`)
+
+### 검증 항목
+
+- InDungeon 진입 시 Enemy 3개가 오류 없이 생성되는지 확인한다.
+- Enemy 체력바가 표시되고 TickManager 행동 로그가 발생하는지 확인한다.
+- 플레이어 공격 후 체력바가 정상 갱신되는지 확인한다.
