@@ -115,6 +115,7 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     private bool isMyTurn;
     private bool isAnimating;
     private bool runtimeInitialized;
+    private bool queuedWaitInput;
 
     // 마우스 클릭으로 예약된 자동 이동 경로. 비어있으면 자동 이동 없음.
     private Queue<Vector3Int> queuedAutoPath;
@@ -225,6 +226,10 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
 
     private void Update()
     {
+        // Enemy 행동 처리 중 눌린 Space도 버리지 않고 다음 Player 턴에 1회 실행한다.
+        // bool 예약이라 키 연타가 여러 턴의 대기로 누적되지는 않는다.
+        if (Input.GetKeyDown(KeyCode.Space)) queuedWaitInput = true;
+
         // [2026-09-03 신규] 사망 처리는 TakeDamage() 안에서 바로 씬 전환을 부르지 않고 여기
         // Update()에서 한 프레임 늦게 실행한다 — TakeDamage가 Enemy의 OnTurnStart 안(TickManager.
         // AdvanceSchedule 반복문 도중)에서 호출될 수도 있는데, 그 호출 스택 한가운데서 바로
@@ -247,20 +252,21 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
 
         if (!isMyTurn || isAnimating) return;
 
+        if (queuedWaitInput)
+        {
+            queuedWaitInput = false;
+            ClearQueuedAutoPath();
+            isMyTurn = false;
+            TickManager.Instance.CompleteTurn(this, TickCost.PerTileMove);
+            return;
+        }
+
         // 수동 입력(방향키/클릭)은 항상 자동 이동보다 우선한다 — 자동 이동 중에 방향키를
         // 누르거나 다른 타일을 클릭하면 기존 예약 경로를 버리고 새 입력을 따른다.
         if (TryReadDirectionKey(out var manualStep))
         {
             ClearQueuedAutoPath();
             TryStep(manualStep);
-            return;
-        }
-
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            ClearQueuedAutoPath();
-            isMyTurn = false;
-            TickManager.Instance.CompleteTurn(this, TickCost.PerTileMove);
             return;
         }
 
