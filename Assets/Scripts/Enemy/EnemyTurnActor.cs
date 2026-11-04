@@ -39,10 +39,10 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     // 시스템이 들어오기 전까지 임시). 몹마다 스탯만 다르게(2~3종) 두는 버티컬 슬라이스 방침이라
     // Inspector에서 몹 프리팹별로 값을 다르게 세팅하면 그대로 난이도 차등이 됨.
     [Header("전투 (2026-09-03 신규, placeholder — 인스펙터에서 확인용)")]
-    [SerializeField] private int maxHP = 5;
-    [SerializeField] private int currentHP = 5;
+    [SerializeField] private int maxHP = 12;
+    [SerializeField] private int currentHP = 12;
     [SerializeField] private int attackPower = 2;
-    [SerializeField] private int defensePower = 0;
+    [SerializeField] private int defensePower = 1;
 
     // 발 위치 보정(Y)에 쓴다 — 아래 GetCellFootWorldPosition() 주석 참고.
     private SpriteRenderer spriteRenderer;
