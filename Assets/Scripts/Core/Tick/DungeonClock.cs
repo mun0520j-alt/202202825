@@ -128,8 +128,13 @@ public class DungeonClock : MonoBehaviour
     // 가장 앞선 지점(=최댓값)이어야 한다. 그래서 += 대신 Mathf.Max로 바꿨다 — 여러 액터가
     // 번갈아 보고해도 시간축이 이미 도달한 지점보다 뒤로는 절대 안 줄어들고(최댓값이라
     // 단조증가), 같은 지점을 여러 액터가 나눠서 채워도 중복으로 안 쌓인다.
-    private void HandleTimeAdvanced(float actorNextActionTime)
+    private void HandleTimeAdvanced(ITurnActor actor, float actorNextActionTime)
     {
+        // 던전의 전역 시간은 플레이어가 선택해 소비한 행동 비용으로만 전진한다.
+        // Enemy의 NextActionTime은 같은 시간축 안에서 행동 순서를 정하는 예약값이며,
+        // 이를 전역 시계에 다시 반영하면 피격/추격 때 시간이 이중으로 흐른다.
+        if (!(actor is PlayerTurnActor)) return;
+
         // 이미 MIA 판정이 난 뒤에는(예: 이미 24시간 넘겨서 못 돌아온 상태) 더 갱신해봤자 의미가
         // 없어서 여기서 조용히 무시한다 — OnMIA가 중복으로 여러 번 발생하는 것도 막아준다.
         if (IsMIA) return;
