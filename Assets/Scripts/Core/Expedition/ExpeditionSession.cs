@@ -43,6 +43,11 @@ public static class ExpeditionSession
     {
         if (IsActive) ElapsedTicks = Mathf.Max(0f, elapsedTicks);
     }
+
+    public static void DebugSetCurrentFloor(int floor)
+    {
+        if (IsActive) CurrentFloor = Mathf.Clamp(floor, FirstFloor, FinalFloor);
+    }
 #endif
 
     public static bool TryAdvanceFloor()

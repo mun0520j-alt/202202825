@@ -5,11 +5,24 @@ using UnityEngine;
 public sealed class ExpeditionDebugCommands : MonoBehaviour
 {
     [Min(0f)] public float targetElapsedTicks = 1439f;
+    [Min(1)] public int targetPlayerHP = 1;
 
     [ContextMenu("QA/Set Elapsed Tick")]
     public void SetConfiguredTick()
     {
         SetElapsedTicks(targetElapsedTicks);
+    }
+
+    [ContextMenu("QA/Build M1 Debug Map")]
+    public void BuildM1DebugMap()
+    {
+        M1DebugMapBuilder.BuildNearPlayer();
+    }
+
+    [ContextMenu("QA/Set Player HP")]
+    public void SetConfiguredPlayerHP()
+    {
+        if (PlayerTurnActor.Instance != null) PlayerTurnActor.Instance.DebugSetCurrentHP(targetPlayerHP);
     }
 
     public static bool SetElapsedTicks(float elapsedTicks)

@@ -82,6 +82,16 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     public bool IsDead => isDead;
     public bool IsReadyForInput => isMyTurn && !isAnimating && !isDead;
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    public void DebugSetCurrentHP(int hp)
+    {
+        currentHP = Mathf.Clamp(hp, 1, maxHP);
+        isDead = false;
+        healthBar?.SetFill((float)currentHP / maxHP);
+        Debug.Log($"[QA] 플레이어 HP를 {currentHP}/{maxHP}(으)로 설정했습니다.");
+    }
+#endif
+
     // 방향키 -> 이동 방향(셀 단위) 매핑. 4방향만(대각선 없음, 2026-08-27 확정).
     private static readonly Dictionary<KeyCode, Vector3Int> DirectionKeys = new Dictionary<KeyCode, Vector3Int>
     {

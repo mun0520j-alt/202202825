@@ -66,6 +66,17 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     private bool isAnimating;
     private bool isInitialized;
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    public void DebugTeleportTo(Vector3Int cell)
+    {
+        if (!TryInitialize()) return;
+        StopAllCoroutines();
+        isAnimating = false;
+        currentCell = cell;
+        transform.position = GetCellFootWorldPosition(cell);
+    }
+#endif
+
     // behaviorType(Idle/Wander)은 "Player를 못 봤을 때의 평소 기본 행동"이고, 추적은 그 위에
     // 얹히는 임시 상태다(2026-08-28 결정, "감지 -> 추적 -> 놓치면 마지막 위치 -> 배회 복귀"
     // 요청 반영) — 그래서 EnemyBehaviorType에 별도 Trace 항목을 안 만들고 이 두 필드로

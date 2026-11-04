@@ -4,6 +4,17 @@
 > 임시값: 층 이동 5 Tick · 탈출 절차 10 Tick · MIA 1,440 Tick. 판정은 **탈출 완료 시점** 기준, 우선순위 Dead > MIA > Escaped.
 > 결과: Pass / Fail(BUG-ID) / Blocked(사유) / 미실행
 
+### 빠른 검증용 런타임 맵
+
+에디터 또는 Development Build에서 `ExpeditionDebugCommands` 컴포넌트 메뉴의
+`QA/Build M1 Debug Map`을 실행하면 플레이어 주변 9×9 구역에 다음 항목이 배치된다.
+
+- 왼쪽 2칸: 상자 자리표시자(M2, 루팅 기능 없음)
+- 위쪽 2칸: Enemy 1개(BUG-003 행동·사망 검증용)
+- 오른쪽 2칸: 3층 탈출구(10Tick)
+
+같은 컴포넌트에서 누적 Tick과 플레이어 HP도 지정할 수 있다. 이 장치는 런타임 타일만 바꾸며 씬 파일은 수정하지 않는다.
+
 ## 1. 상태 전이
 
 ```
