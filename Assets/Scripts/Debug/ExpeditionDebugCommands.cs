@@ -7,6 +7,26 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
 {
     [Min(0f)] public float targetElapsedTicks = 1439f;
     [Min(1)] public int targetPlayerHP = 1;
+    [SerializeField] private bool showTileGrid;
+
+    private GUIStyle gridLabelStyle;
+
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.F3)) showTileGrid = !showTileGrid;
+    }
+
+    private void OnGUI()
+    {
+        if (!showTileGrid) return;
+        DrawTileGridOverlay();
+    }
+
+    [ContextMenu("QA/Toggle Tile Grid (F3)")]
+    public void ToggleTileGrid()
+    {
+        showTileGrid = !showTileGrid;
+    }
 
     [ContextMenu("QA/Set Elapsed Tick")]
     public void SetConfiguredTick()
@@ -42,6 +62,109 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
         ExpeditionSession.DebugSetElapsedTicks(safeTick);
         Debug.Log($"[QA] 누적 Tick을 {safeTick:0.##}(으)로 설정했습니다.");
         return true;
+    }
+
+    private void DrawTileGridOverlay()
+    {
+        var player = PlayerTurnActor.Instance;
+        var camera = Camera.main;
+        if (player == null || camera == null || player.FloorTilemap == null || player.WallsTilemap == null) return;
+
+        Tilemap floor = player.FloorTilemap;
+        Tilemap walls = player.WallsTilemap;
+        Vector3Int playerCell = player.CurrentCell;
+
+        Vector3 bottomLeftWorld = camera.ViewportToWorldPoint(new Vector3(0f, 0f, -camera.transform.position.z));
+        Vector3 topRightWorld = camera.ViewportToWorldPoint(new Vector3(1f, 1f, -camera.transform.position.z));
+        Vector3Int minCell = floor.WorldToCell(bottomLeftWorld) - Vector3Int.one;
+        Vector3Int maxCell = floor.WorldToCell(topRightWorld) + Vector3Int.one;
+
+        EnsureGridLabelStyle();
+        for (int y = minCell.y; y <= maxCell.y; y++)
+        {
+            for (int x = minCell.x; x <= maxCell.x; x++)
+            {
+                var cell = new Vector3Int(x, y, 0);
+                Rect rect = CellToGuiRect(floor, camera, cell);
+                if (rect.width < 2f || rect.height < 2f) continue;
+
+                bool hasFloor = floor.HasTile(cell);
+                bool hasWall = walls.HasTile(cell);
+                Color fill = hasWall
+                    ? new Color(1f, 0.1f, 0.1f, 0.28f)
+                    : hasFloor ? new Color(0.1f, 0.9f, 0.35f, 0.12f) : new Color(0.25f, 0.25f, 0.25f, 0.08f);
+                FillRect(rect, fill);
+                DrawRectOutline(rect, hasWall ? Color.red : hasFloor ? Color.green : Color.gray, 1f);
+
+                string direction = GetDirectionLabel(playerCell, cell);
+                if (cell == playerCell)
+                {
+                    DrawRectOutline(rect, Color.yellow, 3f);
+                    direction = "PLAYER";
+                }
+                else if (!string.IsNullOrEmpty(direction))
+                {
+                    DrawRectOutline(rect, new Color(1f, 0.55f, 0f), 3f);
+                }
+
+                if (rect.width >= 34f)
+                {
+                    string state = hasWall ? "W" : hasFloor ? "F" : "-";
+                    GUI.Label(rect, $"{x},{y}\n{state} {direction}", gridLabelStyle);
+                }
+            }
+        }
+
+        GUI.Box(new Rect(12f, 12f, 310f, 68f),
+            "F3: Grid 끄기\n초록=Floor / 빨강=Wall / 노랑=Player\n주황=플레이어 상하좌우 검색 칸");
+    }
+
+    private void EnsureGridLabelStyle()
+    {
+        if (gridLabelStyle != null) return;
+        gridLabelStyle = new GUIStyle(GUI.skin.label)
+        {
+            alignment = TextAnchor.MiddleCenter,
+            fontSize = 10,
+            normal = { textColor = Color.white }
+        };
+    }
+
+    private static Rect CellToGuiRect(Tilemap tilemap, Camera camera, Vector3Int cell)
+    {
+        Vector3 worldMin = tilemap.CellToWorld(cell);
+        Vector3 worldMax = tilemap.CellToWorld(cell + Vector3Int.one);
+        Vector3 screenMin = camera.WorldToScreenPoint(worldMin);
+        Vector3 screenMax = camera.WorldToScreenPoint(worldMax);
+        float x = Mathf.Min(screenMin.x, screenMax.x);
+        float y = Screen.height - Mathf.Max(screenMin.y, screenMax.y);
+        return new Rect(x, y, Mathf.Abs(screenMax.x - screenMin.x), Mathf.Abs(screenMax.y - screenMin.y));
+    }
+
+    private static string GetDirectionLabel(Vector3Int origin, Vector3Int cell)
+    {
+        Vector3Int delta = cell - origin;
+        if (delta == Vector3Int.up) return "+Y";
+        if (delta == Vector3Int.down) return "-Y";
+        if (delta == Vector3Int.right) return "+X";
+        if (delta == Vector3Int.left) return "-X";
+        return string.Empty;
+    }
+
+    private static void FillRect(Rect rect, Color color)
+    {
+        Color previous = GUI.color;
+        GUI.color = color;
+        GUI.DrawTexture(rect, Texture2D.whiteTexture);
+        GUI.color = previous;
+    }
+
+    private static void DrawRectOutline(Rect rect, Color color, float thickness)
+    {
+        FillRect(new Rect(rect.xMin, rect.yMin, rect.width, thickness), color);
+        FillRect(new Rect(rect.xMin, rect.yMax - thickness, rect.width, thickness), color);
+        FillRect(new Rect(rect.xMin, rect.yMin, thickness, rect.height), color);
+        FillRect(new Rect(rect.xMax - thickness, rect.yMin, thickness, rect.height), color);
     }
 
     private static bool BuildNearPlayer()
