@@ -109,6 +109,7 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     // GetComponentInChildren를 쓰는 이유: knight_m 같은 프리팹은 SpriteRenderer가 이
     // 오브젝트 자신이 아니라 자식 오브젝트에 붙어있을 수도 있어서(둘 다 대응).
     private SpriteRenderer spriteRenderer;
+    private BoxCollider2D movementCollider;
 
     private Vector3Int currentCell;
     private bool isMyTurn;
@@ -152,8 +153,10 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         if (runtimeInitialized || wallsTilemap == null || floorTilemap == null) return;
         runtimeInitialized = true;
 
-        // 시작 위치를 논리 좌표로 스냅 — 에디터 툴이 배치한 월드 좌표를 셀 좌표로 역산.
-        currentCell = floorTilemap.WorldToCell(transform.position);
+        // 루트 Transform이 아니라 발밑 Collider 중심을 실제 점유 셀 기준점으로 사용한다.
+        // Transform을 직접 변환하면 디버그 PLAYER 셀과 상하좌우 검색이 화면보다 한 칸 위로 잡힌다.
+        movementCollider = GetComponent<BoxCollider2D>();
+        currentCell = floorTilemap.WorldToCell(GetLogicalAnchorWorldPosition());
 
         spriteRenderer = GetComponentInChildren<SpriteRenderer>();
         if (spriteRenderer == null)
@@ -432,10 +435,17 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     // 오도록 보정한다 — 스프라이트 크기가 몹마다/캐릭터마다 달라도 자동으로 맞는다.
     private Vector3 GetCellFootWorldPosition(Vector3Int cell)
     {
-        Vector3 cellOrigin = floorTilemap.CellToWorld(cell); // 셀의 바닥-왼쪽 모서리(정수 좌표)
-        Vector3 cellSize = floorTilemap.cellSize;
+        Vector3 desiredAnchorWorld = floorTilemap.GetCellCenterWorld(cell);
+        Vector3 colliderOffsetWorld = movementCollider != null
+            ? transform.TransformVector(movementCollider.offset)
+            : Vector3.zero;
+        return desiredAnchorWorld - colliderOffsetWorld;
+    }
 
-        return cellOrigin + new Vector3(cellSize.x * 0.5f, 0f, 0f);
+    private Vector3 GetLogicalAnchorWorldPosition()
+    {
+        if (movementCollider == null) return transform.position;
+        return transform.TransformPoint(movementCollider.offset);
     }
 
     // 한 칸 이동을 시도한다. 벽이면 false(턴 소모 없음), 성공하면 애니메이션 코루틴을 시작하고 true.
