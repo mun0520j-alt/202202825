@@ -45,6 +45,8 @@ public sealed class DungeonStairs : MonoBehaviour
             }
 
             if (manager.ElapsedTicks - extractionStartTick < manager.EscapeProcedureTickCost) return;
+            // 같은 Tick에 예약된 Enemy 행동과 사망 판정을 모두 끝낸 뒤에만 생환을 확정한다.
+            if (!player.IsReadyForInput) return;
             requestSent = manager.TryCompleteExtraction(player);
             return;
         }

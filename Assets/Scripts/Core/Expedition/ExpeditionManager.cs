@@ -13,6 +13,7 @@ public sealed class ExpeditionManager : MonoBehaviour
 
     private DungeonClock dungeonClock;
     private bool transitionRequested;
+    private bool miaResolutionPending;
     private PlayerTurnActor exitProcedurePlayer;
 
     public float FloorChangeTickCost => floorChangeTickCost;
@@ -65,6 +66,7 @@ public sealed class ExpeditionManager : MonoBehaviour
     {
         if (transitionRequested || player == null || player.IsDead || !ExpeditionSession.IsActive) return false;
         if (ExpeditionSession.CurrentFloor < ExpeditionSession.FinalFloor) return false;
+        if (miaResolutionPending || (dungeonClock != null && dungeonClock.IsMIA)) return false;
 
         transitionRequested = true;
         ExpeditionSession.RecordElapsedTicks(ElapsedTicks);
@@ -117,16 +119,29 @@ public sealed class ExpeditionManager : MonoBehaviour
 
     private void HandleMIA()
     {
-        if (!ExpeditionSession.IsActive) return;
+        if (!ExpeditionSession.IsActive || miaResolutionPending) return;
+        miaResolutionPending = true;
+        StartCoroutine(ResolveMIAAfterScheduledActions());
+    }
+
+    private IEnumerator ResolveMIAAfterScheduledActions()
+    {
+        var player = PlayerTurnActor.Instance;
+        while (ExpeditionSession.IsActive && player != null && !player.IsDead && !player.IsReadyForInput)
+        {
+            yield return null;
+        }
+
+        if (!ExpeditionSession.IsActive) yield break;
+        if (player != null && player.IsDead)
+        {
+            CompleteDeath();
+            yield break;
+        }
+
         transitionRequested = true;
         ExpeditionSession.RecordElapsedTicks(dungeonClock.ElapsedTicks);
         ExpeditionSession.Complete(ExpeditionResult.MIA);
-        StartCoroutine(LoadBaseCampNextFrame());
-    }
-
-    private static IEnumerator LoadBaseCampNextFrame()
-    {
-        yield return null;
         SceneManager.LoadScene("BaseCamp");
     }
 }
