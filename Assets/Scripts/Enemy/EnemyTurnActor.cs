@@ -403,6 +403,10 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
         Vector3 startPos = transform.position;
         Vector3 endPos = GetCellFootWorldPosition(targetCell);
 
+        // 논리 이동과 턴 완료를 연출보다 먼저 확정해 플레이어 및 다른 Enemy의 홉을 동시에 시작한다.
+        currentCell = targetCell;
+        CompleteMyTurn();
+
         float t = 0f;
         while (t < hopDuration)
         {
@@ -415,10 +419,7 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
         }
 
         transform.position = endPos; // 부동소수점 오차 정리 — 정확히 목표 위치에 스냅.
-        currentCell = targetCell;    // 논리 좌표는 애니메이션이 끝나는 시점에 확정한다.
         isAnimating = false;
-
-        CompleteMyTurn();
     }
 
     // Idle이든 Wander(이동 성공/실패 불문)든, 지금은 전부 같은 비용(TickCost.PerTileMove)을

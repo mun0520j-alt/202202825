@@ -465,6 +465,13 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         Vector3 startPos = transform.position;
         Vector3 endPos = GetCellFootWorldPosition(targetCell);
 
+        // 논리 이동과 턴 비용을 연출 시작 시점에 먼저 확정한다. TickManager가 즉시 Enemy 턴을
+        // 시작하므로 플레이어와 Enemy의 홉 애니메이션이 같은 시간에 재생된다.
+        currentCell = targetCell;
+        isMyTurn = false;
+        FogOfWarController.Instance?.UpdateVisibility(currentCell, sightRangeInTiles);
+        TickManager.Instance.CompleteTurn(this, TickCost.PerTileMove);
+
         float t = 0f;
         while (t < hopDuration)
         {
@@ -478,26 +485,6 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         }
 
         transform.position = endPos; // 부동소수점 오차 정리 — 정확히 셀 중앙에 스냅.
-        currentCell = targetCell; // 논리 좌표는 애니메이션이 끝나는 시점에 확정한다.
         isAnimating = false;
-
-        // 이동할 때마다 안개를 다시 계산한다 — Enemy의 Trace 감지와 같은 LineOfSight를 써서
-        // "실제로 지금 보이는 곳"만 걷어낸다(2026-08-28 추가).
-        FogOfWarController.Instance?.UpdateVisibility(currentCell, sightRangeInTiles);
-
-        // isMyTurn=false를 CompleteTurn()보다 먼저 세팅한다 — 순서가 중요하다(2026-08-27
-        // 버그 발견/수정). 등록된 액터가 플레이어 혼자뿐인 상황에서는 CompleteTurn() 호출 안에서
-        // TickManager가 곧바로 다음 차례를 찾는데(AdvanceSchedule), 다음 차례도 결국 플레이어
-        // 자신이라 OnTurnStart()가 CompleteTurn() 호출이 "끝나기 전에" 동기적으로 다시 불려서
-        // isMyTurn을 true로 세팅해버린다. 그 상태에서 이 아래 줄이 isMyTurn=false를 나중에
-        // 실행하면 방금 시작된 새 턴의 플래그를 덮어써서 Update()가 영원히 입력을 무시하게 된다
-        // (실제로 이 버그로 "한 번 움직이면 멈추는" 증상이 발생했었음). 그래서 반드시
-        // CompleteTurn() 호출보다 먼저 false로 내려서, 그 안에서 새 턴이 시작되며 다시
-        // true로 세팅되더라도 최종적으로 true가 남게 만든다.
-        isMyTurn = false;
-
-        // 이동 1칸 = TickCost.PerTileMove(0.2) 소비 — 5칸 이동 시 1tick(=게임 내 5분)이라는
-        // 기존 tick 경제 설계(HOMEPC_SYNC_NOTES.md)를 그대로 따른다. 새 상수 필요 없음.
-        TickManager.Instance.CompleteTurn(this, TickCost.PerTileMove);
     }
 }
