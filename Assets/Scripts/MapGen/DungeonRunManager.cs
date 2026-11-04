@@ -130,6 +130,12 @@ public class DungeonRunManager : MonoBehaviour
 
         var collider = player.GetComponent<BoxCollider2D>();
         if (collider == null) collider = player.AddComponent<BoxCollider2D>();
+        // AddComponent 기본값은 Sprite 전체 bounds(현재 knight_m은 1 x 1.3125)를 따라가서
+        // 한 타일보다 큰 Collider가 위/아래 셀을 침범한다. 플레이어 transform은 셀 바닥(Y 정수)에
+        // 있으므로 Collider 중심만 반 칸 위로 올리고, 한 셀 내부에 여유 있게 들어오도록 고정한다.
+        Vector3 cellSize = floorTilemap.cellSize;
+        collider.size = new Vector2(cellSize.x * 0.8f, cellSize.y * 0.8f);
+        collider.offset = new Vector2(0f, cellSize.y * 0.5f);
 
         var actor = player.GetComponent<PlayerTurnActor>();
         if (actor == null) actor = player.AddComponent<PlayerTurnActor>();
