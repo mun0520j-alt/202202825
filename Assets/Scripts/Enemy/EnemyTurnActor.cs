@@ -65,6 +65,7 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     private Vector3Int currentCell;
     private bool isAnimating;
     private bool isInitialized;
+    private bool turnPendingDuringAnimation;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     public void DebugTeleportTo(Vector3Int cell)
@@ -199,6 +200,12 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     // 3) 둘 다 아니면 → 평소 기본 행동(Idle/Wander).
     public void OnTurnStart()
     {
+        if (isAnimating)
+        {
+            turnPendingDuringAnimation = true;
+            return;
+        }
+
         // [2026-09-04] 새 턴이 시작되면 일단 "!" 표시를 꺼둔다 — 아래에서 "이번 턴에 새로
         // 감지됐음"이 확인되면 그때만 다시 켠다. 이렇게 하면 표시가 "감지된 그 1틱 동안만" 떠있게
         // 된다(다음 턴 맨 위에서 항상 리셋되니까).
@@ -420,6 +427,11 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
 
         transform.position = endPos; // 부동소수점 오차 정리 — 정확히 목표 위치에 스냅.
         isAnimating = false;
+        if (turnPendingDuringAnimation)
+        {
+            turnPendingDuringAnimation = false;
+            OnTurnStart();
+        }
     }
 
     // Idle이든 Wander(이동 성공/실패 불문)든, 지금은 전부 같은 비용(TickCost.PerTileMove)을
