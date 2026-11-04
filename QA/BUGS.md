@@ -318,3 +318,103 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 - InDungeon 진입 시 Enemy 3개가 오류 없이 생성되는지 확인한다.
 - Enemy 체력바가 표시되고 TickManager 행동 로그가 발생하는지 확인한다.
 - 플레이어 공격 후 체력바가 정상 갱신되는지 확인한다.
+
+---
+
+## BUG-006 — 플레이어 피격 시 전역 Tick이 Enemy 공격 비용만큼 추가 경과
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Fixed (Play 검증 대기) |
+| 심각도 | Major |
+| 우선순위 | P1 |
+| 발견 단계 | M1 Play 검증 |
+| 영향 범위 | 전역 시계, MIA 판정, 탈출 완료 Tick |
+| 관련 코드 | `TickManager.OnTimeAdvanced`, `DungeonClock.HandleTimeAdvanced()` |
+
+### 재현 절차
+
+1. Enemy와 인접해 공격받을 수 있는 상태를 만든다.
+2. 플레이어 행동 전후의 누적 Tick을 기록한다.
+3. Enemy가 플레이어를 공격한 직후 누적 Tick을 다시 확인한다.
+
+### 기대 결과
+
+- 전역 시계는 플레이어가 선택한 행동 비용으로만 증가한다.
+- Enemy 공격은 스케줄러의 같은 시간축 안에서 처리되며 전역 시계를 추가로 밀지 않는다.
+
+### 실제 결과 (수정 전)
+
+- 플레이어가 피격될 때마다 Enemy 공격 비용 5Tick이 전역 시계에 추가 반영됐다.
+- 플레이어 공격 5Tick 사이의 Enemy 행동 로그가 1+4 또는 2+3처럼 보여 공격 비용이 분할된 것으로 오인될 수 있었다.
+
+### 원인 및 수정
+
+- `DungeonClock`이 모든 액터의 `NextActionTime` 최댓값을 전역 시간으로 사용해, Enemy의 비용이 Player보다 앞설 때 전역 시계도 함께 전진했다.
+- Tick 이벤트에 행동 액터를 함께 전달하고, `DungeonClock`은 `PlayerTurnActor`의 절대 시각만 반영하도록 변경했다. (`ccafab9`)
+- 로그의 대괄호 값은 전역 Tick으로 통일하고 액터 예약 시각은 `actorTime`으로 분리했다. 따라서 Player 공격은 `/Attack/5` 한 줄이며, 후속 Enemy 행동은 같은 전역 Tick에서 별도 표시된다. (`ccafab9`)
+
+---
+
+## BUG-007 — 탈출 체류 중 공격·피격 Tick 이중 계산
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Fixed (Play 검증 대기) |
+| 심각도 | Major |
+| 우선순위 | P1 |
+| 발견 단계 | M1 Play 검증 |
+| 영향 범위 | 3층 탈출 체류 진행도, 생환·MIA 경계값 |
+| 관련 코드 | `DungeonStairs`, `DungeonClock.HandleTimeAdvanced()` |
+
+### 재현 절차
+
+1. 3층 탈출 구역 안에서 진행도를 0으로 시작한다.
+2. 공격 1회 또는 Space 대기를 실행하고 Enemy에게 피격된다.
+3. 전역 Tick과 탈출 진행도의 증가량을 비교한다.
+
+### 기대 결과
+
+- 탈출 진행도는 구역 안에서 플레이어가 소비한 Tick만큼만 증가한다.
+- Enemy 행동·피격은 진행도와 전역 시계를 추가로 증가시키지 않는다.
+
+### 실제 결과 (수정 전)
+
+- 플레이어 행동 비용에 Enemy 행동 비용까지 전역 시계에 반영되어 탈출 진행도가 이중으로 증가했다.
+
+### 원인 및 수정
+
+- 탈출 진행도가 `DungeonClock.ElapsedTicks`의 차이를 사용하고 있어 BUG-006의 전역 시간 오염이 그대로 전파됐다.
+- 전역 시계를 Player 행동 기준으로 분리해 탈출 진행도도 Player가 소비한 Tick만 반영되도록 수정했다. (`ccafab9`)
+
+---
+
+## BUG-008 — Enemy 인접 상태에서 Space 대기 입력 누락
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Fixed (Play 검증 대기) |
+| 심각도 | Major |
+| 우선순위 | P1 |
+| 발견 단계 | M1 Play 검증 |
+| 영향 범위 | 대기 입력, Enemy 인접 전투 |
+| 관련 코드 | `PlayerTurnActor.Update()` |
+
+### 재현 절차
+
+1. 플레이어를 Enemy와 인접시킨다.
+2. Enemy 행동 처리 직후 또는 처리 중 Space를 한 번 누른다.
+3. 다음 Player 턴의 행동과 누적 Tick을 확인한다.
+
+### 기대 결과
+
+- Enemy 인접 여부와 관계없이 Space 1회가 대기 1회로 처리되고 전역 시계가 1Tick 증가한다.
+
+### 실제 결과 (수정 전)
+
+- `isMyTurn == false`인 프레임에 입력 검사가 끝나 Space 입력이 조용히 버려졌다.
+
+### 원인 및 수정
+
+- Space 감지가 Player 턴 가드 뒤에 있어 Enemy 연속 행동 중 누른 키를 다음 Player 턴으로 넘기지 못했다.
+- Space 입력을 먼저 감지해 bool로 1회 예약하고, 다음 Player 턴에 대기 1Tick으로 실행하도록 변경했다. 연타가 여러 턴으로 누적되지는 않는다. (`0f094e1`)

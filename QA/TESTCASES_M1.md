@@ -47,6 +47,10 @@ BaseCamp ─출격→ 1F ─계단→ 2F ─계단→ 3F ─탈출 절차(10)→
 | TC-M1-11 | 각 층에서 공격 1회 | +5 Tick | 미실행 |
 | TC-M1-12 | 층 이동 직후 시계 | 이전 층 마지막 값 + 5 (0으로 초기화 안 됨) | 미실행 |
 | TC-M1-13 | 계단에서 E 연타 | 층 1회만 증가, Tick 5만 소비 | 미실행 |
+| TC-M1-14 | Player 공격 1회 후 Enemy가 이동·공격 | 전역 시계는 정확히 +5, Player `/Attack/5` 로그는 한 줄 | 미실행 |
+| TC-M1-15 | Player가 Enemy에게 1회 피격 | HP만 감소, 피격 자체로 전역 시계 증가 없음 | 미실행 |
+| TC-M1-16 | Enemy 인접 상태에서 Space 1회 | 다음 Player 턴에 대기 실행, 전역 시계 +1 | 미실행 |
+| TC-M1-17 | Enemy 행동 처리 중 Space 연타 | 다음 Player 턴에 대기 1회만 실행, 이후 턴 자동 대기 없음 | 미실행 |
 
 ## 3. 경계값 — 탈출 완료 시점 (절차 10 Tick)
 
@@ -77,6 +81,22 @@ BaseCamp ─출격→ 1F ─계단→ 2F ─계단→ 3F ─탈출 절차(10)→
 | TC-M1-44 | 탈출 구역, 진행도 1~9 | 구역 이탈 후 재진입 | 진행도 0부터 다시 시작 | 미실행 |
 | TC-M1-45 | 탈출 10Tick째 Enemy 공격으로 HP 0 | 같은 Tick 결과 확인 | Dead (Escaped보다 우선) | 미실행 |
 | TC-M1-46 | 누적 1,440Tick과 HP 0 동시 | 같은 Tick 결과 확인 | Dead (MIA보다 우선) | 미실행 |
+| TC-M1-47 | 탈출 구역에서 공격 1회 후 Enemy에게 피격 | 탈출 진행도 +5만 반영, Enemy 공격 비용은 추가되지 않음 | 미실행 |
+| TC-M1-48 | 탈출 구역에서 Space 1회 후 Enemy 행동 | 탈출 진행도 +1만 반영 | 미실행 |
+
+### Tick 로그 판독 예시 (수정 후 형식)
+
+아래 숫자는 형식 설명용 예시다. 대괄호는 전역 Tick, `actorTime`은 해당 액터의 스케줄 예약 시각이다.
+
+```text
+[105] PlayerTurnActor/Attack/5 (actorTime=105)
+[105] EnemyTurnActor/Attack/5 (actorTime=109)
+[106] PlayerTurnActor/Move/Wait/1 (actorTime=106)
+```
+
+- 첫 줄: Player 공격 한 번이 5Tick으로 한 줄에 기록된다.
+- 둘째 줄: Enemy 피격 공격은 처리되지만 전역 Tick 105를 추가로 밀지 않는다.
+- 셋째 줄: Space 대기 한 번은 전역 Tick을 1만 증가시킨다.
 
 ## 6. 맵·배치 (다음 확인 대상)
 
