@@ -443,14 +443,23 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     {
         var targetCell = currentCell + step;
 
-        if (wallsTilemap.HasTile(targetCell)) return false;
-        if (!floorTilemap.HasTile(targetCell)) return false; // 맵 바깥으로는 못 나감
+        if (wallsTilemap.HasTile(targetCell))
+        {
+            Debug.Log($"[MoveBlocked] {currentCell} → {targetCell}: Wall 타일");
+            return false;
+        }
+        if (!floorTilemap.HasTile(targetCell))
+        {
+            Debug.Log($"[MoveBlocked] {currentCell} → {targetCell}: Floor 없음");
+            return false; // 맵 바깥으로는 못 나감
+        }
 
         // 키보드 이동도 마우스 클릭과 동일하게 Enemy가 있는 방향으로 밀면 이동 대신 공격한다.
         // 기존에는 아래 점유 검사에서 그대로 막혀 WASD/방향키로는 근접 공격할 수 없었다.
         var occupant = TickManager.Instance.GetActorAt(targetCell, this);
         if (occupant is EnemyTurnActor enemy)
         {
+            Debug.Log($"[MoveToAttack] {currentCell} → {targetCell}: Enemy 근접 공격 전환");
             AttackEnemy(enemy);
             return true;
         }
@@ -460,7 +469,11 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         // 처리하는 구조라서다(2026-08-28 발견, ITurnActor.cs 주석 참고). 자동 이동 경로 자체가
         // 이제 이 점유 칸을 피해서 짜이므로(HandleMouseClick 참고, 2026-09-03 수정) 여기 걸리는
         // 경우는 방향키 수동 이동, 또는 경로 계산 이후 몹이 움직여 상황이 바뀐 예외 상황뿐이다.
-        if (occupant != null) return false;
+        if (occupant != null)
+        {
+            Debug.Log($"[MoveBlocked] {currentCell} → {targetCell}: {occupant.GetType().Name} 점유");
+            return false;
+        }
 
         UpdateFacingDirection(step);
         StartCoroutine(HopTo(targetCell));

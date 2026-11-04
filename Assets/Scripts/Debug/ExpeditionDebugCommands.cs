@@ -90,6 +90,9 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
 
                 bool hasFloor = floor.HasTile(cell);
                 bool hasWall = walls.HasTile(cell);
+                ITurnActor occupyingActor = TickManager.Instance != null
+                    ? TickManager.Instance.GetActorAt(cell, player)
+                    : null;
                 Color fill = hasWall
                     ? new Color(1f, 0.1f, 0.1f, 0.28f)
                     : hasFloor ? new Color(0.1f, 0.9f, 0.35f, 0.12f) : new Color(0.25f, 0.25f, 0.25f, 0.08f);
@@ -106,6 +109,11 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
                 {
                     DrawRectOutline(rect, new Color(1f, 0.55f, 0f), 3f);
                 }
+                if (occupyingActor != null)
+                {
+                    DrawRectOutline(rect, new Color(0.85f, 0.2f, 1f), 4f);
+                    direction = $"ACTOR:{occupyingActor.GetType().Name}";
+                }
 
                 if (rect.width >= 34f)
                 {
@@ -116,7 +124,7 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
         }
 
         GUI.Box(new Rect(12f, 12f, 310f, 68f),
-            "F3: Grid 끄기\n초록=Floor / 빨강=Wall / 노랑=Player\n주황=플레이어 상하좌우 검색 칸");
+            "F3: Grid 끄기\n초록=Floor / 빨강=Wall / 노랑=Player\n주황=검색 칸 / 보라=다른 Actor 점유");
     }
 
     private void EnsureGridLabelStyle()
