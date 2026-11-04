@@ -7,6 +7,7 @@ public sealed class DungeonStairs : MonoBehaviour
     private Vector3Int cell;
     private bool isFinalExit;
     private bool requestSent;
+    private float extractionStartTick = -1f;
 
     public void Initialize(Tilemap floorTilemap, Vector3Int targetCell, bool finalExit)
     {
@@ -29,7 +30,23 @@ public sealed class DungeonStairs : MonoBehaviour
 
         if (isFinalExit)
         {
-            if (!IsInsideExtractionZone(player.CurrentCell)) return;
+            var manager = ExpeditionManager.Instance;
+            if (!IsInsideExtractionZone(player.CurrentCell))
+            {
+                extractionStartTick = -1f;
+                return;
+            }
+            if (manager == null) return;
+
+            if (extractionStartTick < 0f)
+            {
+                extractionStartTick = manager.ElapsedTicks;
+                Debug.Log($"[Extraction] 탈출 구역 진입 — {manager.EscapeProcedureTickCost:0.##} Tick 체류 필요.");
+            }
+
+            if (manager.ElapsedTicks - extractionStartTick < manager.EscapeProcedureTickCost) return;
+            requestSent = manager.TryCompleteExtraction(player);
+            return;
         }
         else
         {
@@ -47,9 +64,18 @@ public sealed class DungeonStairs : MonoBehaviour
         bool canInteract = isFinalExit ? IsInsideExtractionZone(player.CurrentCell) : player.CurrentCell == cell;
         if (!canInteract) return;
 
-        string label = isFinalExit
-            ? $"탈출 구역 — {ExpeditionManager.Instance?.EscapeProcedureTickCost ?? 10f:0} Tick 대기 시작"
-            : $"E: {ExpeditionSession.CurrentFloor + 1}층으로 하강 ({ExpeditionManager.Instance?.FloorChangeTickCost ?? TickCost.Interact:0} Tick)";
+        string label;
+        if (isFinalExit)
+        {
+            float required = ExpeditionManager.Instance?.EscapeProcedureTickCost ?? 10f;
+            float elapsed = extractionStartTick < 0f ? 0f : (ExpeditionManager.Instance?.ElapsedTicks ?? 0f) - extractionStartTick;
+            float remaining = Mathf.Max(0f, required - elapsed);
+            label = $"탈출 구역 체류 중 — {remaining:0.##} Tick 남음 (Space: 대기)";
+        }
+        else
+        {
+            label = $"E: {ExpeditionSession.CurrentFloor + 1}층으로 하강 ({ExpeditionManager.Instance?.FloorChangeTickCost ?? TickCost.Interact:0} Tick)";
+        }
         GUI.Box(new Rect(Screen.width * 0.5f - 180f, Screen.height - 90f, 360f, 40f), label);
     }
 

@@ -17,6 +17,7 @@ public sealed class ExpeditionManager : MonoBehaviour
 
     public float FloorChangeTickCost => floorChangeTickCost;
     public float EscapeProcedureTickCost => escapeProcedureTickCost;
+    public float ElapsedTicks => dungeonClock != null ? dungeonClock.ElapsedTicks : ExpeditionSession.ElapsedTicks;
 
     private void Awake()
     {
@@ -50,15 +51,25 @@ public sealed class ExpeditionManager : MonoBehaviour
     public bool TryUseFloorExit(PlayerTurnActor player)
     {
         if (transitionRequested || player == null || !ExpeditionSession.IsActive) return false;
+        if (ExpeditionSession.CurrentFloor >= ExpeditionSession.FinalFloor) return false;
 
-        float cost = ExpeditionSession.CurrentFloor < ExpeditionSession.FinalFloor
-            ? floorChangeTickCost
-            : escapeProcedureTickCost;
-        if (!player.TrySpendInteraction(cost)) return false;
+        if (!player.TrySpendInteraction(floorChangeTickCost)) return false;
 
         transitionRequested = true;
         exitProcedurePlayer = player;
         StartCoroutine(ResolveExitAfterTick());
+        return true;
+    }
+
+    public bool TryCompleteExtraction(PlayerTurnActor player)
+    {
+        if (transitionRequested || player == null || player.IsDead || !ExpeditionSession.IsActive) return false;
+        if (ExpeditionSession.CurrentFloor < ExpeditionSession.FinalFloor) return false;
+
+        transitionRequested = true;
+        ExpeditionSession.RecordElapsedTicks(ElapsedTicks);
+        ExpeditionSession.Complete(ExpeditionResult.Escaped);
+        SceneManager.LoadScene("BaseCamp");
         return true;
     }
 

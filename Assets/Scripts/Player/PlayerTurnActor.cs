@@ -253,6 +253,14 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
             return;
         }
 
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            ClearQueuedAutoPath();
+            isMyTurn = false;
+            TickManager.Instance.CompleteTurn(this, TickCost.PerTileMove);
+            return;
+        }
+
         if (Input.GetMouseButtonDown(0))
         {
             HandleMouseClick();
