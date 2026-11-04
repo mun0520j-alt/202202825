@@ -445,12 +445,22 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
 
         if (wallsTilemap.HasTile(targetCell)) return false;
         if (!floorTilemap.HasTile(targetCell)) return false; // 맵 바깥으로는 못 나감
+
+        // 키보드 이동도 마우스 클릭과 동일하게 Enemy가 있는 방향으로 밀면 이동 대신 공격한다.
+        // 기존에는 아래 점유 검사에서 그대로 막혀 WASD/방향키로는 근접 공격할 수 없었다.
+        var occupant = TickManager.Instance.GetActorAt(targetCell, this);
+        if (occupant is EnemyTurnActor enemy)
+        {
+            AttackEnemy(enemy);
+            return true;
+        }
+
         // 벽/바닥과 같은 자격으로 "이미 다른 액터가 서 있는 칸"도 막는다 — 콜라이더가 아니라
         // TickManager에 직접 물어보는 이유는 이동을 물리엔진 없이 transform.position으로 직접
         // 처리하는 구조라서다(2026-08-28 발견, ITurnActor.cs 주석 참고). 자동 이동 경로 자체가
         // 이제 이 점유 칸을 피해서 짜이므로(HandleMouseClick 참고, 2026-09-03 수정) 여기 걸리는
         // 경우는 방향키 수동 이동, 또는 경로 계산 이후 몹이 움직여 상황이 바뀐 예외 상황뿐이다.
-        if (TickManager.Instance.IsCellOccupied(targetCell, this)) return false;
+        if (occupant != null) return false;
 
         UpdateFacingDirection(step);
         StartCoroutine(HopTo(targetCell));
