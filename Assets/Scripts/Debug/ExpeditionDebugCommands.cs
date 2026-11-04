@@ -14,6 +14,7 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
     private void Update()
     {
         if (Input.GetKeyDown(KeyCode.F3)) showTileGrid = !showTileGrid;
+        if (Input.GetKeyDown(KeyCode.F4)) BuildM1DebugMap();
     }
 
     private void OnGUI()
@@ -123,8 +124,9 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
             }
         }
 
-        GUI.Box(new Rect(12f, 12f, 310f, 68f),
-            "F3: Grid 끄기\n초록=Floor / 빨강=Wall / 노랑=Player\n주황=검색 칸 / 보라=다른 Actor 점유");
+        GUI.Box(new Rect(12f, 12f, 360f, 86f),
+            "F3: Grid 끄기 / F4: 빠른 검증 배치\n초록=Floor / 빨강=Wall / 노랑=Player\n" +
+            "주황=검색 칸 / 보라=다른 Actor 점유\nF4 배치: 왼쪽 상자 / 위 Enemy / 오른쪽 탈출구");
     }
 
     private void EnsureGridLabelStyle()

@@ -7,7 +7,7 @@
 
 ### 빠른 검증용 런타임 맵
 
-에디터 또는 Development Build에서 `ExpeditionDebugCommands` 컴포넌트 메뉴의
+에디터 또는 Development Build에서 `F4`를 누르거나 `ExpeditionDebugCommands` 컴포넌트 메뉴의
 `QA/Build M1 Debug Map`을 실행하면 플레이어 주변 9×9 구역에 다음 항목이 배치된다.
 
 - 왼쪽 2칸: 상자 자리표시자(M2, 루팅 기능 없음)
