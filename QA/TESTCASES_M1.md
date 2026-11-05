@@ -1,7 +1,7 @@
 # M1 테스트 케이스 — 원정 한 바퀴
 
 > 기준: MILESTONES.md M1, 기획서 `04_던전크롤러.md` 2·4쪽 세부 규칙. 빌드: `feature/m1-expedition-loop`.
-> 임시값: 층 이동 5 Tick · 탈출 체류 10 Tick · MIA 1,440 Tick · Enemy HP 12/방어 1/공격 2. 판정은 **탈출 완료 시점** 기준, 우선순위 Dead > MIA > Escaped.
+> 임시값: 층 이동 5 Tick · 탈출 체류 10 Tick · MIA 1,440 Tick · Enemy HP 12/방어 1/공격 5. 판정은 **탈출 완료 시점** 기준, 우선순위 Dead > MIA > Escaped.
 > 탈출 구역 안에서 소비한 모든 Tick(이동 1·대기 1·공격 5)은 진행도로 인정하며, 구역 이탈 시 0으로 초기화한다.
 > 결과: Pass / Fail(BUG-ID) / Blocked(사유) / 미실행
 
