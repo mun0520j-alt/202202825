@@ -213,7 +213,7 @@ public class TickManager : MonoBehaviour
     // 그 반복문 "밖에서" 온 건지(=플레이어 입력 콜백처럼 나중에 비동기로 완료 보고) 구분해서:
     //   - 반복문 안이면: 플래그만 세우고 그 반복문이 이어서 처리하게 한다(재귀 안 함)
     //   - 반복문 밖이면: 새 반복문을 시작해도 스택이 안전하니 AdvanceSchedule()을 새로 호출한다
-    public void CompleteTurn(ITurnActor actor, float tickCost)
+    public void CompleteTurn(ITurnActor actor, float tickCost, string actionName = null)
     {
         if (currentTurnActor == null || currentTurnActor.Actor != actor)
         {
@@ -236,7 +236,8 @@ public class TickManager : MonoBehaviour
         // [2026-09-04 버그 수정] tickCost가 아니라 갱신된 절대 시각(NextActionTime)을 보고한다 —
         // 위 OnTimeAdvanced 선언부 주석 참고.
         OnTimeAdvanced?.Invoke(actor, currentTurnActor.NextActionTime);
-        string action = Mathf.Approximately(tickCost, TickCost.Attack) ? "Attack"
+        string action = !string.IsNullOrEmpty(actionName) ? actionName
+            : Mathf.Approximately(tickCost, TickCost.Attack) ? "Attack"
             : Mathf.Approximately(tickCost, TickCost.Interact) ? "Interact"
             : Mathf.Approximately(tickCost, TickCost.PerTileMove) ? "Move/Wait"
             : "Action";

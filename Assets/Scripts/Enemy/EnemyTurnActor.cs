@@ -291,7 +291,7 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
         // 경로를 짠다(TilePathfinder.cs 주석 참고) — 몹이 여러 마리로 늘어났을 때 서로를
         // 뚫고 지나가는 경로를 짜지 않도록 한다.
         var path = TilePathfinder.FindPath(currentCell, targetCell, wallsTilemap, floorTilemap,
-            cell => TickManager.Instance.IsCellOccupied(cell, this));
+            cell => TickManager.Instance.IsCellOccupied(cell, this) || DungeonChest.IsCellBlocked(cell));
 
         if (path.Count == 0)
         {
@@ -351,6 +351,7 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
             var targetCell = currentCell + dir;
             if (wallsTilemap.HasTile(targetCell)) continue;
             if (!floorTilemap.HasTile(targetCell)) continue; // 맵 바깥으로는 못 나감
+            if (DungeonChest.IsCellBlocked(targetCell)) continue;
             // 벽/바닥과 같은 자격으로 "이미 다른 액터(Player 포함)가 서 있는 칸"도 막는다 —
             // PlayerTurnActor.TryStep()의 동일 체크와 같은 이유(콜라이더로는 안 막힘, 2026-08-28).
             if (TickManager.Instance.IsCellOccupied(targetCell, this)) continue;
@@ -456,7 +457,7 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     // 하면(등록이 아직 안 풀렸으니) 죽은 채로 OnTurnStart가 불릴 위험이 있다 — 즉시 해제해서 막는다.
     public void TakeDamage(int incomingAttackPower)
     {
-        int damage = Mathf.Max(0, incomingAttackPower - defensePower);
+        int damage = Mathf.Max(1, incomingAttackPower - defensePower);
         currentHP = Mathf.Max(0, currentHP - damage);
         healthBar?.SetFill((float)currentHP / maxHP);
 

@@ -24,7 +24,10 @@ public static class ExpeditionRuntimeBootstrap
 
     private static void EnsureForScene(Scene scene)
     {
-        if (scene.name != "BaseCamp" || Object.FindObjectOfType<ExpeditionResultPanel>() != null) return;
-        new GameObject("ExpeditionResultPanel(AutoCreated)").AddComponent<ExpeditionResultPanel>();
+        if (scene.name != "BaseCamp") return;
+        if (Object.FindObjectOfType<ExpeditionResultPanel>() == null)
+            new GameObject("ExpeditionResultPanel(AutoCreated)").AddComponent<ExpeditionResultPanel>();
+        if (Object.FindObjectOfType<StashPanel>() == null)
+            new GameObject("StashPanel(AutoCreated)").AddComponent<StashPanel>();
     }
 }

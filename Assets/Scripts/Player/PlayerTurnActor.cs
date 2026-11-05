@@ -143,6 +143,7 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     private bool isAnimating;
     private bool runtimeInitialized;
     private bool queuedWaitInput;
+    private bool queuedRestInput;
     private bool resultResolutionInputLocked;
 
     // 마우스 클릭으로 예약된 자동 이동 경로. 비어있으면 자동 이동 없음.
@@ -277,6 +278,7 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         if (resultResolutionInputLocked)
         {
             queuedWaitInput = false;
+            queuedRestInput = false;
             ClearQueuedAutoPath();
             return;
         }
@@ -284,8 +286,20 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         // Enemy 행동 처리 중 눌린 Space도 버리지 않고 다음 Player 턴에 1회 실행한다.
         // bool 예약이라 키 연타가 여러 턴의 대기로 누적되지는 않는다.
         if (Input.GetKeyDown(KeyCode.Space)) queuedWaitInput = true;
+        if (Input.GetKeyDown(KeyCode.R)) queuedRestInput = true;
 
         if (!isMyTurn || isAnimating) return;
+
+        if (queuedRestInput)
+        {
+            queuedRestInput = false;
+            queuedWaitInput = false;
+            ClearQueuedAutoPath();
+            isMyTurn = false;
+            TickManager.Instance.CompleteTurn(this, TickCost.Rest, "Rest");
+            StartCoroutine(ResolveRestAfterTick());
+            return;
+        }
 
         if (queuedWaitInput)
         {
@@ -341,7 +355,7 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         var clickedCell = floorTilemap.WorldToCell(worldPoint);
 
         // 클릭한 칸 자체가 바닥이 아니면(벽이거나 맵 바깥) 그냥 무시 — 아무 반응 없음.
-        if (!floorTilemap.HasTile(clickedCell) || wallsTilemap.HasTile(clickedCell)) return;
+        if (!floorTilemap.HasTile(clickedCell) || wallsTilemap.HasTile(clickedCell) || DungeonChest.IsCellBlocked(clickedCell)) return;
 
         // [2026-09-03 신규] 클릭한 칸에 Enemy가 서있으면 이동이 아니라 공격 — 녹픽던처럼 "적 칸을
         // 클릭하면 자동으로 공격 전환"(예전에 이미 확정된 입력 규칙). 지금은 인접 1칸(근접)만
@@ -365,7 +379,7 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         // 경로가 그 위를 지나가버려서, 실제로 걷다가 그 칸에서 TryStep이 막혀 "목적지는 뚫려있는데
         // 경로 중간에서 멈추는" 버그가 났었다(TilePathfinder.cs 주석 참고).
         var path = TilePathfinder.FindPath(currentCell, clickedCell, wallsTilemap, floorTilemap,
-            cell => TickManager.Instance.IsCellOccupied(cell, this));
+            cell => TickManager.Instance.IsCellOccupied(cell, this) || DungeonChest.IsCellBlocked(cell));
         if (path.Count == 0) return; // 갈 수 없는 칸(도달 불가, 또는 점유 중) — 무시
 
         queuedAutoPath = new Queue<Vector3Int>(path);
@@ -385,14 +399,29 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     }
 
     // 계단/탈출구가 플레이어의 현재 차례를 정상적인 Tick 행동으로 소비할 때 사용한다.
-    public bool TrySpendInteraction(float tickCost)
+    public bool TrySpendInteraction(float tickCost, string actionName = "Interact")
     {
         if (!isMyTurn || isAnimating || isDead || TickManager.Instance == null) return false;
 
         ClearQueuedAutoPath();
         isMyTurn = false;
-        TickManager.Instance.CompleteTurn(this, tickCost);
+        TickManager.Instance.CompleteTurn(this, tickCost, actionName);
         return true;
+    }
+
+    private IEnumerator ResolveRestAfterTick()
+    {
+        while (ExpeditionSession.IsActive && !isDead && !IsReadyForInput)
+        {
+            yield return null;
+        }
+
+        if (!ExpeditionSession.IsActive || isDead) yield break;
+        int before = currentHP;
+        currentHP = Mathf.Min(maxHP, currentHP + 1);
+        ExpeditionSession.RecordPlayerHealth(currentHP);
+        healthBar?.SetFill((float)currentHP / maxHP);
+        Debug.Log($"[Rest] {TickCost.Rest:0} Tick 휴식 — HP {before} → {currentHP}/{maxHP}");
     }
 
     // Enemy.TryTraceTowards()가 인접해서 공격할 때 호출한다. 데미지 공식은 "공격력 - 방어력"
@@ -402,7 +431,7 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     {
         if (isDead) return;
 
-        int damage = Mathf.Max(0, incomingAttackPower - EffectiveDefensePower);
+        int damage = Mathf.Max(1, incomingAttackPower - EffectiveDefensePower);
         currentHP = Mathf.Max(0, currentHP - damage);
         ExpeditionSession.RecordPlayerHealth(currentHP);
         healthBar?.SetFill((float)currentHP / maxHP);
@@ -524,6 +553,11 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         if (occupant != null)
         {
             Debug.Log($"[MoveBlocked] {currentCell} → {targetCell}: {occupant.GetType().Name} 점유");
+            return false;
+        }
+        if (DungeonChest.IsCellBlocked(targetCell))
+        {
+            Debug.Log($"[MoveBlocked] {currentCell} → {targetCell}: 상자 점유");
             return false;
         }
 

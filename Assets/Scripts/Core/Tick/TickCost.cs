@@ -19,4 +19,5 @@ public static class TickCost
     public const float SwapWeaponInCombat = 5f; // =5분
     public const float UseItem = 5f;         // 포션/스크롤, =5분
     public const float Interact = 5f;        // 상자/문 개방 등, =5분
+    public const float Rest = 5f;            // R 휴식, 완료 후 HP +1
 }

@@ -1,4 +1,3 @@
-using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -33,10 +32,7 @@ public sealed class ExpeditionResultPanel : MonoBehaviour
         {
             string resultName = result.Result == ExpeditionResult.Escaped ? "생환"
                 : result.Result == ExpeditionResult.Dead ? "사망" : "MIA";
-            string items = result.AcquiredItems.Count == 0
-                ? "없음 (상자 루팅은 M2 예정)"
-                : string.Join(", ", result.AcquiredItems.Select(item => item));
-            body = $"원정 결과: {resultName}\n\n경과 Tick: {result.ElapsedTicks:0}\n도달 층: {result.ReachedFloor}층\n획득 아이템: {items}";
+            body = $"원정 결과: {resultName}\n\n경과 Tick: {result.ElapsedTicks:0}\n도달 층: {result.ReachedFloor}층";
         }
 
         var textGo = CreateUiObject("ResultText", panel.transform);
