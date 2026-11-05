@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Tilemaps;
 
 // Dungeon Tools 9) 실제 던전 씬(DungeonScene)의 진입점 — TickManager/DungeonClock을 준비해두고
 // 스케줄을 시작한다. 이름에 일부러 "Test"를 안 붙였다 — Assets/Scripts/Debug/TickQueueTest/
@@ -30,7 +31,15 @@ public class DungeonSceneBootstrapper : MonoBehaviour
         {
             dungeonClock = tickManager.gameObject.AddComponent<DungeonClock>();
         }
-        dungeonClock.ResetForNewRun();
+        if (!ExpeditionSession.IsActive) ExpeditionSession.BeginNewRun();
+        PlayerTurnActor.Instance?.RestoreHealthForActiveExpedition();
+
+        tickManager.SynchronizeTimeline(ExpeditionSession.ElapsedTicks);
+        dungeonClock.RestoreForActiveRun(ExpeditionSession.ElapsedTicks);
+
+        var expeditionManager = FindObjectOfType<ExpeditionManager>();
+        if (expeditionManager == null) expeditionManager = gameObject.AddComponent<ExpeditionManager>();
+        expeditionManager.Initialize(dungeonClock);
 
         tickManager.BeginSchedule();
 
@@ -49,6 +58,41 @@ public class DungeonSceneBootstrapper : MonoBehaviour
         if (FindObjectOfType<InventoryPanel>() == null) gameObject.AddComponent<InventoryPanel>();
         if (FindObjectOfType<MinimapController>() == null) gameObject.AddComponent<MinimapController>();
 
-        Debug.Log("[DungeonSceneBootstrapper] 던전 씬 스케줄 시작 — TickManager/DungeonClock/HUD 준비 완료.");
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (FindObjectOfType<ExpeditionDebugCommands>() == null) gameObject.AddComponent<ExpeditionDebugCommands>();
+#endif
+
+        CreateFloorExit();
+
+        Debug.Log($"[DungeonSceneBootstrapper] {ExpeditionSession.CurrentFloor}층 시작 — 누적 {ExpeditionSession.ElapsedTicks:0} Tick.");
+    }
+
+    private static void CreateFloorExit()
+    {
+        var player = PlayerTurnActor.Instance;
+        Tilemap floor = player != null ? player.FloorTilemap : null;
+        Tilemap walls = player != null ? player.WallsTilemap : null;
+        if (floor == null)
+        {
+            Debug.LogError("[DungeonSceneBootstrapper] 출구를 배치할 Floor Tilemap을 찾지 못했습니다.");
+            return;
+        }
+
+        Vector3Int playerCell = player.CurrentCell;
+        Vector3Int exitCell = playerCell;
+        int farthestDistance = -1;
+        foreach (var position in floor.cellBounds.allPositionsWithin)
+        {
+            if (!floor.HasTile(position) || (walls != null && walls.HasTile(position))) continue;
+            if (TickManager.Instance != null && TickManager.Instance.IsCellOccupied(position)) continue;
+            int distance = Mathf.Abs(position.x - playerCell.x) + Mathf.Abs(position.y - playerCell.y);
+            if (distance <= farthestDistance) continue;
+            farthestDistance = distance;
+            exitCell = position;
+        }
+
+        bool finalExit = ExpeditionSession.CurrentFloor >= ExpeditionSession.FinalFloor;
+        var exitObject = new GameObject(finalExit ? "EscapeExit(AutoCreated)" : "DownStairs(AutoCreated)");
+        exitObject.AddComponent<DungeonStairs>().Initialize(floor, exitCell, finalExit);
     }
 }

@@ -4,6 +4,29 @@
 
 ---
 
+## 2026-11-03 · M1 원정 루프 구현
+
+**진행 상태**: 1→2→3층 단방향 진행, 3층 탈출, 생환/사망/MIA 결과 흐름 구현 및 BUG-003 회귀 검증 대기
+
+- `ExpeditionSession`이 씬 재로드 사이의 현재 층·누적 Tick·원정 결과를 보존
+- 층 재진입 시 `TickManager` 시간축과 `DungeonClock`을 함께 복원해 누적 시간이 멈추거나 초기화되지 않도록 처리
+- 이동 가능한 바닥 중 플레이어에게 가장 먼 칸에 단방향 계단을 생성하고, 3층에서는 같은 위치를 탈출구로 전환
+- 계단 사용 5Tick, 탈출 절차 10Tick을 `ExpeditionManager` 인스펙터 파라미터 임시값으로 적용
+- 탈출 비용 적용 완료 시점에 결과를 판정하며, 그 비용으로 1,440Tick에 도달하면 생환보다 MIA가 우선
+- BaseCamp에 생환/사망/MIA, 경과 Tick, 도달 층, 획득 아이템을 표시하는 임시 결과 화면과 재출격 버튼 추가
+- `BaseCamp`를 Build Settings에 추가. 상자 루팅 미구현 상태이므로 획득 아이템은 M1에서 없음으로 표시
+- 최초 구현 후 실제 `InDungeon` 씬이 `DungeonSceneBootstrapper/PlayerTurnActor`가 아니라 `_to_delete`의 `DungeonRunManager/GridMover/Tick`을 계속 참조 중인 사실을 확인
+- 실제 씬 진입점에 M1용 3층 생성, 보스방 중앙 계단, 층 이동, 탈출, 누적 Tick 및 MIA 처리를 직접 연결
+- BaseCamp 최초 진입에서도 결과 UI가 생성되도록 런타임 초기화 경로를 보강
+- `_to_delete`는 Unity 컴파일 대상이 아니므로 실제 씬이 참조하던 `DungeonRunManager`, `GridMover`, 기존 `Tick`을 GUID 보존 상태로 `Assets/Scripts`에 이동
+- BUG-003 수정: 탈출 비용을 1Tick씩 처리해 적 행동 기회를 보장하고, 절차 완료 시점에 Dead/MIA/Escaped 우선순위를 판정
+- Test 씬 사용자 조정값을 InDungeon 런타임 생성에 반영: 카메라 Orthographic Size 11.25/Z -10, 플레이어 X +0.5/Y 정수, 이동 0.1초, Sprite 정렬 2
+- InDungeon 구형 `GridMover/LegacyTick` 실행 경로를 중단하고 Test와 동일한 `PlayerTurnActor/TickManager` 경로로 통합
+- 현재 층에 Fog Tilemap과 `FogOfWarController`를 런타임 구성하고, `DungeonSceneBootstrapper`를 통해 시계·인벤토리·미니맵 HUD 생성
+- InDungeon의 `PixelPerfectCamera`가 확대값을 33.75로 덮어쓰지 않도록 비활성화한 뒤 Orthographic Size 11.25 적용
+
+---
+
 ## 2026-11-03
 
 **진행 상태**: M0 BUG-001 미니맵 Edit Mode 파괴 경고 수정 및 사용자 확인 완료

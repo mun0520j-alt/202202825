@@ -179,3 +179,8 @@ MonoBehaviour:
   floorTilemap: {fileID: 0}
   hopDuration: 0.1
   hopHeight: 0.4
+  sightRangeInTiles: 5
+  maxHP: 12
+  currentHP: 12
+  attackPower: 5
+  defensePower: 1

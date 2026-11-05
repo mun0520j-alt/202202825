@@ -39,7 +39,7 @@ public class TickManager : MonoBehaviour
     // "도달 지점"은 여전히 1이라 시계는 정확히 1분만 움직인다. 인자: 이번 행동을 마친 액터의
     // 갱신된 NextActionTime(절대 시각, tick 단위) — "이번에 얼마나 썼는지"가 아니라 "그 액터가
     // 지금 시간축 어디에 있는지".
-    public event Action<float> OnTimeAdvanced;
+    public event Action<ITurnActor, float> OnTimeAdvanced;
 
     // ============================================================================================
     // [주의] 이 클래스 안에는 시간 개념이 두 종류 있고 서로 완전히 무관하다 — 헷갈리지 말 것.
@@ -173,6 +173,30 @@ public class TickManager : MonoBehaviour
         AdvanceSchedule();
     }
 
+    // 층 씬을 다시 불러온 뒤 새 액터들의 시간축을 원정 누적 Tick에 맞춘다.
+    // DungeonClock만 복원하면 액터가 0부터 과거 시간을 다시 따라잡는 동안 시계가 멈추므로
+    // 스케줄러와 시계를 반드시 같은 기준점으로 복원해야 한다.
+    public void SynchronizeTimeline(float absoluteTime)
+    {
+        if (schedulerRunning)
+        {
+            Debug.LogWarning("[TickManager] 실행 중인 스케줄의 시간축은 변경할 수 없습니다.");
+            return;
+        }
+
+        float safeTime = Mathf.Max(0f, absoluteTime);
+        foreach (var entry in registeredActors) entry.NextActionTime = safeTime;
+    }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    // QA 경계값 검증 전용. 현재 턴 소유권은 유지하고 모든 액터의 절대 시각만 같은 값으로 맞춘다.
+    public void DebugSetTimeline(float absoluteTime)
+    {
+        float safeTime = Mathf.Max(0f, absoluteTime);
+        foreach (var entry in registeredActors) entry.NextActionTime = safeTime;
+    }
+#endif
+
     // 현재 차례인 액터가 행동을 끝냈을 때 호출. Player/Enemy 둘 다 결국 이 함수 하나로 턴을
     // 넘긴다 — 실제 게임에서 이걸 부르는 건 Player/Enemy ITurnActor 구현체뿐이다.
     //
@@ -211,7 +235,15 @@ public class TickManager : MonoBehaviour
         currentTurnActor.NextActionTime += tickCost;
         // [2026-09-04 버그 수정] tickCost가 아니라 갱신된 절대 시각(NextActionTime)을 보고한다 —
         // 위 OnTimeAdvanced 선언부 주석 참고.
-        OnTimeAdvanced?.Invoke(currentTurnActor.NextActionTime);
+        OnTimeAdvanced?.Invoke(actor, currentTurnActor.NextActionTime);
+        string action = Mathf.Approximately(tickCost, TickCost.Attack) ? "Attack"
+            : Mathf.Approximately(tickCost, TickCost.Interact) ? "Interact"
+            : Mathf.Approximately(tickCost, TickCost.PerTileMove) ? "Move/Wait"
+            : "Action";
+        DungeonClock dungeonClock = GetComponent<DungeonClock>();
+        float globalTime = dungeonClock != null ? dungeonClock.ElapsedTicks : currentTurnActor.NextActionTime;
+        Debug.Log($"[{globalTime:0.##}] {actor}/{action}/{tickCost:0.##} " +
+                  $"(actorTime={currentTurnActor.NextActionTime:0.##})");
 
         if (isAdvancingSchedule)
         {

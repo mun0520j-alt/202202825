@@ -16,13 +16,24 @@ public class CameraFollow : MonoBehaviour
               "카메라 Z는 이 값으로 고정한다(FloorTilemapPreviewWindow.CenterMainCameraOn의 -10 관례와 동일).")]
     [SerializeField] private float cameraZ = -10f;
 
-    private void Awake()
+    private void Start()
     {
         if (target == null)
         {
             Debug.LogError("[CameraFollow] target이 Inspector에 연결 안 돼있습니다 — Player 오브젝트를 드래그해서 연결해주세요.");
             enabled = false;
         }
+    }
+
+    public void SetTarget(Transform followTarget)
+    {
+        target = followTarget;
+        enabled = target != null;
+    }
+
+    public void SetCameraZ(float z)
+    {
+        cameraZ = z;
     }
 
     private void LateUpdate()

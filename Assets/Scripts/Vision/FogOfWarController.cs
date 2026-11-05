@@ -26,6 +26,7 @@ public class FogOfWarController : MonoBehaviour
     // "일단 임시로" 요청 반영). 나중에 실제 안개 그래픽(예: 어두운 텍스처, 그라데이션)으로
     // 교체할 때는 이 메서드만 바꾸면 된다 — 나머지 로직(어디를 가릴지)은 안 건드려도 됨.
     private TileBase fogTile;
+    private bool runtimeInitialized;
 
     private void Awake()
     {
@@ -39,14 +40,34 @@ public class FogOfWarController : MonoBehaviour
 
         if (floorTilemap == null || wallsTilemap == null || fogTilemap == null)
         {
-            Debug.LogError("[FogOfWarController] floorTilemap/wallsTilemap/fogTilemap이 Inspector에 " +
-                            "연결 안 돼있습니다.");
             enabled = false;
             return;
         }
 
+        InitializeFog();
+    }
+
+    public void ConfigureRuntime(Tilemap floor, Tilemap walls, Tilemap fog)
+    {
+        floorTilemap = floor;
+        wallsTilemap = walls;
+        fogTilemap = fog;
+        InitializeFog();
+        enabled = true;
+    }
+
+    private void InitializeFog()
+    {
+        if (runtimeInitialized || floorTilemap == null || wallsTilemap == null || fogTilemap == null) return;
+        runtimeInitialized = true;
+
         fogTile = CreateSolidFogTile();
         PaintFullFog(); // 시작 시점엔 아무것도 안 보이는 상태로 시작 — 첫 UpdateVisibility 호출을 기다림.
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
     }
 
     // 1x1 검은 반투명 픽셀로 만든 안개 타일. Point 필터라 확대돼도 흐려지지 않고 딱 떨어지는

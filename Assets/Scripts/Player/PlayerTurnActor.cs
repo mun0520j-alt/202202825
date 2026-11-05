@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
 // Dungeon Tools 9) 실제 플레이어의 턴 참여 + 이동 담당. TickManager 큐에서 자기 차례
@@ -78,6 +77,47 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     // ITurnActor.CurrentCell 구현 — TickManager.IsCellOccupied()가 Player/Enemy 겹침 방지를 위해
     // 조회한다(2026-08-28 추가, ITurnActor.cs 주석 참고).
     public Vector3Int CurrentCell => currentCell;
+    public Tilemap FloorTilemap => floorTilemap;
+    public Tilemap WallsTilemap => wallsTilemap;
+    public bool IsDead => isDead;
+    public bool IsReadyForInput => isMyTurn && !isAnimating && !isDead;
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    public void DebugSetCurrentHP(int hp)
+    {
+        currentHP = Mathf.Clamp(hp, 1, maxHP);
+        isDead = false;
+        healthBar?.SetFill((float)currentHP / maxHP);
+        ExpeditionSession.RecordPlayerHealth(currentHP);
+        Debug.Log($"[QA] 플레이어 HP를 {currentHP}/{maxHP}(으)로 설정했습니다.");
+    }
+#endif
+
+    public void RestoreHealthForActiveExpedition()
+    {
+        if (!ExpeditionSession.IsActive) return;
+
+        if (ExpeditionSession.HasPlayerHealth)
+        {
+            currentHP = Mathf.Clamp(ExpeditionSession.PlayerCurrentHP, 0, maxHP);
+            isDead = currentHP <= 0;
+        }
+        else
+        {
+            currentHP = maxHP;
+            isDead = false;
+            ExpeditionSession.RecordPlayerHealth(currentHP);
+        }
+
+        healthBar?.SetFill((float)currentHP / maxHP);
+    }
+
+    public void LockInputForResultResolution()
+    {
+        resultResolutionInputLocked = true;
+        queuedWaitInput = false;
+        ClearQueuedAutoPath();
+    }
 
     // 방향키 -> 이동 방향(셀 단위) 매핑. 4방향만(대각선 없음, 2026-08-27 확정).
     private static readonly Dictionary<KeyCode, Vector3Int> DirectionKeys = new Dictionary<KeyCode, Vector3Int>
@@ -96,10 +136,14 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     // GetComponentInChildren를 쓰는 이유: knight_m 같은 프리팹은 SpriteRenderer가 이
     // 오브젝트 자신이 아니라 자식 오브젝트에 붙어있을 수도 있어서(둘 다 대응).
     private SpriteRenderer spriteRenderer;
+    private BoxCollider2D movementCollider;
 
     private Vector3Int currentCell;
     private bool isMyTurn;
     private bool isAnimating;
+    private bool runtimeInitialized;
+    private bool queuedWaitInput;
+    private bool resultResolutionInputLocked;
 
     // 마우스 클릭으로 예약된 자동 이동 경로. 비어있으면 자동 이동 없음.
     private Queue<Vector3Int> queuedAutoPath;
@@ -116,14 +160,32 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
 
         if (wallsTilemap == null || floorTilemap == null)
         {
-            Debug.LogError("[PlayerTurnActor] wallsTilemap/floorTilemap이 Inspector에 연결 안 돼있습니다 — " +
-                            "MapGenPreview 하위의 Walls/Floor 타일맵을 드래그해서 연결해주세요.");
             enabled = false;
             return;
         }
 
-        // 시작 위치를 논리 좌표로 스냅 — 에디터 툴이 배치한 월드 좌표를 셀 좌표로 역산.
-        currentCell = floorTilemap.WorldToCell(transform.position);
+        InitializeRuntimeComponents();
+    }
+
+    public void ConfigureRuntime(Tilemap walls, Tilemap floor, float moveDuration, float moveHopHeight)
+    {
+        wallsTilemap = walls;
+        floorTilemap = floor;
+        hopDuration = Mathf.Max(0.01f, moveDuration);
+        hopHeight = Mathf.Max(0f, moveHopHeight);
+        InitializeRuntimeComponents();
+        enabled = true;
+    }
+
+    private void InitializeRuntimeComponents()
+    {
+        if (runtimeInitialized || wallsTilemap == null || floorTilemap == null) return;
+        runtimeInitialized = true;
+
+        // 루트 Transform이 아니라 발밑 Collider 중심을 실제 점유 셀 기준점으로 사용한다.
+        // Transform을 직접 변환하면 디버그 PLAYER 셀과 상하좌우 검색이 화면보다 한 칸 위로 잡힌다.
+        movementCollider = GetComponent<BoxCollider2D>();
+        currentCell = floorTilemap.WorldToCell(GetLogicalAnchorWorldPosition());
 
         spriteRenderer = GetComponentInChildren<SpriteRenderer>();
         if (spriteRenderer == null)
@@ -133,12 +195,14 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
 
         // [2026-09-04 신규] HP바 생성 + 초기값 반영 — AlertIndicator와 동일하게 Awake에서
         // 붙여서 씬에 배치만 하면 자동으로 준비되게 한다.
-        healthBar = gameObject.AddComponent<ProceduralHealthBar>();
+        healthBar = GetComponent<ProceduralHealthBar>();
+        if (healthBar == null) healthBar = gameObject.AddComponent<ProceduralHealthBar>();
         healthBar.SetFill((float)currentHP / maxHP);
 
         // [2026-09-04 신규] 장비 컴포넌트 부착 — PlayerEquipment.Awake()가 자체적으로 테스트용
         // 기본 장비를 자동 장착해준다(에셋 없이도 바로 확인 가능, PlayerEquipment.cs 참고).
-        equipment = gameObject.AddComponent<PlayerEquipment>();
+        equipment = GetComponent<PlayerEquipment>();
+        if (equipment == null) equipment = gameObject.AddComponent<PlayerEquipment>();
     }
 
     private void OnDestroy()
@@ -199,11 +263,38 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         if (isDead)
         {
             enabled = false; // 다음 프레임부터 또 호출되는 것 방지(씬 전환은 즉시 시작되지만 방어적으로)
-            SceneManager.LoadScene("BaseCamp");
+            if (ExpeditionManager.Instance != null)
+            {
+                ExpeditionManager.Instance.CompleteDeath();
+            }
+            else
+            {
+                Debug.LogError("[PlayerTurnActor] ExpeditionManager가 없어 사망 결과를 처리할 수 없습니다.");
+            }
             return;
         }
 
+        if (resultResolutionInputLocked)
+        {
+            queuedWaitInput = false;
+            ClearQueuedAutoPath();
+            return;
+        }
+
+        // Enemy 행동 처리 중 눌린 Space도 버리지 않고 다음 Player 턴에 1회 실행한다.
+        // bool 예약이라 키 연타가 여러 턴의 대기로 누적되지는 않는다.
+        if (Input.GetKeyDown(KeyCode.Space)) queuedWaitInput = true;
+
         if (!isMyTurn || isAnimating) return;
+
+        if (queuedWaitInput)
+        {
+            queuedWaitInput = false;
+            ClearQueuedAutoPath();
+            isMyTurn = false;
+            TickManager.Instance.CompleteTurn(this, TickCost.PerTileMove);
+            return;
+        }
 
         // 수동 입력(방향키/클릭)은 항상 자동 이동보다 우선한다 — 자동 이동 중에 방향키를
         // 누르거나 다른 타일을 클릭하면 기존 예약 경로를 버리고 새 입력을 따른다.
@@ -293,6 +384,17 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         TickManager.Instance.CompleteTurn(this, TickCost.Attack);
     }
 
+    // 계단/탈출구가 플레이어의 현재 차례를 정상적인 Tick 행동으로 소비할 때 사용한다.
+    public bool TrySpendInteraction(float tickCost)
+    {
+        if (!isMyTurn || isAnimating || isDead || TickManager.Instance == null) return false;
+
+        ClearQueuedAutoPath();
+        isMyTurn = false;
+        TickManager.Instance.CompleteTurn(this, tickCost);
+        return true;
+    }
+
     // Enemy.TryTraceTowards()가 인접해서 공격할 때 호출한다. 데미지 공식은 "공격력 - 방어력"
     // (0 밑으로는 안 내려감, 사용자 확정). HP가 0 이하가 되면 즉시 죽이지 않고 isDead만 세팅 —
     // 실제 씬 전환은 Update()에서 한 프레임 늦게 처리한다(위 Update() 주석 참고, 호출 스택 분리 목적).
@@ -302,6 +404,7 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
 
         int damage = Mathf.Max(0, incomingAttackPower - EffectiveDefensePower);
         currentHP = Mathf.Max(0, currentHP - damage);
+        ExpeditionSession.RecordPlayerHealth(currentHP);
         healthBar?.SetFill((float)currentHP / maxHP);
 
         // [2026-09-04 신규] 맞는 순간 시각 피드백 — EnemyTurnActor.TakeDamage와 동일한 방식
@@ -374,16 +477,17 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     // 오도록 보정한다 — 스프라이트 크기가 몹마다/캐릭터마다 달라도 자동으로 맞는다.
     private Vector3 GetCellFootWorldPosition(Vector3Int cell)
     {
-        Vector3 cellOrigin = floorTilemap.CellToWorld(cell); // 셀의 바닥-왼쪽 모서리(정수 좌표)
-        Vector3 cellSize = floorTilemap.cellSize;
+        Vector3 desiredAnchorWorld = floorTilemap.GetCellCenterWorld(cell);
+        Vector3 colliderOffsetWorld = movementCollider != null
+            ? transform.TransformVector(movementCollider.offset)
+            : Vector3.zero;
+        return desiredAnchorWorld - colliderOffsetWorld;
+    }
 
-        float footOffsetY = 0f;
-        if (spriteRenderer != null && spriteRenderer.sprite != null)
-        {
-            footOffsetY = spriteRenderer.sprite.bounds.extents.y;
-        }
-
-        return cellOrigin + new Vector3(cellSize.x * 0.5f, footOffsetY, 0f);
+    private Vector3 GetLogicalAnchorWorldPosition()
+    {
+        if (movementCollider == null) return transform.position;
+        return transform.TransformPoint(movementCollider.offset);
     }
 
     // 한 칸 이동을 시도한다. 벽이면 false(턴 소모 없음), 성공하면 애니메이션 코루틴을 시작하고 true.
@@ -391,14 +495,37 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     {
         var targetCell = currentCell + step;
 
-        if (wallsTilemap.HasTile(targetCell)) return false;
-        if (!floorTilemap.HasTile(targetCell)) return false; // 맵 바깥으로는 못 나감
+        if (wallsTilemap.HasTile(targetCell))
+        {
+            Debug.Log($"[MoveBlocked] {currentCell} → {targetCell}: Wall 타일");
+            return false;
+        }
+        if (!floorTilemap.HasTile(targetCell))
+        {
+            Debug.Log($"[MoveBlocked] {currentCell} → {targetCell}: Floor 없음");
+            return false; // 맵 바깥으로는 못 나감
+        }
+
+        // 키보드 이동도 마우스 클릭과 동일하게 Enemy가 있는 방향으로 밀면 이동 대신 공격한다.
+        // 기존에는 아래 점유 검사에서 그대로 막혀 WASD/방향키로는 근접 공격할 수 없었다.
+        var occupant = TickManager.Instance.GetActorAt(targetCell, this);
+        if (occupant is EnemyTurnActor enemy)
+        {
+            Debug.Log($"[MoveToAttack] {currentCell} → {targetCell}: Enemy 근접 공격 전환");
+            AttackEnemy(enemy);
+            return true;
+        }
+
         // 벽/바닥과 같은 자격으로 "이미 다른 액터가 서 있는 칸"도 막는다 — 콜라이더가 아니라
         // TickManager에 직접 물어보는 이유는 이동을 물리엔진 없이 transform.position으로 직접
         // 처리하는 구조라서다(2026-08-28 발견, ITurnActor.cs 주석 참고). 자동 이동 경로 자체가
         // 이제 이 점유 칸을 피해서 짜이므로(HandleMouseClick 참고, 2026-09-03 수정) 여기 걸리는
         // 경우는 방향키 수동 이동, 또는 경로 계산 이후 몹이 움직여 상황이 바뀐 예외 상황뿐이다.
-        if (TickManager.Instance.IsCellOccupied(targetCell, this)) return false;
+        if (occupant != null)
+        {
+            Debug.Log($"[MoveBlocked] {currentCell} → {targetCell}: {occupant.GetType().Name} 점유");
+            return false;
+        }
 
         UpdateFacingDirection(step);
         StartCoroutine(HopTo(targetCell));
@@ -421,6 +548,13 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         Vector3 startPos = transform.position;
         Vector3 endPos = GetCellFootWorldPosition(targetCell);
 
+        // 논리 이동과 턴 비용을 연출 시작 시점에 먼저 확정한다. TickManager가 즉시 Enemy 턴을
+        // 시작하므로 플레이어와 Enemy의 홉 애니메이션이 같은 시간에 재생된다.
+        currentCell = targetCell;
+        isMyTurn = false;
+        FogOfWarController.Instance?.UpdateVisibility(currentCell, sightRangeInTiles);
+        TickManager.Instance.CompleteTurn(this, TickCost.PerTileMove);
+
         float t = 0f;
         while (t < hopDuration)
         {
@@ -434,26 +568,6 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         }
 
         transform.position = endPos; // 부동소수점 오차 정리 — 정확히 셀 중앙에 스냅.
-        currentCell = targetCell; // 논리 좌표는 애니메이션이 끝나는 시점에 확정한다.
         isAnimating = false;
-
-        // 이동할 때마다 안개를 다시 계산한다 — Enemy의 Trace 감지와 같은 LineOfSight를 써서
-        // "실제로 지금 보이는 곳"만 걷어낸다(2026-08-28 추가).
-        FogOfWarController.Instance?.UpdateVisibility(currentCell, sightRangeInTiles);
-
-        // isMyTurn=false를 CompleteTurn()보다 먼저 세팅한다 — 순서가 중요하다(2026-08-27
-        // 버그 발견/수정). 등록된 액터가 플레이어 혼자뿐인 상황에서는 CompleteTurn() 호출 안에서
-        // TickManager가 곧바로 다음 차례를 찾는데(AdvanceSchedule), 다음 차례도 결국 플레이어
-        // 자신이라 OnTurnStart()가 CompleteTurn() 호출이 "끝나기 전에" 동기적으로 다시 불려서
-        // isMyTurn을 true로 세팅해버린다. 그 상태에서 이 아래 줄이 isMyTurn=false를 나중에
-        // 실행하면 방금 시작된 새 턴의 플래그를 덮어써서 Update()가 영원히 입력을 무시하게 된다
-        // (실제로 이 버그로 "한 번 움직이면 멈추는" 증상이 발생했었음). 그래서 반드시
-        // CompleteTurn() 호출보다 먼저 false로 내려서, 그 안에서 새 턴이 시작되며 다시
-        // true로 세팅되더라도 최종적으로 true가 남게 만든다.
-        isMyTurn = false;
-
-        // 이동 1칸 = TickCost.PerTileMove(0.2) 소비 — 5칸 이동 시 1tick(=게임 내 5분)이라는
-        // 기존 tick 경제 설계(HOMEPC_SYNC_NOTES.md)를 그대로 따른다. 새 상수 필요 없음.
-        TickManager.Instance.CompleteTurn(this, TickCost.PerTileMove);
     }
 }

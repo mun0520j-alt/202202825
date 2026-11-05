@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
+// 현재 InDungeon의 생성 플레이어가 실제 사용하는 이동 컴포넌트다.
 // Dungeon Tools 7) 플레이어를 한 칸(1 유닛 = 1 타일)씩 이동시킨다. 이동 한 번 성공할 때마다
 // Tick을 1 소비한다 — 목표 칸이 벽이면 아예 안 움직이고 Tick도 안 든다.
 // 이동 중(다음 칸에 도착하기 전)에는 새 입력을 안 받는다 — 그리드에서 벗어난 애매한 위치에서
@@ -17,6 +18,11 @@ public class GridMover : MonoBehaviour
     public void SetWallTilemap(Tilemap tilemap)
     {
         wallTilemap = tilemap;
+    }
+
+    public void SetMoveDuration(float duration)
+    {
+        moveDuration = Mathf.Max(0.01f, duration);
     }
 
     // 생성 직후 등, 애니메이션 없이 즉시 특정 위치로 맞춰 세울 때 사용.

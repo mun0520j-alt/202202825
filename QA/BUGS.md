@@ -150,3 +150,391 @@ An error occurred while resolving packages:
 
 - MCP는 지속적으로 업데이트되는 개발 도구이며, Git 연결이 준비된 환경에서는 바로 사용할 수 있다.
 - 게임 런타임 결함이 아니므로 현재 프로젝트에서 패키지 구조를 변경하지 않고 알려진 개발 환경 제약으로 수용한다.
+
+---
+
+## BUG-003 — 탈출 절차 중 적이 행동하지 않고 생환 확정
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Closed (사용자 Play 검증 완료, 2026-11-05) |
+| 심각도 | Major |
+| 우선순위 | P1 |
+| 발견 단계 | M1 원정 한 바퀴 |
+| 영향 범위 | 3층 탈출 절차, 생환·사망·MIA 결과 판정 |
+| 관련 코드 | `ExpeditionManager.ResolveExitAfterTick()`, `Tick.Advance()` |
+
+### 사전 조건
+
+- 플레이어가 3층 탈출구에 도달해 있다.
+- 탈출 절차 Tick 동안 행동할 수 있는 적이 주변에 있다.
+- 원정이 생환·사망·MIA 중 어느 결과로도 아직 종료되지 않았다.
+
+### 재현 절차
+
+1. 3층 탈출구 칸에서 탈출 절차를 시작한다.
+2. 탈출 비용이 적용되는 동안 적의 행동 횟수와 플레이어 HP를 관찰한다.
+3. 다음 프레임의 원정 결과를 확인한다.
+
+### 기대 결과
+
+- 탈출 절차가 소비한 Tick만큼 적도 자신의 시간축에 따라 행동한다.
+- 절차 완료 시점에 플레이어 생존 여부와 MIA 조건을 확인한다.
+- 완료 전에 플레이어가 사망하면 `Dead`, MIA 임계값에 도달하면 `MIA`, 둘 다 아니면 `Escaped`가 된다.
+
+### 실제 결과 (수정 전)
+
+- 탈출 비용을 한 번 적용한 뒤 다음 프레임에 바로 `Escaped`를 확정했다.
+- 탈출 절차 동안 적이 행동하거나 플레이어가 사망할 기회가 결과 판정에 반영되지 않았다.
+
+### 원인 분석
+
+- `ResolveExitAfterTick()`가 `yield return null` 한 번 뒤 생존 및 플레이어 차례 복귀를 확인하지 않고 생환을 확정했다.
+- 기존 정수 `Tick.Advance(amount)`는 `amount`만큼 한 번에 증가한 뒤 `OnTick`을 한 번만 발행해, Tick 구독자가 소비 시간만큼 행동할 수 없었다.
+- 탈출 진행 플래그가 세워진 동안 사망·MIA 처리도 함께 차단될 수 있었다.
+
+### 수정 내용
+
+- 탈출 절차 기본값을 30Tick에서 10Tick으로 조정했다. (`d958cf9`)
+- 큐 기반 경로는 적 턴 처리 후 플레이어 차례 복귀 또는 사망·MIA 확정까지 완료 판정을 보류한다. (`ba39534`)
+- 정수 Tick 경로는 비용을 1Tick씩 발행해 구독자가 매 Tick 행동할 수 있게 했다. (`ba39534`)
+- 절차 중 `Dead`와 `MIA`가 `Escaped`보다 우선하도록 결과 가드를 수정했다. (`ba39534`)
+
+### 검증 항목
+
+- 적이 있는 상태에서 10Tick 탈출 시 적 행동이 시간축에 맞게 발생하는지 확인한다.
+- 탈출 절차 중 HP가 0이 되면 `Dead`로 종료되는지 확인한다.
+- 탈출 완료 Tick이 1,440에 도달하면 `MIA`로 종료되는지 확인한다.
+- 생존하고 MIA가 아닌 경우에만 `Escaped`로 종료되는지 확인한다.
+- 1,439/1,440/1,441 경계값에서 완료 시점 판정 결과를 기록한다.
+
+### 수정 및 검증 기록
+
+| 날짜 | 단계 | 내용 | 커밋 |
+|---|---|---|---|
+| 2026-11-03 | 등록 | 탈출 절차 중 적 미행동 명세 불일치 등록 | 문서 커밋 |
+| 2026-11-03 | 비용 수정 | 탈출 절차 기본값 30 → 10Tick | d958cf9 |
+| 2026-11-03 | 로직 수정 | 적 행동 처리 후 완료 판정, 사망·MIA 우선 | ba39534 |
+| 2026-11-03 | 회귀 검증 | Unity Play 확인 필요 | 미검증 |
+| 2026-11-05 | 회귀 검증 | 탈출 체류 중 Enemy 행동, 공격·대기 Tick 반영 및 구역 이탈 초기화 확인 | 사용자 확인 |
+
+---
+
+## BUG-004 — InDungeon 씬이 컴파일 제외 폴더의 스크립트를 참조
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Closed (수정 완료) |
+| 심각도 | Major |
+| 우선순위 | P1 |
+| 발견 단계 | M1 원정 한 바퀴 |
+| 영향 범위 | `InDungeon` 씬 로드 및 `DungeonRunManager` 기반 런타임 구성 |
+| 관련 코드 | `_to_delete`의 `DungeonRunManager`·`GridMover`·`Tick`, `Assets/Scripts/MapGen/DungeonRunManager.cs` |
+
+### 재현 절차
+
+1. `_to_delete` 폴더에 원본 스크립트가 있고 `InDungeon` 씬이 해당 GUID를 참조하는 상태로 프로젝트를 연다.
+2. Unity가 스크립트를 컴파일하고 `InDungeon` 씬을 로드하도록 한다.
+3. Console의 타입 누락 오류와 씬 컴포넌트 연결 상태를 확인한다.
+
+### 기대 결과
+
+- 씬이 참조하는 모든 런타임 스크립트가 `Assets` 아래에서 컴파일된다.
+- `DungeonRunManager`, `GridMover`, `Tick` 타입과 직렬화된 컴포넌트 연결이 유지된다.
+
+### 실제 결과 (수정 전)
+
+- `InDungeon` 씬은 `_to_delete` 폴더에 남아 있던 스크립트 GUID를 계속 참조했다.
+- 해당 폴더가 Unity 컴파일 대상에서 제외되어 타입을 찾지 못하고 런타임 구성이 동작하지 않았다.
+
+### 원인 분석
+
+- 스크립트를 정리 폴더로 옮긴 뒤 씬의 직렬화 참조를 함께 갱신하지 않았다.
+- 파일과 `.meta`를 분리하거나 새 GUID로 교체하면 씬 참조가 끊어질 수 있는 구조였다.
+
+### 수정 내용
+
+- 원본 `.meta`와 GUID를 보존한 채 런타임 스크립트를 `Assets` 아래 컴파일 경로로 이동했다.
+- 기존 씬의 직렬화 참조를 재설정하지 않고도 동일 타입을 다시 해석하도록 복구했다. (`e47ec10`)
+
+### 검증 결과
+
+- Unity 컴파일에서 관련 타입 누락 오류가 해소됐다.
+- `InDungeon`에서 기존 GUID 기반 컴포넌트 참조가 유지됨을 확인했다.
+
+### 수정 및 검증 기록
+
+| 날짜 | 단계 | 내용 | 커밋 |
+|---|---|---|---|
+| 2026-11-03 | 원인 확인 | 씬이 `_to_delete`의 컴파일 제외 스크립트 GUID를 참조 | 기록 목적 등록 |
+| 2026-11-03 | 수정 | GUID 보존 이동으로 컴파일 및 씬 참조 복구 | e47ec10 |
+| 2026-11-03 | 종료 | 타입 오류 해소 확인, Closed 처리 | 문서 커밋 |
+
+---
+
+## BUG-005 — 런타임 Enemy 생성 중 체력바 초기화 NullReferenceException
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Closed (사용자 Play 검증 완료, 2026-11-05) |
+| 심각도 | Major |
+| 우선순위 | P1 |
+| 발견 단계 | M1 원정 한 바퀴 |
+| 영향 범위 | `DungeonRunManager`의 층별 Enemy 런타임 생성 |
+| 관련 코드 | `ProceduralHealthBar.SetFill()`, `EnemyTurnActor.TryInitialize()` |
+
+### 재현 절차
+
+1. `InDungeon`에 진입해 `DungeonRunManager`가 Enemy를 생성하도록 한다.
+2. 비활성 상태로 생성된 Enemy에 `EnemyTurnActor.ConfigureRuntime()`이 호출될 때까지 기다린다.
+3. Console을 확인한다.
+
+### 기대 결과
+
+- Enemy의 Tilemap 참조와 체력바가 초기화된다.
+- Enemy가 활성화되어 TickManager에 등록된다.
+
+### 실제 결과 (수정 전)
+
+```text
+NullReferenceException: Object reference not set to an instance of an object
+ProceduralHealthBar.SetFill (System.Single ratio01) (at Assets/Scripts/UI/ProceduralHealthBar.cs:76)
+EnemyTurnActor.TryInitialize () (at Assets/Scripts/Enemy/EnemyTurnActor.cs:129)
+DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunManager.cs:227)
+```
+
+### 원인 분석
+
+- Enemy를 안전하게 구성하기 위해 GameObject를 비활성 상태로 만든 뒤 컴포넌트를 추가했다.
+- 비활성 GameObject의 `ProceduralHealthBar.Awake()`보다 `EnemyTurnActor`의 초기 `SetFill()` 호출이 먼저 실행됐다.
+- `fillTransform`과 `fillRenderer`가 아직 생성되지 않아 NullReferenceException이 발생했다.
+
+### 수정 내용
+
+- `ProceduralHealthBar.Build()`을 중복 호출 가능한 형태로 변경했다.
+- `SetFill()`이 내부 뷰를 먼저 지연 초기화하므로 Awake 호출 순서와 무관하게 동작한다. (`6c2b0b0`)
+
+### 검증 항목
+
+- InDungeon 진입 시 Enemy 3개가 오류 없이 생성되는지 확인한다.
+- Enemy 체력바가 표시되고 TickManager 행동 로그가 발생하는지 확인한다.
+- 플레이어 공격 후 체력바가 정상 갱신되는지 확인한다.
+
+### 검증 결과
+
+- InDungeon 진입 및 F4 배치에서 Enemy가 NRE 없이 생성되고 TickManager 행동 로그가 출력됨을 확인했다.
+- Player 공격에 따라 체력바가 갱신되고 Enemy 처치까지 정상 처리됨을 확인했다.
+
+---
+
+## BUG-006 — 플레이어 피격 시 전역 Tick이 Enemy 공격 비용만큼 추가 경과
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Closed (사용자 Play 검증 완료, 2026-11-05) |
+| 심각도 | Major |
+| 우선순위 | P1 |
+| 발견 단계 | M1 Play 검증 |
+| 영향 범위 | 전역 시계, MIA 판정, 탈출 완료 Tick |
+| 관련 코드 | `TickManager.OnTimeAdvanced`, `DungeonClock.HandleTimeAdvanced()` |
+
+### 재현 절차
+
+1. Enemy와 인접해 공격받을 수 있는 상태를 만든다.
+2. 플레이어 행동 전후의 누적 Tick을 기록한다.
+3. Enemy가 플레이어를 공격한 직후 누적 Tick을 다시 확인한다.
+
+### 기대 결과
+
+- 전역 시계는 플레이어가 선택한 행동 비용으로만 증가한다.
+- Enemy 공격은 스케줄러의 같은 시간축 안에서 처리되며 전역 시계를 추가로 밀지 않는다.
+
+### 실제 결과 (수정 전)
+
+- 플레이어가 피격될 때마다 Enemy 공격 비용 5Tick이 전역 시계에 추가 반영됐다.
+- 플레이어 공격 5Tick 사이의 Enemy 행동 로그가 1+4 또는 2+3처럼 보여 공격 비용이 분할된 것으로 오인될 수 있었다.
+
+### 원인 및 수정
+
+- `DungeonClock`이 모든 액터의 `NextActionTime` 최댓값을 전역 시간으로 사용해, Enemy의 비용이 Player보다 앞설 때 전역 시계도 함께 전진했다.
+- Tick 이벤트에 행동 액터를 함께 전달하고, `DungeonClock`은 `PlayerTurnActor`의 절대 시각만 반영하도록 변경했다. (`ccafab9`)
+- 로그의 대괄호 값은 전역 Tick으로 통일하고 액터 예약 시각은 `actorTime`으로 분리했다. 따라서 Player 공격은 `/Attack/5` 한 줄이며, 후속 Enemy 행동은 같은 전역 Tick에서 별도 표시된다. (`ccafab9`)
+
+### 검증 결과
+
+- 플레이어 행동으로 1Tick 진행한 뒤 Enemy가 남은 4Tick을 같은 시간축에서 처리하고 공격함을 확인했다.
+- Enemy 공격은 전역 Tick을 추가로 증가시키지 않았고, Player 공격은 정확히 5Tick 증가했다.
+
+---
+
+## BUG-007 — 탈출 체류 중 공격·피격 Tick 이중 계산
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Closed (사용자 Play 검증 완료, 2026-11-05) |
+| 심각도 | Major |
+| 우선순위 | P1 |
+| 발견 단계 | M1 Play 검증 |
+| 영향 범위 | 3층 탈출 체류 진행도, 생환·MIA 경계값 |
+| 관련 코드 | `DungeonStairs`, `DungeonClock.HandleTimeAdvanced()` |
+
+### 재현 절차
+
+1. 3층 탈출 구역 안에서 진행도를 0으로 시작한다.
+2. 공격 1회 또는 Space 대기를 실행하고 Enemy에게 피격된다.
+3. 전역 Tick과 탈출 진행도의 증가량을 비교한다.
+
+### 기대 결과
+
+- 탈출 진행도는 구역 안에서 플레이어가 소비한 Tick만큼만 증가한다.
+- Enemy 행동·피격은 진행도와 전역 시계를 추가로 증가시키지 않는다.
+
+### 실제 결과 (수정 전)
+
+- 플레이어 행동 비용에 Enemy 행동 비용까지 전역 시계에 반영되어 탈출 진행도가 이중으로 증가했다.
+
+### 원인 및 수정
+
+- 탈출 진행도가 `DungeonClock.ElapsedTicks`의 차이를 사용하고 있어 BUG-006의 전역 시간 오염이 그대로 전파됐다.
+- 전역 시계를 Player 행동 기준으로 분리해 탈출 진행도도 Player가 소비한 Tick만 반영되도록 수정했다. (`ccafab9`)
+
+### 검증 결과
+
+- 탈출 구역에서 Space는 1Tick, Player 공격은 5Tick만 진행도에 반영됐다.
+- Enemy 공격은 진행도를 추가하지 않았고, 구역 이탈 후 진행도가 초기화됨을 확인했다.
+
+---
+
+## BUG-008 — Enemy 인접 상태에서 Space 대기 입력 누락
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Closed (사용자 Play 검증 완료, 2026-11-05) |
+| 심각도 | Major |
+| 우선순위 | P1 |
+| 발견 단계 | M1 Play 검증 |
+| 영향 범위 | 대기 입력, Enemy 인접 전투 |
+| 관련 코드 | `PlayerTurnActor.Update()` |
+
+### 재현 절차
+
+1. 플레이어를 Enemy와 인접시킨다.
+2. Enemy 행동 처리 직후 또는 처리 중 Space를 한 번 누른다.
+3. 다음 Player 턴의 행동과 누적 Tick을 확인한다.
+
+### 기대 결과
+
+- Enemy 인접 여부와 관계없이 Space 1회가 대기 1회로 처리되고 전역 시계가 1Tick 증가한다.
+
+### 실제 결과 (수정 전)
+
+- `isMyTurn == false`인 프레임에 입력 검사가 끝나 Space 입력이 조용히 버려졌다.
+
+### 원인 및 수정
+
+- Space 감지가 Player 턴 가드 뒤에 있어 Enemy 연속 행동 중 누른 키를 다음 Player 턴으로 넘기지 못했다.
+- Space 입력을 먼저 감지해 bool로 1회 예약하고, 다음 Player 턴에 대기 1Tick으로 실행하도록 변경했다. 연타가 여러 턴으로 누적되지는 않는다. (`0f094e1`)
+
+### 검증 결과
+
+- Enemy 인접 상태에서 Space 대기가 정상 실행되고 1Tick만 소비됨을 확인했다.
+- Enemy는 이전 공격 후 정확히 5Tick째 다시 공격해 입력 예약이 스케줄을 깨지 않음을 확인했다.
+
+---
+
+## BUG-009 — 층 이동 시 플레이어 HP가 최대치로 회복
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Closed (사용자 Play 검증 완료, 2026-11-05) |
+| 심각도 | Major |
+| 우선순위 | P1 |
+| 발견 단계 | M1 Play 검증 |
+| 영향 범위 | 1→2→3층 원정의 누적 피해와 전투 위험 |
+| 관련 코드 | `ExpeditionSession`, `PlayerTurnActor`, `DungeonSceneBootstrapper` |
+| Jira | DUN-25 |
+
+### 재현 절차
+
+1. Enemy 공격으로 Player HP를 최대치 미만으로 낮춘다.
+2. 계단을 사용해 다음 층으로 이동한다.
+3. 새 층에서 Player HP를 확인한다.
+
+### 기대 결과
+
+- 같은 원정의 층 이동이므로 감소한 현재 HP가 유지된다.
+
+### 실제 결과
+
+- `InDungeon` 씬이 다시 로드되면서 Player HP가 최대치로 회복된다.
+
+### 원인 분석
+
+- `ExpeditionSession`은 현재 층과 누적 Tick은 보존하지만 Player 현재 HP는 보존하지 않는다.
+- 층마다 새로 생성되는 `PlayerTurnActor`가 직렬화 기본값 `currentHP=10`으로 초기화된다.
+
+### 수정 내용
+
+- `ExpeditionSession`에 현재 HP와 초기화 여부를 보존한다.
+- 첫 출격에서는 최대 HP를 기록하고, 같은 원정의 층 재진입에서는 저장된 현재 HP를 복원한다. (`fe84d70`)
+- 피격 및 QA HP 변경 시 세션 HP를 즉시 갱신한다. (`fe84d70`)
+
+### 회귀 검증 항목
+
+- 1→2층과 2→3층 이동에서 현재 HP가 동일하게 유지되는지 확인한다.
+- 새 원정을 시작할 때만 HP가 최대치로 초기화되는지 확인한다.
+- 사망·MIA·생환 결과 처리에는 저장 HP가 남지 않는지 확인한다.
+
+### 검증 결과
+
+- 감소한 HP가 1→2→3층 이동 후에도 유지되고, 새 원정에서만 최대 HP로 초기화됨을 확인했다.
+
+---
+
+## BUG-010 — MIA 확정 대기 중 마우스 자동 경로가 계속 실행
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Closed (사용자 Play 검증 완료, 2026-11-05) |
+| 심각도 | Major |
+| 우선순위 | P1 |
+| 발견 단계 | M1 경계값 검증 |
+| 영향 범위 | MIA 경계 1,440Tick, 마우스 자동 이동, 결과 확정 전 상태 |
+| 관련 코드 | `PlayerTurnActor.queuedAutoPath`, `ExpeditionManager.ResolveMIAAfterScheduledActions()` |
+| Jira | DUN-26 |
+
+### 재현 절차
+
+1. 누적 Tick을 1,439로 설정한다.
+2. 현재 위치에서 여러 칸 떨어진 바닥을 마우스로 클릭한다.
+3. 첫 이동으로 1,440Tick에 도달한 뒤 Player 위치와 결과 전환 전 움직임을 확인한다.
+
+### 기대 결과
+
+- MIA가 발생한 행동 1칸까지만 반영된다.
+- 결과 확정 대기 중 입력과 남은 자동 경로가 취소되고 추가 이동하지 않는다.
+
+### 실제 결과
+
+- MIA 판정이 예약된 뒤에도 클릭한 칸을 향한 자동 경로가 계속 실행된다.
+
+### 원인 분석
+
+- `HandleMIA()`는 결과 판정 코루틴만 시작하고 Player 입력이나 `queuedAutoPath`를 잠그지 않는다.
+- `ResolveMIAAfterScheduledActions()`가 Player 차례 복귀를 기다리는 동안 `PlayerTurnActor.Update()`가 남은 경로를 계속 소비할 수 있다.
+
+### 수정 내용
+
+- MIA 판정 시작 시 Player의 예약 Space와 자동 경로를 즉시 취소하고 결과 확정까지 새 입력을 잠근다. (`fe84d70`)
+- 이미 시작된 한 칸 연출과 같은 Tick의 Enemy 행동은 완료시켜 `Dead > MIA` 우선순위를 유지한다. (`fe84d70`)
+
+### 회귀 검증 항목
+
+- 1,439Tick에서 먼 칸 클릭 시 첫 한 칸 뒤 추가 이동 없이 MIA가 확정되는지 확인한다.
+- 방향키·Space 입력도 MIA 확정 대기 중 무시되는지 확인한다.
+- 같은 Tick의 Enemy 공격으로 사망하면 여전히 Dead > MIA가 유지되는지 확인한다.
+
+### 검증 결과
+
+- 1,439Tick에서 먼 칸 클릭 후 첫 한 칸으로 1,440에 도달하면 남은 자동 경로가 중단되고 MIA가 확정됨을 확인했다.
+- 같은 Tick에 Enemy 공격으로 사망할 경우 Dead > MIA 우선순위가 유지됨을 확인했다.

@@ -39,10 +39,12 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     // 시스템이 들어오기 전까지 임시). 몹마다 스탯만 다르게(2~3종) 두는 버티컬 슬라이스 방침이라
     // Inspector에서 몹 프리팹별로 값을 다르게 세팅하면 그대로 난이도 차등이 됨.
     [Header("전투 (2026-09-03 신규, placeholder — 인스펙터에서 확인용)")]
-    [SerializeField] private int maxHP = 5;
-    [SerializeField] private int currentHP = 5;
-    [SerializeField] private int attackPower = 2;
-    [SerializeField] private int defensePower = 0;
+    [SerializeField] private int maxHP = 12;
+    [SerializeField] private int currentHP = 12;
+    // M1 임시 전투 기준: Player 실효 방어 3 기준 타격당 2 피해,
+    // Player HP 10을 5회 공격하면 사망한다. M3 측정에서 재조정한다.
+    [SerializeField] private int attackPower = 5;
+    [SerializeField] private int defensePower = 1;
 
     // 발 위치 보정(Y)에 쓴다 — 아래 GetCellFootWorldPosition() 주석 참고.
     private SpriteRenderer spriteRenderer;
@@ -64,6 +66,19 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
 
     private Vector3Int currentCell;
     private bool isAnimating;
+    private bool isInitialized;
+    private bool turnPendingDuringAnimation;
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    public void DebugTeleportTo(Vector3Int cell)
+    {
+        if (!TryInitialize()) return;
+        StopAllCoroutines();
+        isAnimating = false;
+        currentCell = cell;
+        transform.position = GetCellFootWorldPosition(cell);
+    }
+#endif
 
     // behaviorType(Idle/Wander)은 "Player를 못 봤을 때의 평소 기본 행동"이고, 추적은 그 위에
     // 얹히는 임시 상태다(2026-08-28 결정, "감지 -> 추적 -> 놓치면 마지막 위치 -> 배회 복귀"
@@ -87,13 +102,30 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
 
     private void Awake()
     {
-        if (wallsTilemap == null || floorTilemap == null)
-        {
-            Debug.LogError("[EnemyTurnActor] wallsTilemap/floorTilemap이 Inspector에 연결 안 돼있습니다 — " +
-                            "MapGenPreview 하위의 Walls/Floor 타일맵을 드래그해서 연결해주세요.");
-            enabled = false;
-            return;
-        }
+        TryInitialize();
+    }
+
+    private void Start()
+    {
+        if (TryInitialize()) return;
+        Debug.LogError("[EnemyTurnActor] wallsTilemap/floorTilemap이 연결되지 않아 Enemy를 비활성화합니다.");
+        enabled = false;
+    }
+
+    public void ConfigureRuntime(Tilemap walls, Tilemap floor, EnemyBehaviorType behavior, float moveDuration, float moveHeight)
+    {
+        wallsTilemap = walls;
+        floorTilemap = floor;
+        behaviorType = behavior;
+        hopDuration = moveDuration;
+        hopHeight = moveHeight;
+        TryInitialize();
+    }
+
+    private bool TryInitialize()
+    {
+        if (isInitialized) return true;
+        if (wallsTilemap == null || floorTilemap == null) return false;
 
         // 배치된 월드 좌표를 논리 좌표(셀)로 역산 — PlayerTurnActor.Awake()와 동일한 방식.
         currentCell = floorTilemap.WorldToCell(transform.position);
@@ -109,6 +141,8 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
         // [2026-09-04 신규] HP바 생성 + 초기값 반영.
         healthBar = gameObject.AddComponent<ProceduralHealthBar>();
         healthBar.SetFill((float)currentHP / maxHP);
+        isInitialized = true;
+        return true;
     }
 
     // 자식 오브젝트로 TextMesh "!" 하나를 만들어서 머리 위에 배치한다 — 프로젝트에 이미 있는
@@ -168,6 +202,12 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     // 3) 둘 다 아니면 → 평소 기본 행동(Idle/Wander).
     public void OnTurnStart()
     {
+        if (isAnimating)
+        {
+            turnPendingDuringAnimation = true;
+            return;
+        }
+
         // [2026-09-04] 새 턴이 시작되면 일단 "!" 표시를 꺼둔다 — 아래에서 "이번 턴에 새로
         // 감지됐음"이 확인되면 그때만 다시 켠다. 이렇게 하면 표시가 "감지된 그 1틱 동안만" 떠있게
         // 된다(다음 턴 맨 위에서 항상 리셋되니까).
@@ -357,7 +397,7 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
         float footOffsetY = 0f;
         if (spriteRenderer != null && spriteRenderer.sprite != null)
         {
-            footOffsetY = spriteRenderer.sprite.bounds.extents.y;
+            footOffsetY = spriteRenderer.sprite.bounds.extents.y * Mathf.Abs(transform.lossyScale.y);
         }
 
         return cellOrigin + new Vector3(cellSize.x * 0.5f, footOffsetY, 0f);
@@ -372,6 +412,10 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
         Vector3 startPos = transform.position;
         Vector3 endPos = GetCellFootWorldPosition(targetCell);
 
+        // 논리 이동과 턴 완료를 연출보다 먼저 확정해 플레이어 및 다른 Enemy의 홉을 동시에 시작한다.
+        currentCell = targetCell;
+        CompleteMyTurn();
+
         float t = 0f;
         while (t < hopDuration)
         {
@@ -384,10 +428,12 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
         }
 
         transform.position = endPos; // 부동소수점 오차 정리 — 정확히 목표 위치에 스냅.
-        currentCell = targetCell;    // 논리 좌표는 애니메이션이 끝나는 시점에 확정한다.
         isAnimating = false;
-
-        CompleteMyTurn();
+        if (turnPendingDuringAnimation)
+        {
+            turnPendingDuringAnimation = false;
+            OnTurnStart();
+        }
     }
 
     // Idle이든 Wander(이동 성공/실패 불문)든, 지금은 전부 같은 비용(TickCost.PerTileMove)을

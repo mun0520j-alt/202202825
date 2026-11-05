@@ -38,6 +38,8 @@ public class ProceduralHealthBar : MonoBehaviour
 
     private void Build()
     {
+        if (barRoot != null) return;
+
         barRoot = new GameObject("ProceduralHealthBar").transform;
         barRoot.SetParent(transform);
         barRoot.localPosition = localOffset;
@@ -71,6 +73,9 @@ public class ProceduralHealthBar : MonoBehaviour
     // 책임을 그대로 갖고, 이 클래스는 "받은 비율을 그림으로만 표현"하는 순수 뷰 역할만 한다.
     public void SetFill(float ratio01)
     {
+        // 비활성 GameObject에 런타임으로 컴포넌트를 붙이면 Awake보다 SetFill이 먼저 호출될 수 있다.
+        // 호출 순서에 관계없이 뷰가 준비되도록 지연 초기화한다.
+        Build();
         ratio01 = Mathf.Clamp01(ratio01);
 
         var scale = fillTransform.localScale;
