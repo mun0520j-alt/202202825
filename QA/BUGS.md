@@ -434,3 +434,80 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 
 - Enemy 인접 상태에서 Space 대기가 정상 실행되고 1Tick만 소비됨을 확인했다.
 - Enemy는 이전 공격 후 정확히 5Tick째 다시 공격해 입력 예약이 스케줄을 깨지 않음을 확인했다.
+
+---
+
+## BUG-009 — 층 이동 시 플레이어 HP가 최대치로 회복
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Open (재현 확인) |
+| 심각도 | Major |
+| 우선순위 | P1 |
+| 발견 단계 | M1 Play 검증 |
+| 영향 범위 | 1→2→3층 원정의 누적 피해와 전투 위험 |
+| 관련 코드 | `ExpeditionSession`, `PlayerTurnActor`, `DungeonSceneBootstrapper` |
+
+### 재현 절차
+
+1. Enemy 공격으로 Player HP를 최대치 미만으로 낮춘다.
+2. 계단을 사용해 다음 층으로 이동한다.
+3. 새 층에서 Player HP를 확인한다.
+
+### 기대 결과
+
+- 같은 원정의 층 이동이므로 감소한 현재 HP가 유지된다.
+
+### 실제 결과
+
+- `InDungeon` 씬이 다시 로드되면서 Player HP가 최대치로 회복된다.
+
+### 원인 분석
+
+- `ExpeditionSession`은 현재 층과 누적 Tick은 보존하지만 Player 현재 HP는 보존하지 않는다.
+- 층마다 새로 생성되는 `PlayerTurnActor`가 직렬화 기본값 `currentHP=10`으로 초기화된다.
+
+### 회귀 검증 항목
+
+- 1→2층과 2→3층 이동에서 현재 HP가 동일하게 유지되는지 확인한다.
+- 새 원정을 시작할 때만 HP가 최대치로 초기화되는지 확인한다.
+- 사망·MIA·생환 결과 처리에는 저장 HP가 남지 않는지 확인한다.
+
+---
+
+## BUG-010 — MIA 확정 대기 중 마우스 자동 경로가 계속 실행
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Open (재현 확인) |
+| 심각도 | Major |
+| 우선순위 | P1 |
+| 발견 단계 | M1 경계값 검증 |
+| 영향 범위 | MIA 경계 1,440Tick, 마우스 자동 이동, 결과 확정 전 상태 |
+| 관련 코드 | `PlayerTurnActor.queuedAutoPath`, `ExpeditionManager.ResolveMIAAfterScheduledActions()` |
+
+### 재현 절차
+
+1. 누적 Tick을 1,439로 설정한다.
+2. 현재 위치에서 여러 칸 떨어진 바닥을 마우스로 클릭한다.
+3. 첫 이동으로 1,440Tick에 도달한 뒤 Player 위치와 결과 전환 전 움직임을 확인한다.
+
+### 기대 결과
+
+- MIA가 발생한 행동 1칸까지만 반영된다.
+- 결과 확정 대기 중 입력과 남은 자동 경로가 취소되고 추가 이동하지 않는다.
+
+### 실제 결과
+
+- MIA 판정이 예약된 뒤에도 클릭한 칸을 향한 자동 경로가 계속 실행된다.
+
+### 원인 분석
+
+- `HandleMIA()`는 결과 판정 코루틴만 시작하고 Player 입력이나 `queuedAutoPath`를 잠그지 않는다.
+- `ResolveMIAAfterScheduledActions()`가 Player 차례 복귀를 기다리는 동안 `PlayerTurnActor.Update()`가 남은 경로를 계속 소비할 수 있다.
+
+### 회귀 검증 항목
+
+- 1,439Tick에서 먼 칸 클릭 시 첫 한 칸 뒤 추가 이동 없이 MIA가 확정되는지 확인한다.
+- 방향키·Space 입력도 MIA 확정 대기 중 무시되는지 확인한다.
+- 같은 Tick의 Enemy 공격으로 사망하면 여전히 Dead > MIA가 유지되는지 확인한다.
