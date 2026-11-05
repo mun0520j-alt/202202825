@@ -12,6 +12,7 @@ public static class LootRuntimeState
     public static IReadOnlyList<LootItemInstance> RunBag => runBag;
     public static IReadOnlyList<LootItemInstance> Stash => stash;
     public static int EquippedBagCapacityBonus { get; private set; }
+    public static bool HasBasicLoadout { get; private set; }
     public static int BagCapacity => BaseBagCapacity + Mathf.Max(0, EquippedBagCapacityBonus);
     public static event Action Changed;
 
@@ -21,7 +22,15 @@ public static class LootRuntimeState
         runBag.Clear();
         stash.Clear();
         EquippedBagCapacityBonus = 0;
+        HasBasicLoadout = false;
         Changed = null;
+    }
+
+    public static void BeginNewRun()
+    {
+        if (HasBasicLoadout) return;
+        HasBasicLoadout = true;
+        Debug.Log("[Loadout] 장비가 없어 기본 검·방패·갑옷을 무료 지급했습니다.");
     }
 
     public static bool TryAddToRunBag(LootItemInstance item)
@@ -56,6 +65,7 @@ public static class LootRuntimeState
         if (result == ExpeditionResult.Escaped) return;
         runBag.Clear();
         EquippedBagCapacityBonus = 0;
+        HasBasicLoadout = false;
         Changed?.Invoke();
     }
 }
