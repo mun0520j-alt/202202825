@@ -50,6 +50,7 @@ public class DungeonRunManager : MonoBehaviour
     private readonly List<FloorLayout> floors = new List<FloorLayout>();
     private readonly List<Tilemap> floorTileTilemaps = new List<Tilemap>();
     private readonly List<Tilemap> floorWallTilemaps = new List<Tilemap>();
+    private readonly List<int> floorSeeds = new List<int>();
     private GameObject player;
 
     public int EscapeProcedureTickCost => escapeProcedureTickCost;
@@ -67,6 +68,7 @@ public class DungeonRunManager : MonoBehaviour
         int activeFloorIndex = ExpeditionSession.CurrentFloor - 1;
         SpawnPlayerAtFloor(activeFloorIndex);
         SpawnEnemiesAtFloor(activeFloorIndex);
+        SpawnChestsAtFloor(activeFloorIndex);
         CreateFogForFloor(activeFloorIndex);
         if (GetComponent<DungeonSceneBootstrapper>() == null) gameObject.AddComponent<DungeonSceneBootstrapper>();
     }
@@ -80,6 +82,7 @@ public class DungeonRunManager : MonoBehaviour
         for (int i = 0; i < m1FloorCount; i++)
         {
             int seed = rng.Next();
+            floorSeeds.Add(seed);
             var layout = FloorLayoutGenerator.Generate(gridWidth, gridHeight, minRooms, maxRooms, seed);
 
             var floorRoot = new GameObject($"Floor_{i + 1}", typeof(Grid));
@@ -232,6 +235,58 @@ public class DungeonRunManager : MonoBehaviour
         var actor = enemy.AddComponent<EnemyTurnActor>();
         actor.ConfigureRuntime(wallTilemap, floorTilemap, EnemyBehaviorType.Wander, enemyMoveDuration, enemyHopHeight);
         enemy.SetActive(true);
+    }
+
+    private void SpawnChestsAtFloor(int floorIndex)
+    {
+        if (floorIndex < 0 || floorIndex >= floors.Count || player == null) return;
+
+        var layout = floors[floorIndex];
+        var floorTilemap = floorTileTilemaps[floorIndex];
+        var wallTilemap = floorWallTilemaps[floorIndex];
+        var playerActor = player.GetComponent<PlayerTurnActor>();
+        Vector3Int playerCell = playerActor.CurrentCell;
+
+        Vector3Int reservedExitCell = playerCell;
+        int farthest = -1;
+        var candidates = new List<Vector3Int>();
+        foreach (var cell in floorTilemap.cellBounds.allPositionsWithin)
+        {
+            if (!floorTilemap.HasTile(cell) || wallTilemap.HasTile(cell) || cell == playerCell) continue;
+            if (TickManager.Instance != null && TickManager.Instance.IsCellOccupied(cell)) continue;
+            int distance = Mathf.Abs(cell.x - playerCell.x) + Mathf.Abs(cell.y - playerCell.y);
+            if (distance > farthest)
+            {
+                farthest = distance;
+                reservedExitCell = cell;
+            }
+            if (distance >= 4) candidates.Add(cell);
+        }
+
+        var rng = new System.Random(floorSeeds[floorIndex] ^ 0x4D325F43);
+        for (int i = candidates.Count - 1; i > 0; i--)
+        {
+            int swap = rng.Next(i + 1);
+            (candidates[i], candidates[swap]) = (candidates[swap], candidates[i]);
+        }
+
+        int targetCount = Mathf.Clamp(Mathf.CeilToInt(layout.RoomCount * 0.5f), 6, 8);
+        var placed = new List<Vector3Int>();
+        foreach (var cell in candidates)
+        {
+            if (cell == reservedExitCell) continue;
+            if (placed.Exists(other => Mathf.Abs(other.x - cell.x) + Mathf.Abs(other.y - cell.y) < 6)) continue;
+
+            int chestIndex = placed.Count;
+            var chest = new GameObject($"Chest_F{floorIndex + 1}_{chestIndex + 1}");
+            chest.transform.SetParent(floorTilemap.transform.parent, false);
+            chest.AddComponent<DungeonChest>().Initialize(floorTilemap, cell, floorIndex + 1,
+                floorSeeds[floorIndex] ^ ((chestIndex + 1) * 7919));
+            placed.Add(cell);
+            if (placed.Count >= targetCount) break;
+        }
+
+        Debug.Log($"[DungeonRunManager] {floorIndex + 1}층 상자 {placed.Count}/{targetCount}개 배치 완료.");
     }
 
     private Tilemap CreateTilemapChild(Transform parent, string name, int sortingOrder)

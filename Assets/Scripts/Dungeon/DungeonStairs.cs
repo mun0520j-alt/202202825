@@ -1,9 +1,11 @@
 using UnityEngine;
 using UnityEngine.Tilemaps;
+using System.Collections.Generic;
 
 // 일반 계단은 해당 칸에서 E로 사용하고, 최종 탈출구는 주변 1칸의 대기 구역에 들어가면 자동 시작한다.
 public sealed class DungeonStairs : MonoBehaviour
 {
+    private static readonly Dictionary<Vector3Int, DungeonStairs> stairsByCell = new Dictionary<Vector3Int, DungeonStairs>();
     private Vector3Int cell;
     private bool isFinalExit;
     private bool requestSent;
@@ -13,6 +15,7 @@ public sealed class DungeonStairs : MonoBehaviour
     {
         cell = targetCell;
         isFinalExit = finalExit;
+        stairsByCell[cell] = this;
         transform.position = floorTilemap.GetCellCenterWorld(cell);
         gameObject.name = finalExit ? "EscapeExit(AutoCreated)" : "DownStairs(AutoCreated)";
 
@@ -23,9 +26,23 @@ public sealed class DungeonStairs : MonoBehaviour
         transform.localScale = finalExit ? new Vector3(3f, 3f, 1f) : new Vector3(0.7f, 0.7f, 1f);
     }
 
+    private void OnDestroy()
+    {
+        if (stairsByCell.TryGetValue(cell, out var stairs) && stairs == this) stairsByCell.Remove(cell);
+    }
+
+    public static bool TryUseAt(Vector3Int targetCell, PlayerTurnActor player)
+    {
+        if (!stairsByCell.TryGetValue(targetCell, out var stairs) || stairs == null || stairs.isFinalExit
+            || player == null || player.CurrentCell != targetCell || stairs.requestSent) return false;
+        stairs.requestSent = ExpeditionManager.Instance != null && ExpeditionManager.Instance.TryUseFloorExit(player);
+        return stairs.requestSent;
+    }
+
     private void Update()
     {
         var player = PlayerTurnActor.Instance;
+        if (InventoryPanel.IsOpen || GroundLoot.IsSelectionOpen) return;
         if (requestSent || player == null) return;
 
         if (isFinalExit)

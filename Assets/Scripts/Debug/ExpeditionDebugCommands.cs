@@ -15,6 +15,7 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.F3)) showTileGrid = !showTileGrid;
         if (Input.GetKeyDown(KeyCode.F4)) BuildM1DebugMap();
+        if (Input.GetKeyDown(KeyCode.F5)) FillM2Bag();
     }
 
     private void OnGUI()
@@ -39,6 +40,28 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
     public void BuildM1DebugMap()
     {
         BuildNearPlayer();
+    }
+
+    [ContextMenu("QA/Fill M2 Bag (F5)")]
+    public void FillM2Bag()
+    {
+        LootItemData definition = null;
+        foreach (var candidate in LootItemDatabase.Items)
+        {
+            if (candidate.DropWeight <= 0) continue;
+            definition = candidate;
+            break;
+        }
+        if (definition == null)
+        {
+            Debug.LogWarning("[QA] 가방을 채울 아이템 정의가 없습니다.");
+            return;
+        }
+
+        while (LootRuntimeState.RunBag.Count < LootRuntimeState.BagCapacity)
+            LootRuntimeState.TryAddToRunBag(new LootItemInstance(definition));
+
+        Debug.Log($"[QA] M2 가방을 {LootRuntimeState.RunBag.Count}/{LootRuntimeState.BagCapacity}로 채웠습니다.");
     }
 
     [ContextMenu("QA/Set Player HP")]
@@ -209,10 +232,10 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
         ExpeditionSession.DebugSetCurrentFloor(ExpeditionSession.FinalFloor);
         ReplaceExit(floor, center + new Vector3Int(2, 0, 0));
         PlaceEnemy(center + new Vector3Int(0, 2, 0));
-        CreateChestPlaceholder(floor, center + new Vector3Int(-2, 0, 0));
+        CreateDebugChest(floor, center + new Vector3Int(-2, 0, 0));
         FogOfWarController.Instance?.UpdateVisibility(center, 8);
 
-        Debug.Log("[QA] M1 디버그 맵 구성 완료: 왼쪽 상자 자리표시자 / 위 Enemy / 오른쪽 3층 탈출구.");
+        Debug.Log("[QA] M2 디버그 맵 구성 완료: 왼쪽 실제 상자 / 위 Enemy / 오른쪽 3층 탈출구. F5=가방 채우기.");
         return true;
     }
 
@@ -236,30 +259,14 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
         for (int i = 1; i < enemies.Length; i++) enemies[i].gameObject.SetActive(false);
     }
 
-    private static void CreateChestPlaceholder(Tilemap floor, Vector3Int cell)
+    private static void CreateDebugChest(Tilemap floor, Vector3Int cell)
     {
-        var previous = GameObject.Find("DebugChestPlaceholder(M2)");
-        if (previous != null) Object.Destroy(previous);
+        var previous = GameObject.Find("DebugChest(M2)");
+        if (previous != null) return;
 
-        var chest = new GameObject("DebugChestPlaceholder(M2)");
-        chest.transform.position = floor.GetCellCenterWorld(cell);
-        chest.transform.localScale = new Vector3(0.75f, 0.75f, 1f);
-        var renderer = chest.AddComponent<SpriteRenderer>();
-        renderer.sprite = ProceduralSprite.GetWhiteSpriteCenterPivot();
-        renderer.color = new Color(0.75f, 0.42f, 0.12f, 1f);
-        renderer.sortingOrder = 5;
-
-        var labelObject = new GameObject("Label");
-        labelObject.transform.SetParent(chest.transform, false);
-        labelObject.transform.localPosition = new Vector3(0f, 0.8f, 0f);
-        var label = labelObject.AddComponent<TextMesh>();
-        label.text = "CHEST\n(M2)";
-        label.anchor = TextAnchor.MiddleCenter;
-        label.alignment = TextAlignment.Center;
-        label.characterSize = 0.12f;
-        label.fontSize = 48;
-        label.color = Color.yellow;
-        labelObject.GetComponent<MeshRenderer>().sortingOrder = 100;
+        var chest = new GameObject("DebugChest(M2)");
+        chest.AddComponent<DungeonChest>().Initialize(
+            floor, cell, ExpeditionSession.CurrentFloor, 20261105);
     }
 }
 #endif

@@ -30,6 +30,7 @@ public static class ExpeditionSession
 
     public static void BeginNewRun()
     {
+        LootRuntimeState.BeginNewRun();
         IsActive = true;
         CurrentFloor = FirstFloor;
         ElapsedTicks = 0f;
@@ -81,6 +82,7 @@ public static class ExpeditionSession
             ReachedFloor = CurrentFloor,
             AcquiredItems = new List<string>(acquiredItems)
         };
+        LootRuntimeState.ResolveRun(result);
         IsActive = false;
     }
 }

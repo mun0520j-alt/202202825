@@ -226,6 +226,12 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
 
             isTracing = true;
             lastKnownPlayerCell = playerCell;
+            if (isNewlyDetected)
+            {
+                // 발견 경고가 실제 대응 기회가 되도록 첫 행동은 이동·공격 대신 경계로 소비한다.
+                CompleteMyTurn();
+                return;
+            }
             TryTraceTowards(playerCell);
             return;
         }
@@ -282,6 +288,16 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
         return LineOfSight.HasLineOfSight(currentCell, playerCell, wallsTilemap);
     }
 
+    public bool IsVisibleToPlayer()
+    {
+        var player = PlayerTurnActor.Instance;
+        if (player == null || wallsTilemap == null) return false;
+        var delta = currentCell - player.CurrentCell;
+        int range = player.SightRangeInTiles;
+        return delta.x * delta.x + delta.y * delta.y <= range * range
+            && LineOfSight.HasLineOfSight(player.CurrentCell, currentCell, wallsTilemap);
+    }
+
     // targetCell(추적 중인 Player의 현재 위치, 또는 마지막 목격 위치)까지 TilePathfinder로
     // 매 턴 새로 경로를 계산해서 첫 칸만 이동한다 — 캐싱 안 하는 이유: Player가 매 턴 움직여서
     // 목표 자체가 계속 바뀌니까, 옛 경로를 그대로 쓰면 엉뚱한 길로 갈 수 있다.
@@ -291,7 +307,7 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
         // 경로를 짠다(TilePathfinder.cs 주석 참고) — 몹이 여러 마리로 늘어났을 때 서로를
         // 뚫고 지나가는 경로를 짜지 않도록 한다.
         var path = TilePathfinder.FindPath(currentCell, targetCell, wallsTilemap, floorTilemap,
-            cell => TickManager.Instance.IsCellOccupied(cell, this));
+            cell => TickManager.Instance.IsCellOccupied(cell, this) || DungeonChest.IsCellBlocked(cell));
 
         if (path.Count == 0)
         {
@@ -351,6 +367,7 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
             var targetCell = currentCell + dir;
             if (wallsTilemap.HasTile(targetCell)) continue;
             if (!floorTilemap.HasTile(targetCell)) continue; // 맵 바깥으로는 못 나감
+            if (DungeonChest.IsCellBlocked(targetCell)) continue;
             // 벽/바닥과 같은 자격으로 "이미 다른 액터(Player 포함)가 서 있는 칸"도 막는다 —
             // PlayerTurnActor.TryStep()의 동일 체크와 같은 이유(콜라이더로는 안 막힘, 2026-08-28).
             if (TickManager.Instance.IsCellOccupied(targetCell, this)) continue;
@@ -456,7 +473,7 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     // 하면(등록이 아직 안 풀렸으니) 죽은 채로 OnTurnStart가 불릴 위험이 있다 — 즉시 해제해서 막는다.
     public void TakeDamage(int incomingAttackPower)
     {
-        int damage = Mathf.Max(0, incomingAttackPower - defensePower);
+        int damage = Mathf.Max(1, incomingAttackPower - defensePower);
         currentHP = Mathf.Max(0, currentHP - damage);
         healthBar?.SetFill((float)currentHP / maxHP);
 
