@@ -276,7 +276,7 @@ An error occurred while resolving packages:
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Fixed (검증 대기) |
+| 상태 | Closed (사용자 Play 검증 완료, 2026-11-05) |
 | 심각도 | Major |
 | 우선순위 | P1 |
 | 발견 단계 | M1 원정 한 바퀴 |
@@ -319,6 +319,11 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 - InDungeon 진입 시 Enemy 3개가 오류 없이 생성되는지 확인한다.
 - Enemy 체력바가 표시되고 TickManager 행동 로그가 발생하는지 확인한다.
 - 플레이어 공격 후 체력바가 정상 갱신되는지 확인한다.
+
+### 검증 결과
+
+- InDungeon 진입 및 F4 배치에서 Enemy가 NRE 없이 생성되고 TickManager 행동 로그가 출력됨을 확인했다.
+- Player 공격에 따라 체력바가 갱신되고 Enemy 처치까지 정상 처리됨을 확인했다.
 
 ---
 
