@@ -6,6 +6,7 @@ using UnityEngine.Tilemaps;
 public sealed class DungeonChest : MonoBehaviour
 {
     private static readonly HashSet<Vector3Int> occupiedCells = new HashSet<Vector3Int>();
+    private static readonly Dictionary<Vector3Int, DungeonChest> chestsByCell = new Dictionary<Vector3Int, DungeonChest>();
     private Tilemap floor;
     private Vector3Int cell;
     private int floorNumber;
@@ -19,6 +20,7 @@ public sealed class DungeonChest : MonoBehaviour
         floor = floorTilemap;
         cell = targetCell;
         occupiedCells.Add(cell);
+        chestsByCell[cell] = this;
         floorNumber = currentFloor;
         lootSeed = seed;
         transform.position = floor.GetCellCenterWorld(cell);
@@ -34,6 +36,7 @@ public sealed class DungeonChest : MonoBehaviour
     private void OnDestroy()
     {
         occupiedCells.Remove(cell);
+        if (chestsByCell.TryGetValue(cell, out var chest) && chest == this) chestsByCell.Remove(cell);
     }
 
     public static bool IsCellBlocked(Vector3Int targetCell)
@@ -41,16 +44,45 @@ public sealed class DungeonChest : MonoBehaviour
         return occupiedCells.Contains(targetCell);
     }
 
+    public static bool TryOpenAt(Vector3Int targetCell, PlayerTurnActor player)
+    {
+        return chestsByCell.TryGetValue(targetCell, out var chest) && chest != null && chest.TryBeginOpen(player);
+    }
+
+    public static void CollectAdjacent(Vector3Int playerCell, List<DungeonChest> results)
+    {
+        if (results == null) return;
+        foreach (var chest in chestsByCell.Values)
+        {
+            if (chest != null && !chest.opened && !chest.opening && Manhattan(playerCell, chest.cell) == 1)
+                results.Add(chest);
+        }
+    }
+
+    public string InteractionLabel => opening ? "상자 여는 중..." : $"상자 열기 ({TickCost.Interact:0} Tick)";
+
+    public bool TryOpenFromInteractionMenu(PlayerTurnActor player)
+    {
+        return TryBeginOpen(player);
+    }
+
     private void Update()
     {
         var player = PlayerTurnActor.Instance;
+        if (InventoryPanel.IsOpen || GroundLoot.IsSelectionOpen) return;
         if (opened || opening || player == null || !Input.GetKeyDown(KeyCode.E)) return;
         if (Manhattan(player.CurrentCell, cell) != 1) return;
         if (GroundLoot.HasAdjacent(player.CurrentCell) || !LootInteractionGate.TryClaim()) return;
-        if (!player.TrySpendInteraction(TickCost.Interact, "Loot")) return;
+        TryBeginOpen(player);
+    }
 
+    private bool TryBeginOpen(PlayerTurnActor player)
+    {
+        if (opened || opening || player == null || Manhattan(player.CurrentCell, cell) != 1) return false;
+        if (!player.TrySpendInteraction(TickCost.Interact, "Loot")) return false;
         opening = true;
         StartCoroutine(ResolveOpenAfterTick(player));
+        return true;
     }
 
     private IEnumerator ResolveOpenAfterTick(PlayerTurnActor player)

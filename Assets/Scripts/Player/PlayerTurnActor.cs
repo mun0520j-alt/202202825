@@ -64,6 +64,7 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     // 사용자 요청: "enemy하고 player 통일해야하잖아"). 완전 자체 생성 컴포넌트라 Inspector
     // 세팅 없이 Awake에서 AddComponent만 하면 되고, HP가 바뀔 때마다 SetFill을 호출해서 갱신한다.
     private ProceduralHealthBar healthBar;
+    private bool healthViewDirty;
 
     // 다른 컴포넌트(EnemyTurnActor 등)가 "지금 Player가 어디 있는지"를 조회할 수 있게 하는
     // 싱글턴 — TickManager.Instance와 같은 패턴(2026-08-28 추가). Player는 씬에 항상 하나만
@@ -79,6 +80,7 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     public Vector3Int CurrentCell => currentCell;
     public Tilemap FloorTilemap => floorTilemap;
     public Tilemap WallsTilemap => wallsTilemap;
+    public int SightRangeInTiles => sightRangeInTiles;
     public bool IsDead => isDead;
     public bool IsReadyForInput => isMyTurn && !isAnimating && !isDead;
 
@@ -143,8 +145,17 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     private bool isAnimating;
     private bool runtimeInitialized;
     private bool queuedWaitInput;
-    private bool queuedRestInput;
     private bool resultResolutionInputLocked;
+    private bool autoRestActive;
+    private bool spaceHoldActivated;
+    private float spacePressedAt;
+    private int consecutiveWaitTicks;
+    private int restSequenceVersion;
+    private const float HoldToRestSeconds = 0.35f;
+    private Vector3Int? selectedMouseCell;
+    private GameObject mouseSelectionMarker;
+    private LineRenderer mousePathPreview;
+    private readonly HashSet<EnemyTurnActor> visibleEnemiesAtAutoPathStart = new HashSet<EnemyTurnActor>();
 
     // 마우스 클릭으로 예약된 자동 이동 경로. 비어있으면 자동 이동 없음.
     private Queue<Vector3Int> queuedAutoPath;
@@ -278,35 +289,27 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         if (resultResolutionInputLocked)
         {
             queuedWaitInput = false;
-            queuedRestInput = false;
+            CancelAutoRest(true);
             ClearQueuedAutoPath();
             return;
         }
 
-        // Enemy 행동 처리 중 눌린 Space도 버리지 않고 다음 Player 턴에 1회 실행한다.
-        // bool 예약이라 키 연타가 여러 턴의 대기로 누적되지는 않는다.
-        if (Input.GetKeyDown(KeyCode.Space)) queuedWaitInput = true;
-        if (Input.GetKeyDown(KeyCode.R)) queuedRestInput = true;
+        bool worldInputBlocked = InventoryPanel.IsOpen || GroundLoot.IsSelectionOpen || Input.GetKeyDown(KeyCode.I);
+        HandleSpaceInput(worldInputBlocked);
+        if (worldInputBlocked)
+        {
+            ClearQueuedAutoPath();
+            return;
+        }
 
         if (!isMyTurn || isAnimating) return;
 
-        if (queuedRestInput)
-        {
-            queuedRestInput = false;
-            queuedWaitInput = false;
-            ClearQueuedAutoPath();
-            isMyTurn = false;
-            TickManager.Instance.CompleteTurn(this, TickCost.Rest, "Rest");
-            StartCoroutine(ResolveRestAfterTick());
-            return;
-        }
-
-        if (queuedWaitInput)
+        if (autoRestActive && (currentHP >= maxHP || IsMonsterVisibleNow())) CancelAutoRest(true);
+        if (queuedWaitInput || autoRestActive)
         {
             queuedWaitInput = false;
             ClearQueuedAutoPath();
-            isMyTurn = false;
-            TickManager.Instance.CompleteTurn(this, TickCost.PerTileMove);
+            SpendWaitTick();
             return;
         }
 
@@ -315,6 +318,7 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         if (TryReadDirectionKey(out var manualStep))
         {
             ClearQueuedAutoPath();
+            ClearMouseSelection();
             TryStep(manualStep);
             return;
         }
@@ -325,10 +329,62 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
             return; // 클릭 처리 자체는 경로 예약까지만, 실제 첫 걸음은 다음 줄부터 이어서 처리
         }
 
+        if (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.Escape))
+        {
+            ClearMouseSelection();
+            ClearQueuedAutoPath();
+            return;
+        }
+
         if (queuedAutoPath != null && queuedAutoPath.Count > 0)
         {
             StepAlongAutoPath();
         }
+    }
+
+    private void LateUpdate()
+    {
+        if (!healthViewDirty || healthBar == null) return;
+        healthViewDirty = false;
+        healthBar.SetFill((float)currentHP / maxHP);
+    }
+
+    private void HandleSpaceInput(bool blocked)
+    {
+        if (blocked)
+        {
+            if (autoRestActive || Input.GetKey(KeyCode.Space)) CancelAutoRest(false);
+            return;
+        }
+
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            spacePressedAt = Time.unscaledTime;
+            spaceHoldActivated = false;
+        }
+        if (Input.GetKey(KeyCode.Space) && !spaceHoldActivated
+            && Time.unscaledTime - spacePressedAt >= HoldToRestSeconds)
+        {
+            spaceHoldActivated = true;
+            autoRestActive = true;
+        }
+        if (Input.GetKeyUp(KeyCode.Space))
+        {
+            if (!spaceHoldActivated) queuedWaitInput = true;
+            autoRestActive = false;
+            spaceHoldActivated = false;
+        }
+    }
+
+    private void SpendWaitTick()
+    {
+        consecutiveWaitTicks++;
+        int sequence = restSequenceVersion;
+        bool shouldHeal = consecutiveWaitTicks >= 5;
+        if (shouldHeal) consecutiveWaitTicks = 0;
+        isMyTurn = false;
+        TickManager.Instance.CompleteTurn(this, TickCost.PerTileMove, "Wait");
+        if (shouldHeal) StartCoroutine(ResolveRestAfterTick(sequence));
     }
 
     private bool TryReadDirectionKey(out Vector3Int step)
@@ -354,8 +410,22 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         worldPoint.z = 0f;
         var clickedCell = floorTilemap.WorldToCell(worldPoint);
 
+        if (!selectedMouseCell.HasValue || selectedMouseCell.Value != clickedCell)
+        {
+            SelectMouseCell(clickedCell);
+            return;
+        }
+        ClearMouseSelection();
+
         // 클릭한 칸 자체가 바닥이 아니면(벽이거나 맵 바깥) 그냥 무시 — 아무 반응 없음.
-        if (!floorTilemap.HasTile(clickedCell) || wallsTilemap.HasTile(clickedCell) || DungeonChest.IsCellBlocked(clickedCell)) return;
+        if (!floorTilemap.HasTile(clickedCell) || wallsTilemap.HasTile(clickedCell)) return;
+        if (DungeonChest.IsCellBlocked(clickedCell))
+        {
+            if (!DungeonChest.TryOpenAt(clickedCell, this)) QueueAutoPathTo(clickedCell, true);
+            return;
+        }
+        if (GroundLoot.TryInteractAt(clickedCell, this)) return;
+        if (DungeonStairs.TryUseAt(clickedCell, this)) return;
 
         // [2026-09-03 신규] 클릭한 칸에 Enemy가 서있으면 이동이 아니라 공격 — 녹픽던처럼 "적 칸을
         // 클릭하면 자동으로 공격 전환"(예전에 이미 확정된 입력 규칙). 지금은 인접 1칸(근접)만
@@ -371,6 +441,7 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
                 ClearQueuedAutoPath();
                 AttackEnemy(enemyOccupant);
             }
+            else QueueAutoPathTo(clickedCell, true);
             return;
         }
 
@@ -378,18 +449,88 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         // isBlockedExtra 델리게이트를 넘긴다 — 안 넘기면 몹이 서있는 칸도 그냥 바닥으로 보고
         // 경로가 그 위를 지나가버려서, 실제로 걷다가 그 칸에서 TryStep이 막혀 "목적지는 뚫려있는데
         // 경로 중간에서 멈추는" 버그가 났었다(TilePathfinder.cs 주석 참고).
-        var path = TilePathfinder.FindPath(currentCell, clickedCell, wallsTilemap, floorTilemap,
-            cell => TickManager.Instance.IsCellOccupied(cell, this) || DungeonChest.IsCellBlocked(cell));
-        if (path.Count == 0) return; // 갈 수 없는 칸(도달 불가, 또는 점유 중) — 무시
+        QueueAutoPathTo(clickedCell, false);
+    }
 
+    private bool QueueAutoPathTo(Vector3Int targetCell, bool stopAdjacent)
+    {
+        var path = FindMousePath(targetCell, stopAdjacent);
+        if (path == null || path.Count == 0) return false;
         queuedAutoPath = new Queue<Vector3Int>(path);
-        StepAlongAutoPath(); // 클릭한 프레임에 바로 첫 걸음을 내딛어서 반응성을 높인다.
+        CaptureVisibleEnemies();
+        StepAlongAutoPath();
+        return true;
+    }
+
+    private List<Vector3Int> FindMousePath(Vector3Int targetCell, bool stopAdjacent)
+    {
+        System.Func<Vector3Int, bool> blocked = cell =>
+            TickManager.Instance.IsCellOccupied(cell, this) || DungeonChest.IsCellBlocked(cell);
+        if (!stopAdjacent)
+        {
+            return TilePathfinder.FindPath(currentCell, targetCell, wallsTilemap, floorTilemap, blocked);
+        }
+
+        List<Vector3Int> best = null;
+        Vector3Int[] directions = { Vector3Int.up, Vector3Int.down, Vector3Int.left, Vector3Int.right };
+        foreach (var direction in directions)
+        {
+            var candidate = targetCell + direction;
+            if (!floorTilemap.HasTile(candidate) || wallsTilemap.HasTile(candidate) || blocked(candidate)) continue;
+            var candidatePath = TilePathfinder.FindPath(currentCell, candidate, wallsTilemap, floorTilemap, blocked);
+            if (candidate == currentCell) candidatePath = new List<Vector3Int>();
+            if (candidate != currentCell && candidatePath.Count == 0) continue;
+            if (best == null || candidatePath.Count < best.Count) best = candidatePath;
+        }
+        return best;
+    }
+
+    private void SelectMouseCell(Vector3Int cell)
+    {
+        selectedMouseCell = cell;
+        if (mouseSelectionMarker == null)
+        {
+            mouseSelectionMarker = new GameObject("MouseSelectionMarker");
+            var renderer = mouseSelectionMarker.AddComponent<SpriteRenderer>();
+            renderer.sprite = ProceduralSprite.GetWhiteSpriteCenterPivot();
+            renderer.color = new Color(0.25f, 0.8f, 1f, 0.35f);
+            renderer.sortingOrder = 50;
+            mouseSelectionMarker.transform.localScale = new Vector3(0.85f, 0.85f, 1f);
+            mousePathPreview = mouseSelectionMarker.AddComponent<LineRenderer>();
+            mousePathPreview.material = new Material(Shader.Find("Sprites/Default"));
+            mousePathPreview.startColor = mousePathPreview.endColor = new Color(0.25f, 0.8f, 1f, 0.65f);
+            mousePathPreview.startWidth = mousePathPreview.endWidth = 0.08f;
+            mousePathPreview.sortingOrder = 49;
+            mousePathPreview.useWorldSpace = true;
+        }
+        mouseSelectionMarker.transform.position = floorTilemap.GetCellCenterWorld(cell);
+        mouseSelectionMarker.SetActive(true);
+        bool stopAdjacent = DungeonChest.IsCellBlocked(cell)
+            || TickManager.Instance.GetActorAt(cell, this) is EnemyTurnActor;
+        var path = FindMousePath(cell, stopAdjacent);
+        if (mousePathPreview != null)
+        {
+            int count = path != null ? path.Count + 1 : 0;
+            mousePathPreview.positionCount = count;
+            if (count > 0)
+            {
+                mousePathPreview.SetPosition(0, floorTilemap.GetCellCenterWorld(currentCell));
+                for (int i = 0; i < path.Count; i++) mousePathPreview.SetPosition(i + 1, floorTilemap.GetCellCenterWorld(path[i]));
+            }
+        }
+    }
+
+    private void ClearMouseSelection()
+    {
+        selectedMouseCell = null;
+        if (mouseSelectionMarker != null) mouseSelectionMarker.SetActive(false);
     }
 
     // [2026-09-03 신규] 인접한 Enemy를 공격한다 — 이동 없이 즉시 데미지를 주고 턴을 소비한다.
     // 애니메이션(홉 등)은 지금 단계 범위 밖 — 데미지 판정 자체가 먼저(placeholder 목표).
     private void AttackEnemy(EnemyTurnActor enemy)
     {
+        ResetWaitProgress();
         // [2026-09-04 신규] 공격 대상 쪽으로 바라보기 — 이동할 때(UpdateFacingDirection)와 동일한
         // 좌우 반전 로직을 그대로 재사용한다. 지금까지는 공격해도 캐릭터가 원래 보던 방향 그대로라
         // "누굴 때리는지" 시각적으로 안 와닿는 문제가 있었다(사용자 지적, 2026-09-04).
@@ -403,25 +544,38 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     {
         if (!isMyTurn || isAnimating || isDead || TickManager.Instance == null) return false;
 
+        ResetWaitProgress();
         ClearQueuedAutoPath();
         isMyTurn = false;
         TickManager.Instance.CompleteTurn(this, tickCost, actionName);
         return true;
     }
 
-    private IEnumerator ResolveRestAfterTick()
+    public bool TryPerformTimedAction(float tickCost, string actionName, System.Func<bool> applyEffect)
+    {
+        if (!isMyTurn || isAnimating || isDead || TickManager.Instance == null || applyEffect == null) return false;
+        if (!applyEffect()) return false;
+        ResetWaitProgress();
+        ClearQueuedAutoPath();
+        isMyTurn = false;
+        TickManager.Instance.CompleteTurn(this, tickCost, actionName);
+        return true;
+    }
+
+    private IEnumerator ResolveRestAfterTick(int sequence)
     {
         while (ExpeditionSession.IsActive && !isDead && !IsReadyForInput)
         {
             yield return null;
         }
 
-        if (!ExpeditionSession.IsActive || isDead) yield break;
+        if (!ExpeditionSession.IsActive || isDead || sequence != restSequenceVersion) yield break;
         int before = currentHP;
         currentHP = Mathf.Min(maxHP, currentHP + 1);
         ExpeditionSession.RecordPlayerHealth(currentHP);
         healthBar?.SetFill((float)currentHP / maxHP);
-        Debug.Log($"[Rest] {TickCost.Rest:0} Tick 휴식 — HP {before} → {currentHP}/{maxHP}");
+        healthViewDirty = true;
+        Debug.Log($"[Rest] 연속 대기 5 Tick — HP {before} → {currentHP}/{maxHP}");
     }
 
     // Enemy.TryTraceTowards()가 인접해서 공격할 때 호출한다. 데미지 공식은 "공격력 - 방어력"
@@ -433,8 +587,10 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
 
         int damage = Mathf.Max(1, incomingAttackPower - EffectiveDefensePower);
         currentHP = Mathf.Max(0, currentHP - damage);
+        CancelAutoRest(true);
         ExpeditionSession.RecordPlayerHealth(currentHP);
         healthBar?.SetFill((float)currentHP / maxHP);
+        healthViewDirty = true;
 
         // [2026-09-04 신규] 맞는 순간 시각 피드백 — EnemyTurnActor.TakeDamage와 동일한 방식
         // (HitImpactVfx.cs 참고). Player는 죽어도 Update()에서 한 프레임 뒤에 씬 전환이라 이
@@ -448,6 +604,7 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         if (currentHP <= 0)
         {
             isDead = true;
+            InventoryPanel.CloseForResult();
         }
     }
 
@@ -456,7 +613,7 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     // 입력 대기 상태로 조용히 돌아간다(정상적인 "내 턴" 상태와 동일).
     private void StepAlongAutoPath()
     {
-        if (IsMonsterVisibleNow())
+        if (HasNewVisibleEnemy())
         {
             ClearQueuedAutoPath();
             return;
@@ -479,13 +636,49 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     // PlayerTurnActor의 나머지 로직은 안 건드려도 됨(단일 책임 원칙).
     private bool IsMonsterVisibleNow()
     {
+        foreach (var enemy in FindObjectsByType<EnemyTurnActor>())
+        {
+            if (enemy != null && enemy.IsVisibleToPlayer()) return true;
+        }
         return false;
+    }
+
+    private bool HasNewVisibleEnemy()
+    {
+        foreach (var enemy in FindObjectsByType<EnemyTurnActor>())
+        {
+            if (enemy != null && enemy.IsVisibleToPlayer() && !visibleEnemiesAtAutoPathStart.Contains(enemy)) return true;
+        }
+        return false;
+    }
+
+    private void CaptureVisibleEnemies()
+    {
+        visibleEnemiesAtAutoPathStart.Clear();
+        foreach (var enemy in FindObjectsByType<EnemyTurnActor>())
+        {
+            if (enemy != null && enemy.IsVisibleToPlayer()) visibleEnemiesAtAutoPathStart.Add(enemy);
+        }
+    }
+
+    private void CancelAutoRest(bool resetProgress)
+    {
+        autoRestActive = false;
+        spaceHoldActivated = false;
+        if (resetProgress) ResetWaitProgress();
+    }
+
+    private void ResetWaitProgress()
+    {
+        consecutiveWaitTicks = 0;
+        restSequenceVersion++;
     }
 
     private void ClearQueuedAutoPath()
     {
         queuedAutoPath?.Clear();
         queuedAutoPath = null;
+        visibleEnemiesAtAutoPathStart.Clear();
     }
 
     // 셀의 목표 월드 좌표를 계산한다. X는 칸 중앙(정수 + 0.5), Y는 칸의 바닥 경계(정수)로
@@ -522,6 +715,7 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     // 한 칸 이동을 시도한다. 벽이면 false(턴 소모 없음), 성공하면 애니메이션 코루틴을 시작하고 true.
     private bool TryStep(Vector3Int step)
     {
+        ResetWaitProgress();
         var targetCell = currentCell + step;
 
         if (wallsTilemap.HasTile(targetCell))

@@ -226,6 +226,12 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
 
             isTracing = true;
             lastKnownPlayerCell = playerCell;
+            if (isNewlyDetected)
+            {
+                // 발견 경고가 실제 대응 기회가 되도록 첫 행동은 이동·공격 대신 경계로 소비한다.
+                CompleteMyTurn();
+                return;
+            }
             TryTraceTowards(playerCell);
             return;
         }
@@ -280,6 +286,16 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
         if (delta.x * delta.x + delta.y * delta.y > sightRangeInTiles * sightRangeInTiles) return false; // 원형 반경 밖
 
         return LineOfSight.HasLineOfSight(currentCell, playerCell, wallsTilemap);
+    }
+
+    public bool IsVisibleToPlayer()
+    {
+        var player = PlayerTurnActor.Instance;
+        if (player == null || wallsTilemap == null) return false;
+        var delta = currentCell - player.CurrentCell;
+        int range = player.SightRangeInTiles;
+        return delta.x * delta.x + delta.y * delta.y <= range * range
+            && LineOfSight.HasLineOfSight(player.CurrentCell, currentCell, wallsTilemap);
     }
 
     // targetCell(추적 중인 Player의 현재 위치, 또는 마지막 목격 위치)까지 TilePathfinder로

@@ -56,7 +56,8 @@ public class DungeonSceneBootstrapper : MonoBehaviour
         // FindObjectOfType으로 이미 있는지 먼저 확인해서 없을 때만 새로 붙인다.
         if (FindObjectOfType<DungeonClockDisplay>() == null) gameObject.AddComponent<DungeonClockDisplay>();
         if (FindObjectOfType<InventoryPanel>() == null) gameObject.AddComponent<InventoryPanel>();
-        if (FindObjectOfType<M2BagPanel>() == null) gameObject.AddComponent<M2BagPanel>();
+        var legacyBagPanel = FindObjectOfType<M2BagPanel>();
+        if (legacyBagPanel != null) Destroy(legacyBagPanel);
         if (FindObjectOfType<MinimapController>() == null) gameObject.AddComponent<MinimapController>();
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD

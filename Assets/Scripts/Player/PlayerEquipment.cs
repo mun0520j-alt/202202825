@@ -32,6 +32,10 @@ public class PlayerEquipment : MonoBehaviour
     // 영구히 붙어있게 되니, 여기(자동 생성 폴백 쪽)에서만 보조적으로 관리한다.
     private readonly Dictionary<EquipmentItemDefinition, Color> fallbackColors =
         new Dictionary<EquipmentItemDefinition, Color>();
+    private readonly Dictionary<EquipmentSlotType, EquipmentItemDefinition> defaultItems =
+        new Dictionary<EquipmentSlotType, EquipmentItemDefinition>();
+    private readonly Dictionary<string, EquipmentItemDefinition> lootAdapters =
+        new Dictionary<string, EquipmentItemDefinition>();
 
     // 슬롯 구성이 바뀔 때마다(장착/해제) 발행 — InventoryPanel이 이걸 구독해서 아이콘만 갱신한다.
     public event Action OnEquipmentChanged;
@@ -41,17 +45,61 @@ public class PlayerEquipment : MonoBehaviour
 
     private void Awake()
     {
-        Equip(startingMainWeapon1 != null ? startingMainWeapon1 : CreateDefaultItem(
-            "기본 검", EquipmentSlotType.MainWeapon1, attackBonus: 2, defenseBonus: 0, new Color(0.85f, 0.35f, 0.25f)));
+        var defaultWeapon = startingMainWeapon1 != null ? startingMainWeapon1 : CreateDefaultItem(
+            "기본 검", EquipmentSlotType.MainWeapon1, attackBonus: 2, defenseBonus: 0, new Color(0.85f, 0.35f, 0.25f));
+        defaultItems[EquipmentSlotType.MainWeapon1] = defaultWeapon;
+        Equip(defaultWeapon);
 
-        Equip(startingOffHandShield != null ? startingOffHandShield : CreateDefaultItem(
-            "낡은 방패", EquipmentSlotType.OffHandShield, attackBonus: 0, defenseBonus: 1, new Color(0.3f, 0.55f, 0.9f)));
+        var defaultShield = startingOffHandShield != null ? startingOffHandShield : CreateDefaultItem(
+            "낡은 방패", EquipmentSlotType.OffHandShield, attackBonus: 0, defenseBonus: 1, new Color(0.3f, 0.55f, 0.9f));
+        defaultItems[EquipmentSlotType.OffHandShield] = defaultShield;
+        Equip(defaultShield);
 
-        Equip(startingArmor != null ? startingArmor : CreateDefaultItem(
-            "가죽 갑옷", EquipmentSlotType.Armor, attackBonus: 0, defenseBonus: 1, new Color(0.4f, 0.75f, 0.35f)));
+        var defaultArmor = startingArmor != null ? startingArmor : CreateDefaultItem(
+            "가죽 갑옷", EquipmentSlotType.Armor, attackBonus: 0, defenseBonus: 1, new Color(0.4f, 0.75f, 0.35f));
+        defaultItems[EquipmentSlotType.Armor] = defaultArmor;
+        Equip(defaultArmor);
+        LootRuntimeState.Changed += RefreshLootEquipment;
+        RefreshLootEquipment();
 
         // MainWeapon2는 의도적으로 비워둔다 — 무기 스왑(ITEM_SYSTEM_DESIGN.md 2장, 전투중 1tick/
         // 비전투 무료)은 아직 범위 밖이라, 지금은 슬롯이 "존재는 하지만 비어있는" 상태로만 둔다.
+    }
+
+    private void OnDestroy()
+    {
+        LootRuntimeState.Changed -= RefreshLootEquipment;
+    }
+
+    private void RefreshLootEquipment()
+    {
+        ApplyLootSlot(LootItemType.Weapon, EquipmentSlotType.MainWeapon1);
+        ApplyLootSlot(LootItemType.Shield, EquipmentSlotType.OffHandShield);
+        ApplyLootSlot(LootItemType.Armor, EquipmentSlotType.Armor);
+        RecalculateBonuses();
+        OnEquipmentChanged?.Invoke();
+    }
+
+    private void ApplyLootSlot(LootItemType type, EquipmentSlotType slot)
+    {
+        var loot = LootRuntimeState.GetEquipped(type);
+        if (loot == null)
+        {
+            if (LootRuntimeState.IsBasicSlotUnequipped(type)) equippedItems.Remove(slot);
+            else if (defaultItems.TryGetValue(slot, out var fallback)) equippedItems[slot] = fallback;
+            return;
+        }
+        if (!lootAdapters.TryGetValue(loot.InstanceId, out var adapter))
+        {
+            adapter = ScriptableObject.CreateInstance<EquipmentItemDefinition>();
+            adapter.itemName = loot.Definition.Name;
+            adapter.slotType = slot;
+            adapter.attackPowerBonus = loot.Definition.AttackBonus;
+            adapter.defensePowerBonus = loot.Definition.DefenseBonus;
+            lootAdapters[loot.InstanceId] = adapter;
+            fallbackColors[adapter] = Color.white;
+        }
+        equippedItems[slot] = adapter;
     }
 
     // 슬롯 하나에 아이템을 장착(또는 교체)한다 — 같은 슬롯에 이미 있던 건 그냥 덮어써서 버려진다
@@ -68,6 +116,46 @@ public class PlayerEquipment : MonoBehaviour
     public EquipmentItemDefinition GetEquipped(EquipmentSlotType slot)
     {
         return equippedItems.TryGetValue(slot, out var item) ? item : null;
+    }
+
+    public bool TryUnequip(EquipmentSlotType slot)
+    {
+        if (!TryGetLootType(slot, out var type) || !equippedItems.TryGetValue(slot, out var current) || current == null) return false;
+        if (LootRuntimeState.GetEquipped(type) != null) return LootRuntimeState.TryUnequipToBag(type);
+
+        var definition = new LootItemData
+        {
+            Id = $"basic_{type.ToString().ToLowerInvariant()}",
+            Name = current.itemName,
+            Type = type,
+            Rarity = LootRarity.Normal,
+            AttackBonus = current.attackPowerBonus,
+            DefenseBonus = current.defensePowerBonus,
+            CapacityBonus = 0,
+            IconKey = string.Empty,
+            DropWeight = 0
+        };
+        return LootRuntimeState.TryStoreUnequippedBasic(type, new LootItemInstance(definition));
+    }
+
+    private static bool TryGetLootType(EquipmentSlotType slot, out LootItemType type)
+    {
+        switch (slot)
+        {
+            case EquipmentSlotType.MainWeapon1:
+            case EquipmentSlotType.MainWeapon2:
+                type = LootItemType.Weapon;
+                return true;
+            case EquipmentSlotType.OffHandShield:
+                type = LootItemType.Shield;
+                return true;
+            case EquipmentSlotType.Armor:
+                type = LootItemType.Armor;
+                return true;
+            default:
+                type = default;
+                return false;
+        }
     }
 
     // icon이 없는 아이템(지금은 자동 생성된 테스트용 기본 장비뿐)을 그릴 때 쓸 대표색.
