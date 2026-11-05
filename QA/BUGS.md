@@ -447,6 +447,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 발견 단계 | M1 Play 검증 |
 | 영향 범위 | 1→2→3층 원정의 누적 피해와 전투 위험 |
 | 관련 코드 | `ExpeditionSession`, `PlayerTurnActor`, `DungeonSceneBootstrapper` |
+| Jira | DUN-25 |
 
 ### 재현 절차
 
@@ -485,6 +486,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 발견 단계 | M1 경계값 검증 |
 | 영향 범위 | MIA 경계 1,440Tick, 마우스 자동 이동, 결과 확정 전 상태 |
 | 관련 코드 | `PlayerTurnActor.queuedAutoPath`, `ExpeditionManager.ResolveMIAAfterScheduledActions()` |
+| Jira | DUN-26 |
 
 ### 재현 절차
 
