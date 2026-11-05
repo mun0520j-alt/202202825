@@ -121,6 +121,7 @@ public sealed class ExpeditionManager : MonoBehaviour
     {
         if (!ExpeditionSession.IsActive || miaResolutionPending) return;
         miaResolutionPending = true;
+        PlayerTurnActor.Instance?.LockInputForResultResolution();
         StartCoroutine(ResolveMIAAfterScheduledActions());
     }
 

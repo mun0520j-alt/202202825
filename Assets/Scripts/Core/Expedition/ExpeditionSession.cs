@@ -11,6 +11,8 @@ public static class ExpeditionSession
     public static int CurrentFloor { get; private set; } = FirstFloor;
     public static float ElapsedTicks { get; private set; }
     public static ExpeditionResultData LastResult { get; private set; }
+    public static int PlayerCurrentHP { get; private set; }
+    public static bool HasPlayerHealth { get; private set; }
 
     private static readonly List<string> acquiredItems = new List<string>();
 
@@ -21,6 +23,8 @@ public static class ExpeditionSession
         CurrentFloor = FirstFloor;
         ElapsedTicks = 0f;
         LastResult = null;
+        PlayerCurrentHP = 0;
+        HasPlayerHealth = false;
         acquiredItems.Clear();
     }
 
@@ -30,12 +34,21 @@ public static class ExpeditionSession
         CurrentFloor = FirstFloor;
         ElapsedTicks = 0f;
         LastResult = null;
+        PlayerCurrentHP = 0;
+        HasPlayerHealth = false;
         acquiredItems.Clear();
     }
 
     public static void RecordElapsedTicks(float elapsedTicks)
     {
         if (IsActive && elapsedTicks > ElapsedTicks) ElapsedTicks = elapsedTicks;
+    }
+
+    public static void RecordPlayerHealth(int currentHP)
+    {
+        if (!IsActive) return;
+        PlayerCurrentHP = Mathf.Max(0, currentHP);
+        HasPlayerHealth = true;
     }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD

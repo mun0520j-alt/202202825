@@ -88,9 +88,36 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         currentHP = Mathf.Clamp(hp, 1, maxHP);
         isDead = false;
         healthBar?.SetFill((float)currentHP / maxHP);
+        ExpeditionSession.RecordPlayerHealth(currentHP);
         Debug.Log($"[QA] 플레이어 HP를 {currentHP}/{maxHP}(으)로 설정했습니다.");
     }
 #endif
+
+    public void RestoreHealthForActiveExpedition()
+    {
+        if (!ExpeditionSession.IsActive) return;
+
+        if (ExpeditionSession.HasPlayerHealth)
+        {
+            currentHP = Mathf.Clamp(ExpeditionSession.PlayerCurrentHP, 0, maxHP);
+            isDead = currentHP <= 0;
+        }
+        else
+        {
+            currentHP = maxHP;
+            isDead = false;
+            ExpeditionSession.RecordPlayerHealth(currentHP);
+        }
+
+        healthBar?.SetFill((float)currentHP / maxHP);
+    }
+
+    public void LockInputForResultResolution()
+    {
+        resultResolutionInputLocked = true;
+        queuedWaitInput = false;
+        ClearQueuedAutoPath();
+    }
 
     // 방향키 -> 이동 방향(셀 단위) 매핑. 4방향만(대각선 없음, 2026-08-27 확정).
     private static readonly Dictionary<KeyCode, Vector3Int> DirectionKeys = new Dictionary<KeyCode, Vector3Int>
@@ -116,6 +143,7 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     private bool isAnimating;
     private bool runtimeInitialized;
     private bool queuedWaitInput;
+    private bool resultResolutionInputLocked;
 
     // 마우스 클릭으로 예약된 자동 이동 경로. 비어있으면 자동 이동 없음.
     private Queue<Vector3Int> queuedAutoPath;
@@ -226,10 +254,6 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
 
     private void Update()
     {
-        // Enemy 행동 처리 중 눌린 Space도 버리지 않고 다음 Player 턴에 1회 실행한다.
-        // bool 예약이라 키 연타가 여러 턴의 대기로 누적되지는 않는다.
-        if (Input.GetKeyDown(KeyCode.Space)) queuedWaitInput = true;
-
         // [2026-09-03 신규] 사망 처리는 TakeDamage() 안에서 바로 씬 전환을 부르지 않고 여기
         // Update()에서 한 프레임 늦게 실행한다 — TakeDamage가 Enemy의 OnTurnStart 안(TickManager.
         // AdvanceSchedule 반복문 도중)에서 호출될 수도 있는데, 그 호출 스택 한가운데서 바로
@@ -249,6 +273,17 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
             }
             return;
         }
+
+        if (resultResolutionInputLocked)
+        {
+            queuedWaitInput = false;
+            ClearQueuedAutoPath();
+            return;
+        }
+
+        // Enemy 행동 처리 중 눌린 Space도 버리지 않고 다음 Player 턴에 1회 실행한다.
+        // bool 예약이라 키 연타가 여러 턴의 대기로 누적되지는 않는다.
+        if (Input.GetKeyDown(KeyCode.Space)) queuedWaitInput = true;
 
         if (!isMyTurn || isAnimating) return;
 
@@ -369,6 +404,7 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
 
         int damage = Mathf.Max(0, incomingAttackPower - EffectiveDefensePower);
         currentHP = Mathf.Max(0, currentHP - damage);
+        ExpeditionSession.RecordPlayerHealth(currentHP);
         healthBar?.SetFill((float)currentHP / maxHP);
 
         // [2026-09-04 신규] 맞는 순간 시각 피드백 — EnemyTurnActor.TakeDamage와 동일한 방식

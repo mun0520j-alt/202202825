@@ -32,6 +32,7 @@ public class DungeonSceneBootstrapper : MonoBehaviour
             dungeonClock = tickManager.gameObject.AddComponent<DungeonClock>();
         }
         if (!ExpeditionSession.IsActive) ExpeditionSession.BeginNewRun();
+        PlayerTurnActor.Instance?.RestoreHealthForActiveExpedition();
 
         tickManager.SynchronizeTimeline(ExpeditionSession.ElapsedTicks);
         dungeonClock.RestoreForActiveRun(ExpeditionSession.ElapsedTicks);
