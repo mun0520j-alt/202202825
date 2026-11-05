@@ -1,8 +1,10 @@
 using UnityEngine;
 using UnityEngine.Tilemaps;
+using System.Collections.Generic;
 
 public sealed class GroundLoot : MonoBehaviour
 {
+    private static readonly List<GroundLoot> activeLoot = new List<GroundLoot>();
     private LootItemInstance item;
     private Vector3Int cell;
 
@@ -12,6 +14,7 @@ public sealed class GroundLoot : MonoBehaviour
         cell = targetCell;
         transform.position = floor.GetCellCenterWorld(cell);
         name = $"GroundLoot({loot.Definition.Name})";
+        activeLoot.Add(this);
 
         var renderer = gameObject.AddComponent<SpriteRenderer>();
         renderer.sprite = ProceduralSprite.GetWhiteSpriteCenterPivot();
@@ -20,11 +23,22 @@ public sealed class GroundLoot : MonoBehaviour
         transform.localScale = new Vector3(0.35f, 0.35f, 1f);
     }
 
+    private void OnDestroy()
+    {
+        activeLoot.Remove(this);
+    }
+
+    public static bool HasAdjacent(Vector3Int playerCell)
+    {
+        return activeLoot.Exists(loot => loot != null && loot.item != null && Manhattan(playerCell, loot.cell) <= 1);
+    }
+
     private void Update()
     {
         var player = PlayerTurnActor.Instance;
         if (item == null || player == null || !Input.GetKeyDown(KeyCode.E)) return;
         if (Manhattan(player.CurrentCell, cell) > 1) return;
+        if (!LootInteractionGate.TryClaim()) return;
 
         if (!LootRuntimeState.TryAddToRunBag(item))
         {
@@ -61,5 +75,17 @@ public sealed class GroundLoot : MonoBehaviour
             case LootRarity.Legendary: return new Color(1f, 0.2f, 0.15f);
             default: return new Color(0.85f, 0.85f, 0.85f);
         }
+    }
+}
+
+public static class LootInteractionGate
+{
+    private static int claimedFrame = -1;
+
+    public static bool TryClaim()
+    {
+        if (claimedFrame == Time.frameCount) return false;
+        claimedFrame = Time.frameCount;
+        return true;
     }
 }

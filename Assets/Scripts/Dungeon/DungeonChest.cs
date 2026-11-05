@@ -46,6 +46,7 @@ public sealed class DungeonChest : MonoBehaviour
         var player = PlayerTurnActor.Instance;
         if (opened || opening || player == null || !Input.GetKeyDown(KeyCode.E)) return;
         if (Manhattan(player.CurrentCell, cell) != 1) return;
+        if (GroundLoot.HasAdjacent(player.CurrentCell) || !LootInteractionGate.TryClaim()) return;
         if (!player.TrySpendInteraction(TickCost.Interact, "Loot")) return;
 
         opening = true;

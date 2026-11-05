@@ -253,13 +253,14 @@ public class DungeonRunManager : MonoBehaviour
         foreach (var cell in floorTilemap.cellBounds.allPositionsWithin)
         {
             if (!floorTilemap.HasTile(cell) || wallTilemap.HasTile(cell) || cell == playerCell) continue;
+            if (TickManager.Instance != null && TickManager.Instance.IsCellOccupied(cell)) continue;
             int distance = Mathf.Abs(cell.x - playerCell.x) + Mathf.Abs(cell.y - playerCell.y);
             if (distance > farthest)
             {
                 farthest = distance;
                 reservedExitCell = cell;
             }
-            if (distance >= 4 && (TickManager.Instance == null || !TickManager.Instance.IsCellOccupied(cell))) candidates.Add(cell);
+            if (distance >= 4) candidates.Add(cell);
         }
 
         var rng = new System.Random(floorSeeds[floorIndex] ^ 0x4D325F43);
