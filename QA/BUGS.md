@@ -157,7 +157,7 @@ An error occurred while resolving packages:
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Fixed (검증 대기) |
+| 상태 | Closed (사용자 Play 검증 완료, 2026-11-05) |
 | 심각도 | Major |
 | 우선순위 | P1 |
 | 발견 단계 | M1 원정 한 바퀴 |
@@ -216,6 +216,7 @@ An error occurred while resolving packages:
 | 2026-11-03 | 비용 수정 | 탈출 절차 기본값 30 → 10Tick | d958cf9 |
 | 2026-11-03 | 로직 수정 | 적 행동 처리 후 완료 판정, 사망·MIA 우선 | ba39534 |
 | 2026-11-03 | 회귀 검증 | Unity Play 확인 필요 | 미검증 |
+| 2026-11-05 | 회귀 검증 | 탈출 체류 중 Enemy 행동, 공격·대기 Tick 반영 및 구역 이탈 초기화 확인 | 사용자 확인 |
 
 ---
 
@@ -325,7 +326,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Fixed (Play 검증 대기) |
+| 상태 | Closed (사용자 Play 검증 완료, 2026-11-05) |
 | 심각도 | Major |
 | 우선순위 | P1 |
 | 발견 단계 | M1 Play 검증 |
@@ -354,13 +355,18 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 - Tick 이벤트에 행동 액터를 함께 전달하고, `DungeonClock`은 `PlayerTurnActor`의 절대 시각만 반영하도록 변경했다. (`ccafab9`)
 - 로그의 대괄호 값은 전역 Tick으로 통일하고 액터 예약 시각은 `actorTime`으로 분리했다. 따라서 Player 공격은 `/Attack/5` 한 줄이며, 후속 Enemy 행동은 같은 전역 Tick에서 별도 표시된다. (`ccafab9`)
 
+### 검증 결과
+
+- 플레이어 행동으로 1Tick 진행한 뒤 Enemy가 남은 4Tick을 같은 시간축에서 처리하고 공격함을 확인했다.
+- Enemy 공격은 전역 Tick을 추가로 증가시키지 않았고, Player 공격은 정확히 5Tick 증가했다.
+
 ---
 
 ## BUG-007 — 탈출 체류 중 공격·피격 Tick 이중 계산
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Fixed (Play 검증 대기) |
+| 상태 | Closed (사용자 Play 검증 완료, 2026-11-05) |
 | 심각도 | Major |
 | 우선순위 | P1 |
 | 발견 단계 | M1 Play 검증 |
@@ -387,13 +393,18 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 - 탈출 진행도가 `DungeonClock.ElapsedTicks`의 차이를 사용하고 있어 BUG-006의 전역 시간 오염이 그대로 전파됐다.
 - 전역 시계를 Player 행동 기준으로 분리해 탈출 진행도도 Player가 소비한 Tick만 반영되도록 수정했다. (`ccafab9`)
 
+### 검증 결과
+
+- 탈출 구역에서 Space는 1Tick, Player 공격은 5Tick만 진행도에 반영됐다.
+- Enemy 공격은 진행도를 추가하지 않았고, 구역 이탈 후 진행도가 초기화됨을 확인했다.
+
 ---
 
 ## BUG-008 — Enemy 인접 상태에서 Space 대기 입력 누락
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Fixed (Play 검증 대기) |
+| 상태 | Closed (사용자 Play 검증 완료, 2026-11-05) |
 | 심각도 | Major |
 | 우선순위 | P1 |
 | 발견 단계 | M1 Play 검증 |
@@ -418,3 +429,8 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 
 - Space 감지가 Player 턴 가드 뒤에 있어 Enemy 연속 행동 중 누른 키를 다음 Player 턴으로 넘기지 못했다.
 - Space 입력을 먼저 감지해 bool로 1회 예약하고, 다음 Player 턴에 대기 1Tick으로 실행하도록 변경했다. 연타가 여러 턴으로 누적되지는 않는다. (`0f094e1`)
+
+### 검증 결과
+
+- Enemy 인접 상태에서 Space 대기가 정상 실행되고 1Tick만 소비됨을 확인했다.
+- Enemy는 이전 공격 후 정확히 5Tick째 다시 공격해 입력 예약이 스케줄을 깨지 않음을 확인했다.
