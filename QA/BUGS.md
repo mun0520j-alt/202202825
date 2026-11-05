@@ -441,7 +441,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Open (재현 확인) |
+| 상태 | Fixed (Play 검증 대기) |
 | 심각도 | Major |
 | 우선순위 | P1 |
 | 발견 단계 | M1 Play 검증 |
@@ -468,6 +468,12 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 - `ExpeditionSession`은 현재 층과 누적 Tick은 보존하지만 Player 현재 HP는 보존하지 않는다.
 - 층마다 새로 생성되는 `PlayerTurnActor`가 직렬화 기본값 `currentHP=10`으로 초기화된다.
 
+### 수정 내용
+
+- `ExpeditionSession`에 현재 HP와 초기화 여부를 보존한다.
+- 첫 출격에서는 최대 HP를 기록하고, 같은 원정의 층 재진입에서는 저장된 현재 HP를 복원한다. (`fe84d70`)
+- 피격 및 QA HP 변경 시 세션 HP를 즉시 갱신한다. (`fe84d70`)
+
 ### 회귀 검증 항목
 
 - 1→2층과 2→3층 이동에서 현재 HP가 동일하게 유지되는지 확인한다.
@@ -480,7 +486,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Open (재현 확인) |
+| 상태 | Fixed (Play 검증 대기) |
 | 심각도 | Major |
 | 우선순위 | P1 |
 | 발견 단계 | M1 경계값 검증 |
@@ -507,6 +513,11 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 
 - `HandleMIA()`는 결과 판정 코루틴만 시작하고 Player 입력이나 `queuedAutoPath`를 잠그지 않는다.
 - `ResolveMIAAfterScheduledActions()`가 Player 차례 복귀를 기다리는 동안 `PlayerTurnActor.Update()`가 남은 경로를 계속 소비할 수 있다.
+
+### 수정 내용
+
+- MIA 판정 시작 시 Player의 예약 Space와 자동 경로를 즉시 취소하고 결과 확정까지 새 입력을 잠근다. (`fe84d70`)
+- 이미 시작된 한 칸 연출과 같은 Tick의 Enemy 행동은 완료시켜 `Dead > MIA` 우선순위를 유지한다. (`fe84d70`)
 
 ### 회귀 검증 항목
 
