@@ -81,6 +81,7 @@ public static class ExpeditionSession
             ReachedFloor = CurrentFloor,
             AcquiredItems = new List<string>(acquiredItems)
         };
+        LootRuntimeState.ResolveRun(result);
         IsActive = false;
     }
 }
