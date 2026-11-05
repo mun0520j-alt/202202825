@@ -41,7 +41,9 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     [Header("전투 (2026-09-03 신규, placeholder — 인스펙터에서 확인용)")]
     [SerializeField] private int maxHP = 12;
     [SerializeField] private int currentHP = 12;
-    [SerializeField] private int attackPower = 2;
+    // M1 임시 전투 기준: Player 실효 방어 3 기준 타격당 2 피해,
+    // Player HP 10을 5회 공격하면 사망한다. M3 측정에서 재조정한다.
+    [SerializeField] private int attackPower = 5;
     [SerializeField] private int defensePower = 1;
 
     // 발 위치 보정(Y)에 쓴다 — 아래 GetCellFootWorldPosition() 주석 참고.

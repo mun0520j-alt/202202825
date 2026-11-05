@@ -182,5 +182,5 @@ MonoBehaviour:
   sightRangeInTiles: 5
   maxHP: 12
   currentHP: 12
-  attackPower: 2
+  attackPower: 5
   defensePower: 1
