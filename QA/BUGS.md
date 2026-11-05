@@ -441,7 +441,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Fixed (Play 검증 대기) |
+| 상태 | Closed (사용자 Play 검증 완료, 2026-11-05) |
 | 심각도 | Major |
 | 우선순위 | P1 |
 | 발견 단계 | M1 Play 검증 |
@@ -480,13 +480,17 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 - 새 원정을 시작할 때만 HP가 최대치로 초기화되는지 확인한다.
 - 사망·MIA·생환 결과 처리에는 저장 HP가 남지 않는지 확인한다.
 
+### 검증 결과
+
+- 감소한 HP가 1→2→3층 이동 후에도 유지되고, 새 원정에서만 최대 HP로 초기화됨을 확인했다.
+
 ---
 
 ## BUG-010 — MIA 확정 대기 중 마우스 자동 경로가 계속 실행
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Fixed (Play 검증 대기) |
+| 상태 | Closed (사용자 Play 검증 완료, 2026-11-05) |
 | 심각도 | Major |
 | 우선순위 | P1 |
 | 발견 단계 | M1 경계값 검증 |
@@ -524,3 +528,8 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 - 1,439Tick에서 먼 칸 클릭 시 첫 한 칸 뒤 추가 이동 없이 MIA가 확정되는지 확인한다.
 - 방향키·Space 입력도 MIA 확정 대기 중 무시되는지 확인한다.
 - 같은 Tick의 Enemy 공격으로 사망하면 여전히 Dead > MIA가 유지되는지 확인한다.
+
+### 검증 결과
+
+- 1,439Tick에서 먼 칸 클릭 후 첫 한 칸으로 1,440에 도달하면 남은 자동 경로가 중단되고 MIA가 확정됨을 확인했다.
+- 같은 Tick에 Enemy 공격으로 사망할 경우 Dead > MIA 우선순위가 유지됨을 확인했다.
