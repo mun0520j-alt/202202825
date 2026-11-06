@@ -85,10 +85,9 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     // 요청 반영) — 그래서 EnemyBehaviorType에 별도 Trace 항목을 안 만들고 이 두 필드로
     // 상태를 따로 추적한다. isTracing=true면 매 턴 Player의 "현재" 셀로 다시 경로를 계산해서
     // 쫓아가고, 시야에서 놓치면 lastKnownPlayerCell(마지막으로 본 위치)까지만 마저 쫓아간 뒤
-    // 거기 도착하면 isTracing=false로 돌아가 기본 행동(behaviorType)을 재개한다.
+    // 거기 도착하면 isTracing=false로 전환하고 주변 Search 3회 후 기본 행동을 재개한다.
     private bool isTracing;
     private Vector3Int? lastKnownPlayerCell;
-    private int unseenActions;
     private int searchActionsRemaining;
     private bool pendingRoomAlert;
 
@@ -244,7 +243,6 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
             }
 
             isTracing = true;
-            unseenActions = 0;
             searchActionsRemaining = 0;
             lastKnownPlayerCell = playerCell;
             if (isNewlyDetected)
@@ -260,12 +258,11 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
 
         if (isTracing && lastKnownPlayerCell.HasValue)
         {
-            unseenActions++;
-            if (unseenActions >= 3)
+            if (currentCell == lastKnownPlayerCell.Value)
             {
                 isTracing = false;
                 searchActionsRemaining = 3;
-                Debug.Log($"[EnemySearch] {name}: Player 미인식 3회, 마지막 목격 위치 {lastKnownPlayerCell.Value} 주변 수색 시작");
+                Debug.Log($"[EnemySearch] {name}: 마지막 목격 위치 {lastKnownPlayerCell.Value} 도착, 주변 수색 시작");
             }
             else
             {
@@ -280,7 +277,6 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
             if (searchActionsRemaining == 0)
             {
                 lastKnownPlayerCell = null;
-                unseenActions = 0;
                 Debug.Log($"[EnemySearch] {name}: 수색 종료");
             }
             TryWanderStep();
@@ -301,7 +297,6 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
             enemy.pendingRoomAlert = true;
             enemy.isTracing = true;
             enemy.lastKnownPlayerCell = playerCell;
-            enemy.unseenActions = 0;
             Debug.Log($"[RoomAlert] {name} → {enemy.name}: Room {roomId}, 마지막 목격 위치 {playerCell}");
         }
     }
@@ -364,7 +359,7 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
         if (path.Count == 0)
         {
             // 다른 Enemy나 닫힌 통로로 순간적으로 막혀도 추적 기억을 즉시 버리지 않는다.
-            // 미인식 3회와 Search 상태 전이는 OnTurnStart에서 일관되게 처리한다.
+            // 동적 점유로 잠시 막혀도 추적 기억을 유지하고 다음 행동에 같은 목표로 다시 계산한다.
             CompleteMyTurn();
             return;
         }
