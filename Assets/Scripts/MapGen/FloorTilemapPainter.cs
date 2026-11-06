@@ -39,6 +39,11 @@ public class FloorTilemapPainter
             DrawRoomWallRing(cell);
         }
 
+        // 인접한 두 방이 각자 벽 링을 가지면 경계가 2칸 두께가 된다. M3 문은 한 칸짜리
+        // 공용 경계를 기준으로 동작하므로 서/남쪽 방의 경계 한 줄을 제거하고 동/북쪽 방의
+        // 한 줄만 공용 벽으로 남긴다. 모서리는 다른 외곽 벽과 겹치므로 유지한다.
+        CollapseConnectedBorders(layout);
+
         var opened = new HashSet<(Vector2Int, Vector2Int)>();
         foreach (var kvp in layout.Connections)
         {
@@ -51,6 +56,33 @@ public class FloorTilemapPainter
         }
 
         OpenMergedRoomWalls(layout);
+    }
+
+    private void CollapseConnectedBorders(FloorLayout layout)
+    {
+        var collapsed = new HashSet<(Vector2Int, Vector2Int)>();
+        foreach (var kvp in layout.Connections)
+        {
+            foreach (var neighbor in kvp.Value)
+            {
+                var pair = OrderedPair(kvp.Key, neighbor);
+                if (!collapsed.Add(pair)) continue;
+                var a = pair.Item1;
+                var b = pair.Item2;
+                if (b.x == a.x + 1 && b.y == a.y)
+                {
+                    int removeX = a.x * ChunkSize + ChunkSize - 1;
+                    int baseY = a.y * ChunkSize;
+                    for (int y = 1; y < ChunkSize - 1; y++) ClearWall(removeX, baseY + y);
+                }
+                else if (b.y == a.y + 1 && b.x == a.x)
+                {
+                    int removeY = a.y * ChunkSize + ChunkSize - 1;
+                    int baseX = a.x * ChunkSize;
+                    for (int x = 1; x < ChunkSize - 1; x++) ClearWall(baseX + x, removeY);
+                }
+            }
+        }
     }
 
     // [2026-09-03 버그 수정] FloorLayoutGenerator.MergeRooms()가 "합쳐져서 큰 방 하나로 취급된다"고

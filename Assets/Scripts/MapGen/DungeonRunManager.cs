@@ -126,24 +126,20 @@ public class DungeonRunManager : MonoBehaviour
                 if (b.x == a.x + 1)
                 {
                     horizontal = false;
-                    int ax = a.x * chunkSize + chunkSize - 1;
                     int bx = b.x * chunkSize;
                     int baseY = a.y * chunkSize;
                     for (int i = -1; i <= 1; i++)
                     {
-                        doorCells.Add(new Vector3Int(ax, baseY + mid + i, 0));
                         doorCells.Add(new Vector3Int(bx, baseY + mid + i, 0));
                     }
                 }
                 else
                 {
                     horizontal = true;
-                    int ay = a.y * chunkSize + chunkSize - 1;
                     int by = b.y * chunkSize;
                     int baseX = a.x * chunkSize;
                     for (int i = -1; i <= 1; i++)
                     {
-                        doorCells.Add(new Vector3Int(baseX + mid + i, ay, 0));
                         doorCells.Add(new Vector3Int(baseX + mid + i, by, 0));
                     }
                 }
