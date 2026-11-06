@@ -114,6 +114,7 @@ public sealed class GroundLoot : MonoBehaviour
                 return false;
             }
             target.item = null;
+            M3MeasurementAutomation.RecordItemAcquired();
             Debug.Log($"[Loot] {picked.Definition.Name} ({picked.Definition.Rarity}) 획득 — {LootRuntimeState.RunBag.Count}/{LootRuntimeState.BagCapacity}");
             Destroy(target.gameObject);
             return true;

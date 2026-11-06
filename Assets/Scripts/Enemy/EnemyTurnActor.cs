@@ -248,6 +248,7 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
             lastKnownPlayerCell = playerCell;
             if (isNewlyDetected)
             {
+                M3MeasurementAutomation.RecordEnemyEncounter(this);
                 AlertSameRoom(playerCell);
                 // 발견 경고가 실제 대응 기회가 되도록 첫 행동은 이동·공격 대신 경계로 소비한다.
                 CompleteMyTurn();
@@ -298,6 +299,7 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
             enemy.pendingRoomAlert = true;
             enemy.isTracing = true;
             enemy.lastKnownPlayerCell = playerCell;
+            M3MeasurementAutomation.RecordEnemyEncounter(enemy);
             Debug.Log($"[RoomAlert] {name} → {enemy.name}: Room {roomId}, 마지막 목격 위치 {playerCell}");
         }
     }
@@ -522,7 +524,9 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     public void TakeDamage(int incomingAttackPower)
     {
         int damage = Mathf.Max(1, incomingAttackPower - defensePower);
+        int before = currentHP;
         currentHP = Mathf.Max(0, currentHP - damage);
+        M3MeasurementAutomation.RecordEnemyDamage(before - currentHP);
         healthBar?.SetFill((float)currentHP / maxHP);
 
         // [2026-09-04 신규] 맞는 순간 시각 피드백 — HitImpactVfx.cs 참고. 죽어서 바로
@@ -536,6 +540,7 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
 
         if (currentHP <= 0)
         {
+            M3MeasurementAutomation.RecordEnemyKill();
             if (TickManager.Instance != null)
             {
                 TickManager.Instance.UnregisterActor(this);

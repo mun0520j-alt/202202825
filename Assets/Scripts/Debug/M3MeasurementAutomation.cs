@@ -13,6 +13,7 @@ public static class M3MeasurementAutomation
     private const int DefaultSeed = 20261106;
     private static readonly Dictionary<string, float> playerActionTicks = new Dictionary<string, float>();
     private static readonly HashSet<string> visitedRooms = new HashSet<string>();
+    private static readonly HashSet<string> encounteredEnemies = new HashSet<string>();
     private static bool sessionPrepared;
     private static bool recording;
     private static int runSeed = DefaultSeed;
@@ -21,10 +22,21 @@ public static class M3MeasurementAutomation
     private static float enemyActionTicks;
     private static int roomRevisits;
     private static string lastRoomKey;
+    private static int enemiesKilled;
+    private static int damageDealt;
+    private static int damageTaken;
+    private static int healingReceived;
+    private static int chestsOpened;
+    private static int itemsAcquired;
+    private static int itemsGrounded;
+    private static int exitPathTiles;
+    private static int exitRoomEnemies;
 
     public static int ConfiguredSeed => PlayerPrefs.GetInt(SeedPreferenceKey, DefaultSeed);
     public static string OutputDirectory => Path.Combine(Application.persistentDataPath, "M3Measurements");
-    public static string OutputPath => Path.Combine(OutputDirectory, "expedition_runs.csv");
+    // v1 CSV(19열)는 그대로 보존한다. 상세 지표를 섞어 붙이면 기존 헤더와 행이 어긋나므로
+    // 확장 스키마는 v2 파일에서 새로 시작한다.
+    public static string OutputPath => Path.Combine(OutputDirectory, "expedition_runs_v2.csv");
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetRuntimeState()
@@ -86,6 +98,72 @@ public static class M3MeasurementAutomation
 #endif
     }
 
+    public static void RecordEnemyEncounter(EnemyTurnActor enemy)
+    {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (recording && enemy != null)
+            encounteredEnemies.Add(ExpeditionSession.CurrentFloor + ":" + enemy.name);
+#endif
+    }
+
+    public static void RecordEnemyDamage(int amount)
+    {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (recording) damageDealt += Mathf.Max(0, amount);
+#endif
+    }
+
+    public static void RecordEnemyKill()
+    {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (recording) enemiesKilled++;
+#endif
+    }
+
+    public static void RecordPlayerDamage(int amount)
+    {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (recording) damageTaken += Mathf.Max(0, amount);
+#endif
+    }
+
+    public static void RecordPlayerHealing(int amount)
+    {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (recording) healingReceived += Mathf.Max(0, amount);
+#endif
+    }
+
+    public static void RecordChestOpened()
+    {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (recording) chestsOpened++;
+#endif
+    }
+
+    public static void RecordItemAcquired()
+    {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (recording) itemsAcquired++;
+#endif
+    }
+
+    public static void RecordItemGrounded()
+    {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (recording) itemsGrounded++;
+#endif
+    }
+
+    public static void RecordFloorExitMetrics(int shortestPathTiles, int enemiesInExitRoom)
+    {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (!recording) return;
+        exitPathTiles += Mathf.Max(0, shortestPathTiles);
+        exitRoomEnemies += Mathf.Max(0, enemiesInExitRoom);
+#endif
+    }
+
     public static void Finish(ExpeditionResult result, float elapsedTicks, int reachedFloor)
     {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -97,7 +175,7 @@ public static class M3MeasurementAutomation
         {
             if (writeHeader)
             {
-                writer.WriteLine("timestamp,seed,result,total_ticks,reached_floor,player_actions,enemy_actions,enemy_action_ticks,move_ticks,wait_ticks,attack_ticks,door_ticks,loot_ticks,interact_ticks,other_ticks,visited_rooms,room_revisits,bag_items,hp");
+                writer.WriteLine("timestamp,seed,result,total_ticks,reached_floor,player_actions,enemy_actions,enemy_action_ticks,move_ticks,wait_ticks,attack_ticks,door_ticks,loot_ticks,interact_ticks,other_ticks,visited_rooms,room_revisits,bag_items,hp,enemy_encounters,enemies_killed,damage_dealt,damage_taken,healing_received,chests_opened,items_acquired,items_grounded,exit_path_tiles,exit_room_enemies");
             }
             writer.WriteLine(string.Join(",", new[]
             {
@@ -119,7 +197,17 @@ public static class M3MeasurementAutomation
                 visitedRooms.Count.ToString(CultureInfo.InvariantCulture),
                 roomRevisits.ToString(CultureInfo.InvariantCulture),
                 LootRuntimeState.RunBag.Count.ToString(CultureInfo.InvariantCulture),
-                ExpeditionSession.PlayerCurrentHP.ToString(CultureInfo.InvariantCulture)
+                ExpeditionSession.PlayerCurrentHP.ToString(CultureInfo.InvariantCulture),
+                encounteredEnemies.Count.ToString(CultureInfo.InvariantCulture),
+                enemiesKilled.ToString(CultureInfo.InvariantCulture),
+                damageDealt.ToString(CultureInfo.InvariantCulture),
+                damageTaken.ToString(CultureInfo.InvariantCulture),
+                healingReceived.ToString(CultureInfo.InvariantCulture),
+                chestsOpened.ToString(CultureInfo.InvariantCulture),
+                itemsAcquired.ToString(CultureInfo.InvariantCulture),
+                itemsGrounded.ToString(CultureInfo.InvariantCulture),
+                exitPathTiles.ToString(CultureInfo.InvariantCulture),
+                exitRoomEnemies.ToString(CultureInfo.InvariantCulture)
             }));
         }
         Debug.Log($"[M3Measure] 원정 기록 저장 완료 — {OutputPath}");
@@ -148,11 +236,21 @@ public static class M3MeasurementAutomation
     {
         playerActionTicks.Clear();
         visitedRooms.Clear();
+        encounteredEnemies.Clear();
         playerActions = 0;
         enemyActions = 0;
         enemyActionTicks = 0f;
         roomRevisits = 0;
         lastRoomKey = null;
+        enemiesKilled = 0;
+        damageDealt = 0;
+        damageTaken = 0;
+        healingReceived = 0;
+        chestsOpened = 0;
+        itemsAcquired = 0;
+        itemsGrounded = 0;
+        exitPathTiles = 0;
+        exitRoomEnemies = 0;
     }
 
     private static string F(float value) => value.ToString("0.##", CultureInfo.InvariantCulture);

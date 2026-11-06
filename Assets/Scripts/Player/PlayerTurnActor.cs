@@ -572,6 +572,7 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
 
         int before = currentHP;
         currentHP = Mathf.Min(maxHP, currentHP + 1);
+        M3MeasurementAutomation.RecordPlayerHealing(currentHP - before);
         ExpeditionSession.RecordPlayerHealth(currentHP);
         healthBar?.SetFill((float)currentHP / maxHP);
         healthViewDirty = true;
@@ -587,7 +588,9 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         if (isDead) return;
 
         int damage = Mathf.Max(1, incomingAttackPower - EffectiveDefensePower);
+        int before = currentHP;
         currentHP = Mathf.Max(0, currentHP - damage);
+        M3MeasurementAutomation.RecordPlayerDamage(before - currentHP);
         CancelAutoRest(true);
         ExpeditionSession.RecordPlayerHealth(currentHP);
         healthBar?.SetFill((float)currentHP / maxHP);
