@@ -10,9 +10,14 @@ public sealed class DungeonStairs : MonoBehaviour
     private bool isFinalExit;
     private bool requestSent;
     private float extractionStartTick = -1f;
+    private Tilemap floor;
+    public Vector3Int Cell => cell;
+    public Tilemap FloorTilemap => floor;
+    public bool IsFinalExit => isFinalExit;
 
     public void Initialize(Tilemap floorTilemap, Vector3Int targetCell, bool finalExit)
     {
+        floor = floorTilemap;
         cell = targetCell;
         isFinalExit = finalExit;
         stairsByCell[cell] = this;

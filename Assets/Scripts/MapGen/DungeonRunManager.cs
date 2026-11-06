@@ -55,9 +55,13 @@ public class DungeonRunManager : MonoBehaviour
     private GameObject player;
 
     public int EscapeProcedureTickCost => escapeProcedureTickCost;
+    public int RunSeed => runSeed;
 
     private void Awake()
     {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        runSeed = M3MeasurementAutomation.ConfiguredSeed;
+#endif
         if (floorTile == null || wallTile == null)
         {
             Debug.LogError("[DungeonRunManager] floorTile/wallTile이 인스펙터에 안 물려있어서 생성을 중단합니다.");
@@ -65,6 +69,7 @@ public class DungeonRunManager : MonoBehaviour
         }
 
         if (!ExpeditionSession.IsActive) ExpeditionSession.BeginNewRun();
+        M3MeasurementAutomation.BeginOrResume(runSeed);
         GenerateAllFloors();
         int activeFloorIndex = ExpeditionSession.CurrentFloor - 1;
         SpawnPlayerAtFloor(activeFloorIndex);
@@ -72,7 +77,96 @@ public class DungeonRunManager : MonoBehaviour
         SpawnChestsAtFloor(activeFloorIndex);
         CreateFogForFloor(activeFloorIndex);
         if (GetComponent<DungeonSceneBootstrapper>() == null) gameObject.AddComponent<DungeonSceneBootstrapper>();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        ValidateGeneratedRun();
+#endif
     }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    [ContextMenu("QA/Validate Generated Run")]
+    public bool ValidateGeneratedRun()
+    {
+        var errors = new List<string>();
+        for (int i = 0; i < floors.Count; i++)
+        {
+            FloorLayout actual = floors[i];
+            FloorLayout replay = FloorLayoutGenerator.Generate(gridWidth, gridHeight, minRooms, maxRooms, floorSeeds[i]);
+            string actualSignature = BuildLayoutSignature(actual);
+            string replaySignature = BuildLayoutSignature(replay);
+            if (actualSignature != replaySignature) errors.Add($"F{i + 1}: 동일 Seed 재생성 결과 불일치");
+
+            var reached = new HashSet<Vector2Int>();
+            var queue = new Queue<Vector2Int>();
+            queue.Enqueue(actual.StartCell);
+            reached.Add(actual.StartCell);
+            while (queue.Count > 0)
+            {
+                Vector2Int current = queue.Dequeue();
+                if (!actual.Connections.TryGetValue(current, out var neighbors)) continue;
+                foreach (var next in neighbors)
+                {
+                    if (reached.Add(next)) queue.Enqueue(next);
+                }
+            }
+            if (reached.Count != actual.RoomCells.Count)
+                errors.Add($"F{i + 1}: 연결된 방 {reached.Count}/{actual.RoomCells.Count}");
+        }
+
+        var playerActor = PlayerTurnActor.Instance;
+        if (playerActor != null)
+        {
+            Tilemap activeFloor = playerActor.FloorTilemap;
+            Tilemap activeWalls = playerActor.WallsTilemap;
+            var occupied = new HashSet<Vector3Int> { playerActor.CurrentCell };
+            foreach (var enemy in FindObjectsOfType<EnemyTurnActor>())
+            {
+                if (enemy.FloorTilemap != activeFloor) continue;
+                if (!occupied.Add(enemy.CurrentCell)) errors.Add($"현재 층 Actor 겹침: {enemy.CurrentCell}");
+                if (!activeFloor.HasTile(enemy.CurrentCell) || activeWalls.HasTile(enemy.CurrentCell))
+                    errors.Add($"Enemy 비정상 시작 칸: {enemy.CurrentCell}");
+            }
+            foreach (var chest in FindObjectsOfType<DungeonChest>())
+            {
+                if (chest.FloorTilemap != activeFloor) continue;
+                if (DungeonDoor.IsDoorCell(activeFloor, chest.Cell)) errors.Add($"문 칸 상자: {chest.Cell}");
+                if (!occupied.Add(chest.Cell)) errors.Add($"상자·Actor 겹침: {chest.Cell}");
+            }
+            foreach (var stairs in FindObjectsOfType<DungeonStairs>())
+            {
+                if (stairs.FloorTilemap != activeFloor) continue;
+                if (!occupied.Add(stairs.Cell)) errors.Add($"계단·출구 겹침: {stairs.Cell}");
+                var path = TilePathfinder.FindPath(playerActor.CurrentCell, stairs.Cell, activeWalls, activeFloor);
+                if (playerActor.CurrentCell != stairs.Cell && path.Count == 0)
+                    errors.Add($"계단·출구 도달 불가: {stairs.Cell}");
+            }
+        }
+
+        if (errors.Count == 0)
+        {
+            Debug.Log($"[M3Validate] PASS — Seed {runSeed}, {floors.Count}개 층 동일 생성·전체 방 연결 확인");
+            return true;
+        }
+        foreach (string error in errors) Debug.LogError("[M3Validate] " + error);
+        return false;
+    }
+
+    private static string BuildLayoutSignature(FloorLayout layout)
+    {
+        var cells = new List<Vector2Int>(layout.RoomCells);
+        cells.Sort((a, b) => a.y != b.y ? a.y.CompareTo(b.y) : a.x.CompareTo(b.x));
+        var builder = new System.Text.StringBuilder();
+        foreach (var cell in cells)
+        {
+            builder.Append(cell.x).Append(':').Append(cell.y).Append(':').Append(layout.GetRoomId(cell)).Append('|');
+            if (!layout.Connections.TryGetValue(cell, out var neighbors)) continue;
+            var sorted = new List<Vector2Int>(neighbors);
+            sorted.Sort((a, b) => a.y != b.y ? a.y.CompareTo(b.y) : a.x.CompareTo(b.x));
+            foreach (var neighbor in sorted) builder.Append(neighbor.x).Append(':').Append(neighbor.y).Append(',');
+            builder.Append(';');
+        }
+        return builder.ToString();
+    }
+#endif
 
     private void GenerateAllFloors()
     {

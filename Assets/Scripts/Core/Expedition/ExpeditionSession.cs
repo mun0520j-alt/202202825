@@ -30,6 +30,7 @@ public static class ExpeditionSession
 
     public static void BeginNewRun()
     {
+        M3MeasurementAutomation.PrepareNewSession();
         LootRuntimeState.BeginNewRun();
         IsActive = true;
         CurrentFloor = FirstFloor;
@@ -82,6 +83,7 @@ public static class ExpeditionSession
             ReachedFloor = CurrentFloor,
             AcquiredItems = new List<string>(acquiredItems)
         };
+        M3MeasurementAutomation.Finish(result, ElapsedTicks, CurrentFloor);
         LootRuntimeState.ResolveRun(result);
         IsActive = false;
     }

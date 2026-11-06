@@ -14,6 +14,8 @@ public sealed class DungeonChest : MonoBehaviour
     private bool opened;
     private bool opening;
     private SpriteRenderer chestRenderer;
+    public Vector3Int Cell => cell;
+    public Tilemap FloorTilemap => floor;
 
     public void Initialize(Tilemap floorTilemap, Vector3Int targetCell, int currentFloor, int seed)
     {

@@ -1,5 +1,6 @@
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
 // M1 경계값 QA용. 에디터 또는 Development Build에만 포함된다.
@@ -8,20 +9,56 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
     [Min(0f)] public float targetElapsedTicks = 1439f;
     [Min(1)] public int targetPlayerHP = 1;
     [SerializeField] private bool showTileGrid;
+    [SerializeField] private bool showM3Panel;
+    private string seedInput;
 
     private GUIStyle gridLabelStyle;
 
     private void Update()
     {
+        if (seedInput == null) seedInput = M3MeasurementAutomation.ConfiguredSeed.ToString();
         if (Input.GetKeyDown(KeyCode.F3)) showTileGrid = !showTileGrid;
         if (Input.GetKeyDown(KeyCode.F4)) BuildM1DebugMap();
         if (Input.GetKeyDown(KeyCode.F5)) FillM2Bag();
+        if (Input.GetKeyDown(KeyCode.F6)) showM3Panel = !showM3Panel;
     }
 
     private void OnGUI()
     {
-        if (!showTileGrid) return;
-        DrawTileGridOverlay();
+        if (showTileGrid) DrawTileGridOverlay();
+        if (showM3Panel) DrawM3Panel();
+    }
+
+    private void DrawM3Panel()
+    {
+        GUILayout.BeginArea(new Rect(Screen.width - 350f, 16f, 334f, 210f), "M3 측정 자동화 (F6)", GUI.skin.window);
+        GUILayout.Label("Run Seed");
+        seedInput = GUILayout.TextField(seedInput ?? string.Empty);
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("Seed 적용 후 재시작"))
+        {
+            if (int.TryParse(seedInput, out int seed))
+            {
+                M3MeasurementAutomation.SetConfiguredSeed(seed);
+                ExpeditionSession.BeginNewRun();
+                SceneManager.LoadScene("InDungeon");
+            }
+            else Debug.LogWarning("[M3Measure] Seed는 정수로 입력하세요.");
+        }
+        if (GUILayout.Button("Seed 복사"))
+        {
+            GUIUtility.systemCopyBuffer = M3MeasurementAutomation.ConfiguredSeed.ToString();
+            Debug.Log($"[M3Measure] Seed {GUIUtility.systemCopyBuffer} 복사 완료");
+        }
+        GUILayout.EndHorizontal();
+        if (GUILayout.Button("현재 맵 자동 검증"))
+        {
+            var manager = FindObjectOfType<DungeonRunManager>();
+            if (manager != null) manager.ValidateGeneratedRun();
+        }
+        GUILayout.Label("원정 종료 시 CSV 자동 저장:");
+        GUILayout.TextArea(M3MeasurementAutomation.OutputPath, GUILayout.Height(54f));
+        GUILayout.EndArea();
     }
 
     [ContextMenu("QA/Toggle Tile Grid (F3)")]

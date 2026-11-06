@@ -56,6 +56,7 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     // ITurnActor.CurrentCell 구현 — TickManager.IsCellOccupied()가 Player/Enemy 겹침 방지를 위해
     // 조회한다(2026-08-28 추가, ITurnActor.cs 주석 참고).
     public Vector3Int CurrentCell => currentCell;
+    public Tilemap FloorTilemap => floorTilemap;
 
     // 4방향만(대각선 없음) — PlayerTurnActor와 동일한 이동 규칙(2026-08-27 확정).
     private static readonly Vector3Int[] FourDirections =

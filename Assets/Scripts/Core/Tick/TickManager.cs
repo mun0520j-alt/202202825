@@ -243,6 +243,7 @@ public class TickManager : MonoBehaviour
             : "Action";
         DungeonClock dungeonClock = GetComponent<DungeonClock>();
         float globalTime = dungeonClock != null ? dungeonClock.ElapsedTicks : currentTurnActor.NextActionTime;
+        M3MeasurementAutomation.RecordAction(actor, action, tickCost);
         Debug.Log($"[{globalTime:0.##}] {actor}/{action}/{tickCost:0.##} " +
                   $"(actorTime={currentTurnActor.NextActionTime:0.##})");
 
