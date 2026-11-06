@@ -772,7 +772,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Fixed (Play 재검증 대기) |
+| 상태 | Closed (사용자 Play 확인, 2026-11-06) |
 | 심각도 | Major |
 | 우선순위 | P1 |
 | 발견 단계 | M3-A 문 Play 검증 |
@@ -786,7 +786,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Fixed (Play 재검증 대기) |
+| 상태 | Closed (사용자 Play 확인, 2026-11-06) |
 | 심각도 | Major |
 | 우선순위 | P1 |
 | 발견 단계 | M3-A 문 Play 검증 |
@@ -800,7 +800,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Fixed (Play 재검증 대기) |
+| 상태 | Closed (사용자 Play 확인, 2026-11-06) |
 | 심각도 | Major |
 | 우선순위 | P1 |
 | 발견 단계 | M3-A 문 Play 검증 |
@@ -814,7 +814,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Open (로그 보강, 재현 조사) |
+| 상태 | Closed (첨부 로그 확인, 2026-11-06) |
 | 심각도 | Major 후보 |
 | 우선순위 | P1 |
 | 발견 단계 | M3-A 집단 경보 Play 검증 |
@@ -823,3 +823,21 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 - **재현:** 한 Enemy가 Player를 발견해 같은 방 Enemy에 경보 표시가 발생한 뒤 행동을 관찰한다.
 - **실제:** 경보 표시는 보이지만 경보받은 Enemy가 Player 발견 지점으로 추적하지 않는 것으로 관찰됐다.
 - **조사 보강:** `[RoomAlert] 발신 → 수신 / Room ID / 마지막 목격 위치` 로그를 추가해 경보 대상과 경로 상태를 재검증한다.
+- **검증:** 같은 Room ID의 대상만 1회 경보를 받고 마지막 목격 위치를 기준으로 Search한 뒤 종료하는 로그를 확인했다. 연쇄 경보 및 다른 Room 전파는 없었다.
+
+## BUG-024 — Space 장기 휴식 중 회복·HP UI 갱신 정지 및 Tick 무한 소비
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Closed (사용자 Play 확인, 2026-11-06) |
+| 심각도 | Major |
+| 우선순위 | P1 |
+| 발견 단계 | M3-A 자동 휴식 Play 검증 |
+| 관련 코드 | `PlayerTurnActor` |
+
+- **재현:** HP 2에서 Space를 계속 눌러 자동 휴식한다.
+- **기대:** 5Tick마다 HP와 체력바가 1씩 증가하고, 40Tick 뒤 HP 10에 도달하면 자동 대기가 멈춘다.
+- **실제:** `Wait/1` 로그와 전역 Tick은 계속 증가하지만 일부 회복 및 체력바 갱신이 실행되지 않고 최대 HP에서도 대기가 이어진다.
+- **원인:** 5번째 대기 뒤 시작한 회복 코루틴이 `IsReadyForInput`을 기다리는 동안, `Update`의 자동 대기가 돌아온 플레이어 턴을 같은 프레임에 다시 소비해 회복 처리 시점을 계속 놓쳤다.
+- **수정:** 5번째 대기 전에 회복을 예약하고 다음 `OnTurnStart`에서 입력 처리보다 먼저 확정한다. 최대 HP 또는 추적 상태에서는 Space 장기 휴식을 새로 시작하지 않는다.
+- **회귀 검증:** HP 2에서 Space를 유지했을 때 5Tick마다 HP와 체력바가 함께 증가하고, 40Tick 뒤 HP 10에서 자동 대기가 정지함을 확인했다.

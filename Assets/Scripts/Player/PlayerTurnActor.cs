@@ -150,7 +150,7 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     private bool spaceHoldActivated;
     private float spacePressedAt;
     private int consecutiveWaitTicks;
-    private int restSequenceVersion;
+    private bool pendingRestHeal;
     private const float HoldToRestSeconds = 0.35f;
     private Vector3Int? selectedMouseCell;
     private GameObject mouseSelectionMarker;
@@ -261,6 +261,7 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     public void OnTurnStart()
     {
         isMyTurn = true;
+        ResolvePendingRestHeal();
         // 실제 입력 처리는 Update()에서 매 프레임 폴링한다 — 여기서는 "내 턴 시작됨" 표시만.
     }
 
@@ -362,7 +363,8 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
             spacePressedAt = Time.unscaledTime;
             spaceHoldActivated = false;
         }
-        if (Input.GetKey(KeyCode.Space) && !spaceHoldActivated
+        if (Input.GetKey(KeyCode.Space) && !spaceHoldActivated && currentHP < maxHP
+            && !EnemyTurnActor.AnyEnemyHuntingPlayer()
             && Time.unscaledTime - spacePressedAt >= HoldToRestSeconds)
         {
             spaceHoldActivated = true;
@@ -379,12 +381,11 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     private void SpendWaitTick()
     {
         consecutiveWaitTicks++;
-        int sequence = restSequenceVersion;
         bool shouldHeal = consecutiveWaitTicks >= 5;
         if (shouldHeal) consecutiveWaitTicks = 0;
+        pendingRestHeal = shouldHeal;
         isMyTurn = false;
         TickManager.Instance.CompleteTurn(this, TickCost.PerTileMove, "Wait");
-        if (shouldHeal) StartCoroutine(ResolveRestAfterTick(sequence));
     }
 
     private bool TryReadDirectionKey(out Vector3Int step)
@@ -563,20 +564,19 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         return true;
     }
 
-    private IEnumerator ResolveRestAfterTick(int sequence)
+    private void ResolvePendingRestHeal()
     {
-        while (ExpeditionSession.IsActive && !isDead && !IsReadyForInput)
-        {
-            yield return null;
-        }
+        if (!pendingRestHeal) return;
+        pendingRestHeal = false;
+        if (!ExpeditionSession.IsActive || isDead) return;
 
-        if (!ExpeditionSession.IsActive || isDead || sequence != restSequenceVersion) yield break;
         int before = currentHP;
         currentHP = Mathf.Min(maxHP, currentHP + 1);
         ExpeditionSession.RecordPlayerHealth(currentHP);
         healthBar?.SetFill((float)currentHP / maxHP);
         healthViewDirty = true;
         Debug.Log($"[Rest] 연속 대기 5 Tick — HP {before} → {currentHP}/{maxHP}");
+        if (currentHP >= maxHP) autoRestActive = false;
     }
 
     // Enemy.TryTraceTowards()가 인접해서 공격할 때 호출한다. 데미지 공식은 "공격력 - 방어력"
@@ -672,7 +672,7 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     private void ResetWaitProgress()
     {
         consecutiveWaitTicks = 0;
-        restSequenceVersion++;
+        pendingRestHeal = false;
     }
 
     private void ClearQueuedAutoPath()
