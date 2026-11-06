@@ -46,3 +46,10 @@ Unity 상단 메뉴에서 `Dungeon Tools > QA > M3 Automation`을 연다.
 - 긴 원정이 탐색, 회복, 전투, 루팅 중 무엇 때문에 발생했는지
 
 자동화 결과가 PASS여도 위 항목이 재미와 의도에 맞지 않으면 밸런스 조정 대상이다.
+
+## 관련 문서
+
+- `QA/M3_TRACEABILITY.md`: 요구사항·Jira·TC·자동화 연결
+- `QA/M3_MEASUREMENT_REPORT_TEMPLATE.md`: 자동화 결과와 플레이 5판 기록 양식
+- `QA/M3_RELEASE_CHECKLIST.md`: M3 종료 전 확인 목록
+- `docs/M3_DOCUMENTATION_AUDIT_2026-11-06.md`: 현재 명세와 역사 문서 충돌 감사
