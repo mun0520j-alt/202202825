@@ -114,6 +114,10 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
 
                 bool hasFloor = floor.HasTile(cell);
                 bool hasWall = walls.HasTile(cell);
+                int roomId = DungeonRoomRegistry.GetRoomId(floor, cell);
+                bool hasDoor = DungeonDoor.TryGetDebugState(floor, cell, out bool doorOpen);
+                bool hasChest = DungeonChest.IsCellBlocked(cell);
+                bool hasStairs = DungeonStairs.TryGetDebugLabel(cell, out string stairsLabel);
                 ITurnActor occupyingActor = TickManager.Instance != null
                     ? TickManager.Instance.GetActorAt(cell, player)
                     : null;
@@ -122,6 +126,20 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
                     : hasFloor ? new Color(0.1f, 0.9f, 0.35f, 0.12f) : new Color(0.25f, 0.25f, 0.25f, 0.08f);
                 FillRect(rect, fill);
                 DrawRectOutline(rect, hasWall ? Color.red : hasFloor ? Color.green : Color.gray, 1f);
+
+                if (hasDoor)
+                {
+                    FillRect(rect, doorOpen ? new Color(0.1f, 0.75f, 1f, 0.16f) : new Color(1f, 0.45f, 0.05f, 0.35f));
+                    DrawRectOutline(rect, doorOpen ? Color.cyan : new Color(1f, 0.45f, 0.05f), 3f);
+                }
+                else if (hasChest)
+                {
+                    DrawRectOutline(rect, new Color(0.65f, 0.35f, 0.1f), 3f);
+                }
+                else if (hasStairs)
+                {
+                    DrawRectOutline(rect, new Color(0.2f, 0.8f, 1f), 3f);
+                }
 
                 string direction = GetDirectionLabel(playerCell, cell);
                 if (cell == playerCell)
@@ -142,14 +160,18 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
                 if (rect.width >= 34f)
                 {
                     string state = hasWall ? "W" : hasFloor ? "F" : "-";
-                    GUI.Label(rect, $"{x},{y}\n{state} {direction}", gridLabelStyle);
+                    string room = roomId >= 0 ? $"R{roomId}" : "R-";
+                    string obj = hasDoor ? (doorOpen ? "D:OPEN" : "D:CLOSED")
+                        : hasChest ? "CHEST" : hasStairs ? stairsLabel : string.Empty;
+                    GUI.Label(rect, $"{x},{y} {room}\n{state} {obj} {direction}", gridLabelStyle);
                 }
             }
         }
 
-        GUI.Box(new Rect(12f, 12f, 360f, 86f),
-            "F3: Grid 끄기 / F4: 빠른 검증 배치\n초록=Floor / 빨강=Wall / 노랑=Player\n" +
-            "주황=검색 칸 / 보라=다른 Actor 점유\nF4 배치: 왼쪽 상자 / 위 Enemy / 오른쪽 탈출구");
+        GUI.Box(new Rect(12f, 12f, 460f, 108f),
+            "F3: Grid 끄기 / F4: 빠른 검증 배치\n초록=Floor / 빨강=Wall / 노랑=Player / 보라=Actor\n" +
+            "주황=D:CLOSED / 하늘=D:OPEN / 갈색=CHEST / 파랑=STAIRS·EXIT\n" +
+            "R번호=Room ID / 주황 테두리=Player 인접 검색 칸\nF4: 왼쪽 상자 / 위 Enemy / 오른쪽 탈출구");
     }
 
     private void EnsureGridLabelStyle()

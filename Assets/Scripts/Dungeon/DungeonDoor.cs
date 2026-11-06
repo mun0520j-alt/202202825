@@ -51,6 +51,16 @@ public sealed class DungeonDoor : MonoBehaviour
     }
 
     public static bool IsClosedAt(Tilemap map, Vector3Int cell) => byCell.TryGetValue((map, cell), out var door) && door != null && !door.IsOpen;
+    public static bool TryGetDebugState(Tilemap map, Vector3Int cell, out bool isOpen)
+    {
+        if (byCell.TryGetValue((map, cell), out var door) && door != null)
+        {
+            isOpen = door.IsOpen;
+            return true;
+        }
+        isOpen = false;
+        return false;
+    }
     public static bool TryOpenForEnemy(Tilemap map, Vector3Int cell, EnemyTurnActor enemy)
     {
         if (!byCell.TryGetValue((map, cell), out var door) || door == null || door.IsOpen) return false;

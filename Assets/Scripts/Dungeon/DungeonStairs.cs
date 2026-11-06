@@ -39,6 +39,17 @@ public sealed class DungeonStairs : MonoBehaviour
         return stairs.requestSent;
     }
 
+    public static bool TryGetDebugLabel(Vector3Int targetCell, out string label)
+    {
+        if (stairsByCell.TryGetValue(targetCell, out var stairs) && stairs != null)
+        {
+            label = stairs.isFinalExit ? "EXIT" : "STAIRS";
+            return true;
+        }
+        label = null;
+        return false;
+    }
+
     private void Update()
     {
         var player = PlayerTurnActor.Instance;
