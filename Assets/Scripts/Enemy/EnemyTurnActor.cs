@@ -301,6 +301,8 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
             enemy.pendingRoomAlert = true;
             enemy.isTracing = true;
             enemy.lastKnownPlayerCell = playerCell;
+            enemy.unseenActions = 0;
+            Debug.Log($"[RoomAlert] {name} → {enemy.name}: Room {roomId}, 마지막 목격 위치 {playerCell}");
         }
     }
 

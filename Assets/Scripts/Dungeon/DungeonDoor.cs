@@ -43,14 +43,16 @@ public sealed class DungeonDoor : MonoBehaviour
     {
         if (!Input.GetKeyDown(KeyCode.E) || InventoryPanel.IsOpen || GroundLoot.IsSelectionOpen) return;
         var player = PlayerTurnActor.Instance;
-        if (player == null || !player.IsReadyForInput || !IsAdjacent(player.CurrentCell) || !LootInteractionGate.TryClaim()) return;
+        if (player == null || player.FloorTilemap != floor || !player.IsReadyForInput
+            || !IsAdjacent(player.CurrentCell) || !LootInteractionGate.TryClaim()) return;
         if (!IsOpen) SetOpen(true);
-        else if (!ContainsActor()) SetOpen(false);
+        else if (!ContainsActor() && !HasAdjacentEnemy()) SetOpen(false);
         else return;
         TickManager.Instance.CompleteTurn(player, TickCost.PerTileMove, IsOpen ? "OpenDoor" : "CloseDoor");
     }
 
     public static bool IsClosedAt(Tilemap map, Vector3Int cell) => byCell.TryGetValue((map, cell), out var door) && door != null && !door.IsOpen;
+    public static bool IsDoorCell(Tilemap map, Vector3Int cell) => byCell.TryGetValue((map, cell), out var door) && door != null;
     public static bool TryGetDebugState(Tilemap map, Vector3Int cell, out bool isOpen)
     {
         if (byCell.TryGetValue((map, cell), out var door) && door != null)
@@ -79,6 +81,20 @@ public sealed class DungeonDoor : MonoBehaviour
     {
         if (TickManager.Instance == null) return false;
         foreach (var cell in cells) if (TickManager.Instance.IsCellOccupied(cell)) return true;
+        return false;
+    }
+
+    private bool HasAdjacentEnemy()
+    {
+        if (TickManager.Instance == null) return false;
+        Vector3Int[] directions = { Vector3Int.up, Vector3Int.down, Vector3Int.left, Vector3Int.right };
+        foreach (var cell in cells)
+        {
+            foreach (var direction in directions)
+            {
+                if (TickManager.Instance.GetActorAt(cell + direction) is EnemyTurnActor) return true;
+            }
+        }
         return false;
     }
 

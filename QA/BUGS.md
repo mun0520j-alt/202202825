@@ -768,3 +768,58 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 
 - 바닥 아이템과 상자가 동시에 상호작용 범위에 있으면 `주변 상호작용` 목록을 표시한다.
 - 사용자가 아이템 줍기 또는 상자 열기를 직접 선택하며, 가방이 가득 차도 상자 선택은 정상 처리한다.
+## BUG-020 — 다른 층 문이 E 입력을 선점해 현재 층 문이 바뀌지 않음
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Fixed (Play 재검증 대기) |
+| 심각도 | Major |
+| 우선순위 | P1 |
+| 발견 단계 | M3-A 문 Play 검증 |
+| 관련 코드 | `DungeonDoor` |
+
+- **재현:** 2층에서 문 옆 `E` 입력 시 OpenDoor/CloseDoor 로그는 출력되지만 현재 보이는 문 상태가 변하지 않는다.
+- **원인:** 세 층의 문이 모두 활성 `Update()`를 실행하고 동일한 로컬 셀 좌표로 인접 판정해 다른 층 문이 입력을 먼저 선점했다.
+- **수정:** Player의 현재 Floor Tilemap과 문 소유 Tilemap이 같은 경우에만 입력을 처리한다.
+
+## BUG-021 — 문 점유 셀에 상자 생성
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Fixed (Play 재검증 대기) |
+| 심각도 | Major |
+| 우선순위 | P1 |
+| 발견 단계 | M3-A 문 Play 검증 |
+| 관련 코드 | `DungeonRunManager`, `DungeonDoor` |
+
+- **재현:** 층 생성 후 문 통로에 상자가 배치되어 문 이동·상호작용을 방해한다.
+- **원인:** 상자 후보 셀에서 문 점유 셀을 제외하지 않았다.
+- **수정:** `DungeonDoor.IsDoorCell`을 추가하고 상자 생성 후보에서 제외한다.
+
+## BUG-022 — Enemy 문 개방 직후 Player 재닫기로 추격 봉쇄 가능
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Fixed (Play 재검증 대기) |
+| 심각도 | Major |
+| 우선순위 | P1 |
+| 발견 단계 | M3-A 문 Play 검증 |
+| 관련 코드 | `DungeonDoor`, `EnemyTurnActor` |
+
+- **재현:** Enemy가 `/OpenDoor/2`로 문을 연 직후 Player가 반대편에서 1Tick으로 다시 닫는 행동을 반복한다.
+- **실제:** Enemy가 문 열기만 반복하고 이동하지 못해 추격을 봉쇄할 수 있다.
+- **수정:** Enemy가 문 칸 또는 문 인접 칸에 있으면 Player 문 닫기를 실패·0Tick 처리한다.
+
+## BUG-023 — 같은 방 경보 대상 Enemy의 추적 행동 불명확
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Open (로그 보강, 재현 조사) |
+| 심각도 | Major 후보 |
+| 우선순위 | P1 |
+| 발견 단계 | M3-A 집단 경보 Play 검증 |
+| 관련 코드 | `EnemyTurnActor`, `DungeonRoomRegistry` |
+
+- **재현:** 한 Enemy가 Player를 발견해 같은 방 Enemy에 경보 표시가 발생한 뒤 행동을 관찰한다.
+- **실제:** 경보 표시는 보이지만 경보받은 Enemy가 Player 발견 지점으로 추적하지 않는 것으로 관찰됐다.
+- **조사 보강:** `[RoomAlert] 발신 → 수신 / Room ID / 마지막 목격 위치` 로그를 추가해 경보 대상과 경로 상태를 재검증한다.

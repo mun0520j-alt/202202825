@@ -4,22 +4,24 @@
 
 | ID | 절차 | 기대 결과 | 상태 |
 |---|---|---|---|
-| TC-M3-01 | 같은 Run Seed로 맵을 두 번 생성 | 방·연결·Room ID·문 위치가 동일 | Play 검증 대기 |
-| TC-M3-02 | Player가 닫힌 문 옆에서 E | 문이 열리고 정확히 1Tick 소비 | Play 검증 대기 |
-| TC-M3-03 | Player가 열린 문 옆에서 E | Actor가 문에 없으면 닫히고 정확히 1Tick 소비 | Play 검증 대기 |
-| TC-M3-04 | Enemy가 닫힌 문을 통해 추적 | 2Tick 행동으로 문을 열고 다음 행동부터 통과 | Play 검증 대기 |
-| TC-M3-05 | 닫힌 문으로 Player와 Enemy 시야 차단 | Enemy가 Player를 직접 인식하지 않음 | Play 검증 대기 |
-| TC-M3-06 | 같은 방 Enemy 한 마리가 Player 발견 | 같은 Room ID Enemy만 1회 경보, 연쇄 없음 | Play 검증 대기 |
+| TC-M3-01 | 같은 Run Seed로 맵을 두 번 생성 | 방·연결·Room ID·문 위치가 동일 | Pass (사용자 Play, 2026-11-06) |
+| TC-M3-02 | Player가 닫힌 문 옆에서 E | 문이 열리고 정확히 1Tick 소비 | Pass (사용자 Play, 2026-11-06) |
+| TC-M3-03 | Player가 열린 문 옆에서 E | Actor가 문에 없으면 닫히고 정확히 1Tick 소비 | Pass (사용자 Play, 2026-11-06) |
+| TC-M3-04 | Enemy가 닫힌 문을 통해 추적 | `/OpenDoor/2`로 다음 Enemy 행동을 2Tick 뒤 예약하고 문 개방 | Pass (로그 확인, 2026-11-06), 재개방 반복 UX 재검증 필요 |
+| TC-M3-05 | 닫힌 문으로 Player와 Enemy 시야 차단 | Enemy가 Player를 직접 인식하지 않음 | Pass (사용자 Play, 2026-11-06) |
+| TC-M3-06 | 같은 방 Enemy 한 마리가 Player 발견 | 같은 Room ID Enemy만 1회 경보, 연쇄 없음 | Fail — 경보 표시는 확인, 경보 대상 추적 행동 불명확 |
 | TC-M3-07 | 추적 중 3회 행동 동안 Player 재인식 실패 | Search 3회로 전환 후 기본 상태 복귀 | Play 검증 대기 |
-| TC-M3-08 | Chase 또는 Search 상태에서 Space 길게 입력 | 자동 휴식 시작 불가, 수동 1Tick 대기는 가능 | Play 검증 대기 |
-| TC-M3-09 | 같은 칸에서 Space 짧게 5회 | HP +1, 이동·공격·피격 시 누적 초기화 | Play 검증 대기 |
+| TC-M3-08 | Chase 또는 Search 상태에서 Space 길게 입력 | 자동 휴식 시작 불가, 수동 1Tick 대기는 가능 | Pass (사용자 Play, 2026-11-06) |
+| TC-M3-09 | 같은 칸에서 Space 짧게 5회 | HP +1, 이동·공격·피격 시 누적 초기화 | Pass (사용자 Play, 2026-11-06) |
 | TC-M3-10 | Player 또는 Enemy가 문 칸에 있는 상태에서 Player가 닫기 시도 | 문 닫기 실패, 0Tick | Play 검증 대기 |
 | TC-M3-11 | 첫 Enemy가 문을 연 뒤 다른 Enemy가 같은 문으로 이동 | 추가 2Tick 개방 없이 열린 문 통과 | Play 검증 대기 |
 | TC-M3-12 | 다른 Room ID Enemy가 Player 발견 | 인접 방 Enemy는 경보받지 않음 | Play 검증 대기 |
 | TC-M3-13 | Search 중 Player 재발견 | 즉시 Chase 복귀, 미인식 횟수 초기화 | Play 검증 대기 |
-| TC-M3-14 | 마우스로 닫힌 문 너머를 선택 | 경로 미리보기가 닫힌 문을 통과하지 않음 | Play 검증 대기 |
-| TC-M3-15 | 1→2→3층에서 동일 셀 좌표의 문 확인 | 다른 층 문 상태가 서로 덮어쓰이지 않음 | Play 검증 대기 |
+| TC-M3-14 | 마우스로 닫힌 문 너머를 선택 | 경로 미리보기가 닫힌 문을 통과하지 않음. 문 개폐는 키보드 E 전용 | Pass (사용자 Play, 2026-11-06) |
+| TC-M3-15 | 1→2→3층에서 동일 셀 좌표의 문 확인 | 다른 층 문 상태가 서로 덮어쓰이지 않음 | Fail — 2층에서 로그만 출력되고 실제 문 상태 미변경 |
 | TC-M3-16 | F3에서 연결된 두 방의 경계와 문 점유 셀 확인 | 공용 벽은 1칸 두께, 문은 그 경계의 3칸만 점유하고 양쪽 상호작용 거리가 대칭 | Play 검증 대기 |
+| TC-M3-17 | 상자 생성 위치 전체 확인 | 문 점유 셀에는 상자가 생성되지 않음 | Fail — 문 사이 상자 생성 확인 |
+| TC-M3-18 | Enemy가 문을 연 직후 문 반대편 Player가 E로 닫기 시도 | Enemy가 문 칸 또는 인접 칸에 있으면 닫기 실패·0Tick, 문 반복 개폐로 추적 봉쇄 불가 | 수정 후 Play 재검증 대기 |
 
 ## 권장 실행 순서
 

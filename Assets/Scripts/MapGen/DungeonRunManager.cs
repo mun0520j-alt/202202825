@@ -300,6 +300,7 @@ public class DungeonRunManager : MonoBehaviour
         foreach (var cell in floorTilemap.cellBounds.allPositionsWithin)
         {
             if (!floorTilemap.HasTile(cell) || wallTilemap.HasTile(cell) || cell == playerCell) continue;
+            if (DungeonDoor.IsDoorCell(floorTilemap, cell)) continue;
             if (TickManager.Instance != null && TickManager.Instance.IsCellOccupied(cell)) continue;
             int distance = Mathf.Abs(cell.x - playerCell.x) + Mathf.Abs(cell.y - playerCell.y);
             if (distance > farthest)
