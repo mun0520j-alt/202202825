@@ -23,6 +23,7 @@ public static class LineOfSight
         {
             if (cell == start || cell == end) continue;
             if (wallsTilemap.HasTile(cell)) return false;
+            if (DungeonDoor.IsClosedAt(wallsTilemap, cell)) return false;
         }
         return true;
     }

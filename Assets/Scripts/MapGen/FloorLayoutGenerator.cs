@@ -43,8 +43,32 @@ public static class FloorLayoutGenerator
         layout.BossCell = FindFarthestCell(layout, layout.StartCell);
         layout.KeyCells = PickKeyCells(layout, rng, maxCount: 2);
         MergeRooms(layout, rng);
+        AssignRoomIds(layout);
 
         return layout;
+    }
+
+    private static void AssignRoomIds(FloorLayout layout)
+    {
+        layout.RoomIdByCell.Clear();
+        var mergedIds = new Dictionary<int, int>();
+        int nextRoomId = 1;
+        foreach (var cell in layout.RoomCells.OrderBy(c => c.y).ThenBy(c => c.x))
+        {
+            if (layout.MergeGroupId.TryGetValue(cell, out var mergeGroup))
+            {
+                if (!mergedIds.TryGetValue(mergeGroup, out var roomId))
+                {
+                    roomId = nextRoomId++;
+                    mergedIds[mergeGroup] = roomId;
+                }
+                layout.RoomIdByCell[cell] = roomId;
+            }
+            else
+            {
+                layout.RoomIdByCell[cell] = nextRoomId++;
+            }
+        }
     }
 
     // 이미 놓인 방들(프론티어) 중 아무거나 랜덤하게 골라서 그 옆 빈 칸에 새 방을 뻗는다.

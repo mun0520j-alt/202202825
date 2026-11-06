@@ -21,6 +21,7 @@ public class DungeonRunManager : MonoBehaviour
     [SerializeField] private int maxRooms = 16;
     [SerializeField] private int chunkSize = 16;
     [SerializeField] private float floorSpacingMargin = 32f;
+    [SerializeField] private int runSeed = 20261106;
 
     [Header("M1 Temporary Balance")]
     [SerializeField, Min(1)] private int escapeProcedureTickCost = 10;
@@ -76,7 +77,7 @@ public class DungeonRunManager : MonoBehaviour
     private void GenerateAllFloors()
     {
         float spacing = gridWidth * chunkSize + floorSpacingMargin;
-        var rng = new System.Random(); // 시드 고정 안 함 — 런마다 다르게
+        var rng = new System.Random(runSeed);
 
         int m1FloorCount = Mathf.Min(floorCount, ExpeditionSession.FinalFloor);
         for (int i = 0; i < m1FloorCount; i++)
@@ -94,13 +95,63 @@ public class DungeonRunManager : MonoBehaviour
 
             var painter = new FloorTilemapPainter(floorTilemap, wallTilemap, floorTile, wallTile) { ChunkSize = chunkSize };
             painter.Paint(layout);
+            DungeonRoomRegistry.Register(floorTilemap, layout, chunkSize);
+            SpawnDoors(layout, floorTilemap, wallTilemap, floorRoot.transform);
 
             floors.Add(layout);
             floorTileTilemaps.Add(floorTilemap);
             floorWallTilemaps.Add(wallTilemap);
         }
 
-        Debug.Log($"[DungeonRunManager] M1용 {m1FloorCount}개 층 생성 완료.");
+        Debug.Log($"[DungeonRunManager] Seed {runSeed}, {m1FloorCount}개 층 생성 완료.");
+    }
+
+    private void SpawnDoors(FloorLayout layout, Tilemap floorTilemap, Tilemap wallTilemap, Transform parent)
+    {
+        var opened = new HashSet<(Vector2Int, Vector2Int)>();
+        int index = 0;
+        foreach (var pair in layout.Connections)
+        {
+            foreach (var neighbor in pair.Value)
+            {
+                var a = pair.Key;
+                var b = neighbor;
+                if (a.x > b.x || (a.x == b.x && a.y > b.y)) (a, b) = (b, a);
+                if (!opened.Add((a, b))) continue;
+                if (layout.GetRoomId(a) == layout.GetRoomId(b)) continue;
+
+                int mid = chunkSize / 2;
+                var doorCells = new List<Vector3Int>();
+                bool horizontal;
+                if (b.x == a.x + 1)
+                {
+                    horizontal = false;
+                    int ax = a.x * chunkSize + chunkSize - 1;
+                    int bx = b.x * chunkSize;
+                    int baseY = a.y * chunkSize;
+                    for (int i = -1; i <= 1; i++)
+                    {
+                        doorCells.Add(new Vector3Int(ax, baseY + mid + i, 0));
+                        doorCells.Add(new Vector3Int(bx, baseY + mid + i, 0));
+                    }
+                }
+                else
+                {
+                    horizontal = true;
+                    int ay = a.y * chunkSize + chunkSize - 1;
+                    int by = b.y * chunkSize;
+                    int baseX = a.x * chunkSize;
+                    for (int i = -1; i <= 1; i++)
+                    {
+                        doorCells.Add(new Vector3Int(baseX + mid + i, ay, 0));
+                        doorCells.Add(new Vector3Int(baseX + mid + i, by, 0));
+                    }
+                }
+                var door = new GameObject($"Door_{++index}");
+                door.transform.SetParent(parent, false);
+                door.AddComponent<DungeonDoor>().Initialize(floorTilemap, wallTilemap, doorCells, horizontal);
+            }
+        }
     }
 
     private void SpawnPlayerAtFloor(int floorIndex)

@@ -88,6 +88,17 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     // 거기 도착하면 isTracing=false로 돌아가 기본 행동(behaviorType)을 재개한다.
     private bool isTracing;
     private Vector3Int? lastKnownPlayerCell;
+    private int unseenActions;
+    private int searchActionsRemaining;
+    private bool pendingRoomAlert;
+
+    public bool IsHuntingPlayer => isTracing || searchActionsRemaining > 0 || pendingRoomAlert;
+    public static bool AnyEnemyHuntingPlayer()
+    {
+        foreach (var enemy in FindObjectsByType<EnemyTurnActor>())
+            if (enemy != null && enemy.IsHuntingPlayer) return true;
+        return false;
+    }
 
     // [2026-09-04 신규] "방금 새로 감지됨"을 표시하는 머리 위 "!" — 별도 스프라이트 에셋 없이
     // TextMesh(유니티 기본 3D 텍스트 컴포넌트)로 즉석에서 만든다(2026-09-04, 사용자 요청:
@@ -213,6 +224,14 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
         // 된다(다음 턴 맨 위에서 항상 리셋되니까).
         if (alertIndicatorObject != null) alertIndicatorObject.SetActive(false);
 
+        if (pendingRoomAlert)
+        {
+            pendingRoomAlert = false;
+            if (alertIndicatorObject != null) alertIndicatorObject.SetActive(true);
+            CompleteMyTurn();
+            return;
+        }
+
         if (TryDetectPlayer(out var playerCell))
         {
             // isTracing이 이번 턴 이전엔 false였다가 지금 true가 되는 경우 = "방금 새로 감지됨".
@@ -225,9 +244,12 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
             }
 
             isTracing = true;
+            unseenActions = 0;
+            searchActionsRemaining = 0;
             lastKnownPlayerCell = playerCell;
             if (isNewlyDetected)
             {
+                AlertSameRoom(playerCell);
                 // 발견 경고가 실제 대응 기회가 되도록 첫 행동은 이동·공격 대신 경계로 소비한다.
                 CompleteMyTurn();
                 return;
@@ -238,11 +260,12 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
 
         if (isTracing && lastKnownPlayerCell.HasValue)
         {
-            if (currentCell == lastKnownPlayerCell.Value)
+            unseenActions++;
+            if (unseenActions >= 3)
             {
-                // 마지막 목격 위치에 도착했는데도 안 보임 — 추적 종료, 이번 턴부터는 기본 행동.
                 isTracing = false;
-                lastKnownPlayerCell = null;
+                searchActionsRemaining = 3;
+                Debug.Log($"[EnemySearch] {name}: Player 미인식 3회, 마지막 목격 위치 {lastKnownPlayerCell.Value} 주변 수색 시작");
             }
             else
             {
@@ -251,7 +274,34 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
             }
         }
 
+        if (searchActionsRemaining > 0)
+        {
+            searchActionsRemaining--;
+            if (searchActionsRemaining == 0)
+            {
+                lastKnownPlayerCell = null;
+                unseenActions = 0;
+                Debug.Log($"[EnemySearch] {name}: 수색 종료");
+            }
+            TryWanderStep();
+            return;
+        }
+
         RunDefaultBehavior();
+    }
+
+    private void AlertSameRoom(Vector3Int playerCell)
+    {
+        int roomId = DungeonRoomRegistry.GetRoomId(floorTilemap, currentCell);
+        if (roomId < 0) return;
+        foreach (var enemy in FindObjectsByType<EnemyTurnActor>())
+        {
+            if (enemy == null || enemy == this || enemy.floorTilemap != floorTilemap || enemy.IsHuntingPlayer) continue;
+            if (DungeonRoomRegistry.GetRoomId(floorTilemap, enemy.currentCell) != roomId) continue;
+            enemy.pendingRoomAlert = true;
+            enemy.isTracing = true;
+            enemy.lastKnownPlayerCell = playerCell;
+        }
     }
 
     // 평소(Player를 못 봤을 때) 기본 행동 — 원래 OnTurnStart에 있던 로직을 그대로 옮긴 것뿐,
@@ -311,15 +361,14 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
 
         if (path.Count == 0)
         {
-            // 갈 방법이 없음(완전히 막혔거나 이미 그 칸에 있음) — 추적을 포기하고 이번 턴은
-            // 기본 행동으로 대체한다.
-            isTracing = false;
-            lastKnownPlayerCell = null;
-            RunDefaultBehavior();
+            // 다른 Enemy나 닫힌 통로로 순간적으로 막혀도 추적 기억을 즉시 버리지 않는다.
+            // 미인식 3회와 Search 상태 전이는 OnTurnStart에서 일관되게 처리한다.
+            CompleteMyTurn();
             return;
         }
 
         var nextCell = path[0];
+        if (DungeonDoor.TryOpenForEnemy(floorTilemap, nextCell, this)) return;
         var blocker = TickManager.Instance.GetActorAt(nextCell, this);
         if (blocker is PlayerTurnActor player)
         {
@@ -368,6 +417,7 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
             if (wallsTilemap.HasTile(targetCell)) continue;
             if (!floorTilemap.HasTile(targetCell)) continue; // 맵 바깥으로는 못 나감
             if (DungeonChest.IsCellBlocked(targetCell)) continue;
+            if (DungeonDoor.IsClosedAt(floorTilemap, targetCell)) continue;
             // 벽/바닥과 같은 자격으로 "이미 다른 액터(Player 포함)가 서 있는 칸"도 막는다 —
             // PlayerTurnActor.TryStep()의 동일 체크와 같은 이유(콜라이더로는 안 막힘, 2026-08-28).
             if (TickManager.Instance.IsCellOccupied(targetCell, this)) continue;

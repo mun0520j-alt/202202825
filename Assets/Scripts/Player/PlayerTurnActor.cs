@@ -304,7 +304,7 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
 
         if (!isMyTurn || isAnimating) return;
 
-        if (autoRestActive && (currentHP >= maxHP || IsMonsterVisibleNow())) CancelAutoRest(true);
+        if (autoRestActive && (currentHP >= maxHP || EnemyTurnActor.AnyEnemyHuntingPlayer())) CancelAutoRest(true);
         if (queuedWaitInput || autoRestActive)
         {
             queuedWaitInput = false;
@@ -465,7 +465,8 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     private List<Vector3Int> FindMousePath(Vector3Int targetCell, bool stopAdjacent)
     {
         System.Func<Vector3Int, bool> blocked = cell =>
-            TickManager.Instance.IsCellOccupied(cell, this) || DungeonChest.IsCellBlocked(cell);
+            TickManager.Instance.IsCellOccupied(cell, this) || DungeonChest.IsCellBlocked(cell)
+            || DungeonDoor.IsClosedAt(floorTilemap, cell);
         if (!stopAdjacent)
         {
             return TilePathfinder.FindPath(currentCell, targetCell, wallsTilemap, floorTilemap, blocked);
@@ -752,6 +753,11 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         if (DungeonChest.IsCellBlocked(targetCell))
         {
             Debug.Log($"[MoveBlocked] {currentCell} → {targetCell}: 상자 점유");
+            return false;
+        }
+        if (DungeonDoor.IsClosedAt(floorTilemap, targetCell))
+        {
+            Debug.Log($"[MoveBlocked] {currentCell} → {targetCell}: 닫힌 문");
             return false;
         }
 

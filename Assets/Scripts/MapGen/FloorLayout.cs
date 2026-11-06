@@ -31,8 +31,12 @@ public class FloorLayout
     // 병합된 방끼리 같은 id를 공유 (녹픽던의 "표준 방은 인접한 방 1개와 병합 가능" 규칙 참고).
     // 병합되지 않은 방은 이 딕셔너리에 아예 안 들어있다.
     public Dictionary<Vector2Int, int> MergeGroupId = new Dictionary<Vector2Int, int>();
+    // M3: 집단 경보와 Seed 재현 분석에 쓰는 안정적인 방 ID. 병합된 청크는 같은 ID를 공유한다.
+    public Dictionary<Vector2Int, int> RoomIdByCell = new Dictionary<Vector2Int, int>();
 
     public int RoomCount => RoomCells.Count;
 
     public bool IsMerged(Vector2Int cell) => MergeGroupId.ContainsKey(cell);
+
+    public int GetRoomId(Vector2Int cell) => RoomIdByCell.TryGetValue(cell, out var id) ? id : -1;
 }
