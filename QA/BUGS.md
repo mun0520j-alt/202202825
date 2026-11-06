@@ -846,7 +846,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Fixed (Play 재검증 대기) |
+| 상태 | Closed (사용자 Play·첨부 로그 확인, 2026-11-06) |
 | 심각도 | Major 후보 |
 | 우선순위 | P1 |
 | 발견 단계 | M3-A 추적·Search Play 검증 |
@@ -859,3 +859,4 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 - **원인:** 추적 기억의 만료 조건이 마지막 목격 위치 도달이 아니라 고정 3회 행동이며, Search 단계가 마지막 목격 위치 경로를 우선하지 않고 즉시 무작위 이동한다.
 - **기획 확정:** `마지막 목격 위치까지 추적 → 도착 후 Search 3회`로 변경한다.
 - **수정:** 시야를 잃은 행동 횟수로 추적을 만료하지 않는다. 마지막 목격 셀에 도착할 때까지 기존 추적 경로와 Enemy 문 개방을 유지하고, 도착한 턴부터 Search 3회를 수행한다.
+- **회귀 검증:** 먼 거리에서 시야를 끊고 문을 닫아도 Enemy가 마지막 목격 위치를 향해 이동했다. 경로상 문이 수색 범위 안에 있으면 `OpenDoor/2`로 개방하고, 도착 후 Search 3회 뒤 종료했다.
