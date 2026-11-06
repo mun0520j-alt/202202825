@@ -551,7 +551,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 발견 단계 | M2 1차 Play 검증 |
 | 영향 범위 | 인벤토리 UI, 원정 가방 |
 | 관련 코드 | `DungeonSceneBootstrapper`, `InventoryPanel`, `M2BagPanel` |
-| Jira | 확인 필요 |
+| Jira | DUN-30 |
 
 ### 실제 결과
 
@@ -579,7 +579,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 발견 단계 | M2 1차 Play 검증 |
 | 영향 범위 | 이동, 공격, 상호작용, 마우스 자동이동 |
 | 관련 코드 | `PlayerTurnActor`, `DungeonChest`, `DungeonStairs`, `GroundLoot`, `InventoryPanel` |
-| Jira | 확인 필요 |
+| Jira | DUN-31 |
 
 ### 실제 결과
 
@@ -608,7 +608,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 발견 단계 | M2 1차 Play 검증 |
 | 영향 범위 | 기본 장비 지급 확인, 장비 교체 UX |
 | 관련 코드 | `InventoryPanel`, `PlayerEquipment`, `LootRuntimeState` |
-| Jira | 확인 필요 |
+| Jira | DUN-32 |
 
 ### 실제 결과
 
@@ -636,7 +636,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 발견 단계 | M2 2차 Play 검증 |
 | 영향 범위 | 기본 장비·전리품 장비, 가방, 장비 교체 |
 | 관련 코드 | `InventoryPanel`, `PlayerEquipment`, `LootRuntimeState` |
-| Jira | 확인 필요 |
+| Jira | DUN-33 |
 
 ### 실제 결과
 
@@ -661,7 +661,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 발견 단계 | M2 2차 Play 검증 |
 | 영향 범위 | Space 연속 휴식, Player HP 표시 |
 | 관련 코드 | `PlayerTurnActor`, `ProceduralHealthBar` |
-| Jira | 확인 필요 |
+| Jira | DUN-34 |
 
 ### 실제 결과
 
@@ -683,7 +683,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 발견 단계 | M2 2차 Play 검증 |
 | 영향 범위 | PC 마우스 선택, 키보드 이동 |
 | 관련 코드 | `PlayerTurnActor` |
-| Jira | 확인 필요 |
+| Jira | DUN-35 |
 
 ### 실제 결과
 
@@ -705,7 +705,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 발견 단계 | M2 재검증 |
 | 영향 범위 | 주변 아이템 선택 목록, 인벤토리 입력 레이어 |
 | 관련 코드 | `GroundLoot`, `InventoryPanel` |
-| Jira | 확인 필요 |
+| Jira | DUN-36 |
 
 ### 재현 절차
 
@@ -734,7 +734,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 발견 단계 | M2 마감 Play |
 | 영향 범위 | 생환 장비 보존, BaseCamp Stash |
 | 관련 코드 | `StashPanel`, `LootRuntimeState` |
-| Jira | 확인 필요 |
+| Jira | DUN-37 |
 
 ### 실제 결과
 
@@ -757,7 +757,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 발견 단계 | M2 마감 Play |
 | 영향 범위 | 가방 6/6, 바닥 아이템, 상자 키보드 상호작용 |
 | 관련 코드 | `GroundLoot`, `DungeonChest` |
-| Jira | 확인 필요 |
+| Jira | DUN-38 |
 
 ### 실제 결과
 
