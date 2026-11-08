@@ -870,7 +870,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 우선순위 | P1 |
 | 발견 단계 | M3 원정 CSV 수동 검증 |
 | 관련 코드 | `DungeonStairs`, `TickManager` |
-| Jira | 작성 필요 |
+| Jira | DUN-41 |
 
 - **재현:** 3층 탈출 구역 진입 직후 Player가 공격 2회를 연속 실행해 10Tick을 소비한다.
 - **기대:** 공격 5Tick×2가 탈출 체류 10Tick으로 인정되어 생환한다.
