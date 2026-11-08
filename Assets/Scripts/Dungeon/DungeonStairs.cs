@@ -55,6 +55,26 @@ public sealed class DungeonStairs : MonoBehaviour
         return false;
     }
 
+    public static void PrepareExtractionForAction(PlayerTurnActor player, string actionName)
+    {
+        // Move/Wait는 이동 완료 후 전달되므로 진입 이동 1Tick까지 체류로 계산하지 않는다.
+        // 실제 대기는 명시적인 "Wait" 이름으로 들어온다.
+        if (player == null || actionName == "Move/Wait") return;
+
+        foreach (var stairs in stairsByCell.Values)
+        {
+            if (stairs == null || !stairs.isFinalExit || stairs.requestSent
+                || stairs.extractionStartTick >= 0f
+                || !stairs.IsInsideExtractionZone(player.CurrentCell)) continue;
+
+            var manager = ExpeditionManager.Instance;
+            if (manager == null) return;
+            stairs.extractionStartTick = manager.ElapsedTicks;
+            Debug.Log($"[Extraction] 탈출 구역 행동 시작 — {manager.EscapeProcedureTickCost:0.##} Tick 체류 필요.");
+            return;
+        }
+    }
+
     private void Update()
     {
         var player = PlayerTurnActor.Instance;

@@ -76,6 +76,7 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
     [ContextMenu("QA/Build M1 Debug Map")]
     public void BuildM1DebugMap()
     {
+        M3MeasurementAutomation.MarkDebugRun();
         BuildNearPlayer();
     }
 

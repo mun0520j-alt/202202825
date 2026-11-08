@@ -31,6 +31,7 @@ public static class M3MeasurementAutomation
     private static int itemsGrounded;
     private static int exitPathTiles;
     private static int exitRoomEnemies;
+    private static bool debugRun;
 
     public static int ConfiguredSeed => PlayerPrefs.GetInt(SeedPreferenceKey, DefaultSeed);
     public static string OutputDirectory => Path.Combine(Application.persistentDataPath, "M3Measurements");
@@ -70,6 +71,15 @@ public static class M3MeasurementAutomation
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         PlayerPrefs.SetInt(SeedPreferenceKey, seed);
         PlayerPrefs.Save();
+#endif
+    }
+
+    public static void MarkDebugRun()
+    {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (!recording) return;
+        debugRun = true;
+        Debug.Log("[M3Measure] QA 디버그 맵 사용 — 현재 원정은 CSV 저장에서 제외합니다.");
 #endif
     }
 
@@ -169,6 +179,11 @@ public static class M3MeasurementAutomation
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         if (!recording) return;
         recording = false;
+        if (debugRun)
+        {
+            Debug.Log("[M3Measure] QA 디버그 원정 기록 제외 — CSV 행을 저장하지 않았습니다.");
+            return;
+        }
         Directory.CreateDirectory(OutputDirectory);
         bool writeHeader = !File.Exists(OutputPath) || new FileInfo(OutputPath).Length == 0;
         using (var writer = new StreamWriter(OutputPath, true, new UTF8Encoding(true)))
@@ -251,6 +266,7 @@ public static class M3MeasurementAutomation
         itemsGrounded = 0;
         exitPathTiles = 0;
         exitRoomEnemies = 0;
+        debugRun = false;
     }
 
     private static string F(float value) => value.ToString("0.##", CultureInfo.InvariantCulture);
