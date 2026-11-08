@@ -876,4 +876,4 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 - **기대:** 공격 5Tick×2가 탈출 체류 10Tick으로 인정되어 생환한다.
 - **실제:** `DungeonStairs.Update` 실행 순서에 따라 첫 공격 완료 후 탈출 시작 Tick이 저장되어 5Tick이 누락될 수 있다.
 - **수정:** Player 행동 비용을 적용하기 전, 탈출 구역 안의 첫 비이동 행동이면 체류 시작 시각을 먼저 확정한다.
-- **추가 보호:** F4/QA 디버그 맵을 사용한 원정은 M3 CSV에 행을 저장하지 않는다.
+- **추가 보호:** F4/QA 디버그 맵, F5 가방 채우기, QA Tick·Player HP 강제 설정을 사용한 원정은 M3 CSV에 행을 저장하지 않는다.

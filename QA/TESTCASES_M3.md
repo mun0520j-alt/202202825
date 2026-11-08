@@ -27,6 +27,7 @@
 | TC-M3-27 | M3 Automation에서 Run Seed 1,000개 자동 검증 | 3,000개 층의 연결·양방향 연결·Room ID·동일 Seed 결정성 통과, 실패 시 재현 Seed CSV 저장 | Editor 실행 대기 |
 | TC-M3-28 | M3 Automation에서 층별 드롭 100,000회 실행 | 설정 분포 ±0.5%p, 1~4층 Legendary 0건, 결과 CSV 저장 | Editor 실행 대기 |
 | TC-M3-29 | M3 Automation 전체 실행 | Tick·가방·Seed 핵심 회귀 통과 및 원정 CSV 자동 요약 보고서 생성 | Editor 실행 대기 |
+| TC-M3-30 | 원정 중 F4, F5, QA/Set Elapsed Tick, QA/Set Player HP를 각각 사용한 뒤 종료 | Console에 디버그 원정 제외 로그가 나오고 `expedition_runs_v2.csv`에 행이 추가되지 않음 | Play 검증 대기 |
 | TC-M3-14 | 마우스로 닫힌 문 너머를 선택 | 경로 미리보기가 닫힌 문을 통과하지 않음. 문 개폐는 키보드 E 전용 | Pass (사용자 Play, 2026-11-06) |
 | TC-M3-15 | 1→2→3층에서 동일 셀 좌표의 문 확인 | 다른 층 문 상태가 서로 덮어쓰이지 않음 | Pass (사용자 Play, 2026-11-06) |
 | TC-M3-16 | F3에서 연결된 두 방의 경계와 문 점유 셀 확인 | 공용 벽은 1칸 두께, 문은 그 경계의 3칸만 점유하고 양쪽 상호작용 거리가 대칭 | Pass (사용자 Play, 2026-11-06) |

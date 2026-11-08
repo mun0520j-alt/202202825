@@ -96,6 +96,7 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
             return;
         }
 
+        M3MeasurementAutomation.MarkDebugRun();
         while (LootRuntimeState.RunBag.Count < LootRuntimeState.BagCapacity)
             LootRuntimeState.TryAddToRunBag(new LootItemInstance(definition));
 
@@ -105,7 +106,9 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
     [ContextMenu("QA/Set Player HP")]
     public void SetConfiguredPlayerHP()
     {
-        if (PlayerTurnActor.Instance != null) PlayerTurnActor.Instance.DebugSetCurrentHP(targetPlayerHP);
+        if (PlayerTurnActor.Instance == null) return;
+        M3MeasurementAutomation.MarkDebugRun();
+        PlayerTurnActor.Instance.DebugSetCurrentHP(targetPlayerHP);
     }
 
     public static bool SetElapsedTicks(float elapsedTicks)
@@ -118,6 +121,7 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
             return false;
         }
 
+        M3MeasurementAutomation.MarkDebugRun();
         float safeTick = Mathf.Max(0f, elapsedTicks);
         tickManager.DebugSetTimeline(safeTick);
         dungeonClock.DebugSetElapsedTicks(safeTick);
