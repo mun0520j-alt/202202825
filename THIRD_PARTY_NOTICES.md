@@ -18,7 +18,9 @@ Credit is not required by CC0. It is included here in appreciation of the creato
 - Version used: v1.3
 - License: Creative Commons Attribution 4.0 International (CC BY 4.0)
 - License text: https://creativecommons.org/licenses/by/4.0/
-- Use: item icons
-- Changes: selected and reorganized for Unity SpriteSets, icon keys, and runtime item data. Confirm whether any pixel-level edits are included before public release.
+- Current use: not connected to runtime items; original asset files are retained in the project
+- Changes: none; the original pixel art has not been modified
 
 Kyrise's Free 16x16 RPG Icon Pack © 2018 by Kyrise is licensed under CC BY 4.0.
+
+This notice remains because the original asset files are present in the public repository. If they are excluded from both the repository and distributed build, the game itself does not use this asset pack.
