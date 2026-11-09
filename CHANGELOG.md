@@ -24,6 +24,7 @@
 - 같은 Room ID 안에서 최초 발견 경보를 한 번만 전달하고 연쇄 경보는 차단
 - Chase·Search 중 자동 휴식을 차단하되 수동 Space 1Tick과 같은 칸 5Tick 누적 회복은 유지
 ### 구현
+- 문과 상자가 동시에 인접할 때 중앙 상호작용 선택 UI를 표시해 E 입력 선점 충돌을 제거
 - 원정 CSV v3에 `schema_version`·`seed_mode`·`seed_attempt`을 추가하고 Seed별 파생 요약 `seed_summary.csv` 자동 생성을 추가. v1·v2는 보존
 - 고정 Run Seed와 Seed 기반 층 생성 추가
 - 병합 방을 포함한 안정적인 Room ID 데이터와 런타임 조회 레지스트리 추가

@@ -10,7 +10,8 @@ public sealed class GroundLoot : MonoBehaviour
     private static bool selectionOpen;
     private LootItemInstance item;
     private Vector3Int cell;
-    public static bool IsSelectionOpen => selectionOpen;
+    public static bool IsSelectionOpen => selectionOpen || DungeonInteractionMenu.IsOpen;
+    public static bool IsLootSelectionOpen => selectionOpen;
 
     public void Initialize(Tilemap floor, Vector3Int targetCell, LootItemInstance loot)
     {

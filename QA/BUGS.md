@@ -895,3 +895,21 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 - **원인:** 설정 Seed와 이번 원정의 실제 Seed가 분리되지 않았고 Seed 모드 상태가 없었다.
 - **수정:** 기본 Random/명시적 Fixed 모드를 분리하고, 원정 시작 때 실제 Run Seed를 한 번만 확정해 1~3층에서 유지한다. CSV v3에 모드와 Seed 반복 차수를 기록하고 Fixed 표본은 목표 Tick 자동 분석에서 제외한다.
 - **회귀 범위:** TC-M3-01·21·24·27·30·31~36.
+
+## BUG-028 — 문과 상자가 동시에 인접하면 문이 E 입력을 선점
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Fixed (Play 재검증 대기) |
+| Jira | 등록 여부 사용자 확인 대기 |
+| 심각도 | Major |
+| 우선순위 | P1 |
+| 발견 단계 | M3 Random 원정 Play 검증 |
+| 관련 코드 | `DungeonInteractionMenu`, `DungeonDoor`, `DungeonChest`, `GroundLoot` |
+
+- **재현:** Player가 문과 미개봉 상자 모두에 인접한 위치에서 E를 누르고 상자 열기를 시도한다.
+- **기대:** 선택 UI에서 문과 상자를 모두 보여주고 사용자가 선택한 대상 하나만 처리한다.
+- **실제:** 상자 안내는 표시되지만 문 `Update()`가 같은 프레임의 상호작용 게이트를 먼저 점유해 문 열기·닫기만 실행된다.
+- **원인:** 문과 상자가 각자 E 입력을 폴링하며 실행 순서에 따라 `LootInteractionGate`를 경쟁했다.
+- **수정:** 우선 실행되는 중앙 선택 메뉴가 문+상자 동시 인접 상황을 감지해 E를 한 번만 점유한다. 선택한 문 또는 상자의 기존 실행 API만 호출하고 다른 대상은 처리하지 않는다.
+- **회귀 범위:** 문 단독 1Tick, 상자 단독 5Tick, 문 닫기 Actor 차단, 주변 아이템 선택 UI.
