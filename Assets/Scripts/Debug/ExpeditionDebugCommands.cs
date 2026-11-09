@@ -31,7 +31,9 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
 
     private void DrawM3Panel()
     {
-        GUILayout.BeginArea(new Rect(Screen.width - 350f, 16f, 334f, 210f), "M3 측정 자동화 (F6)", GUI.skin.window);
+        GUILayout.BeginArea(new Rect(Screen.width - 370f, 16f, 354f, 270f), "M3 측정 자동화 (F6)", GUI.skin.window);
+        GUILayout.Label($"현재 모드: {M3MeasurementAutomation.CurrentSeedMode}");
+        GUILayout.Label($"이번 원정 Seed: {M3MeasurementAutomation.CurrentRunSeed}");
         GUILayout.Label("Run Seed");
         seedInput = GUILayout.TextField(seedInput ?? string.Empty);
         GUILayout.BeginHorizontal();
@@ -47,17 +49,22 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
         }
         if (GUILayout.Button("Seed 복사"))
         {
-            GUIUtility.systemCopyBuffer = M3MeasurementAutomation.ConfiguredSeed.ToString();
+            GUIUtility.systemCopyBuffer = M3MeasurementAutomation.CurrentRunSeed.ToString();
             Debug.Log($"[M3Measure] Seed {GUIUtility.systemCopyBuffer} 복사 완료");
         }
         GUILayout.EndHorizontal();
+        if (GUILayout.Button("Random 모드로 전환 (다음 출격부터)"))
+        {
+            M3MeasurementAutomation.SetRandomMode();
+            Debug.Log("[M3Measure] 다음 출격부터 Random Seed 모드를 사용합니다.");
+        }
         if (GUILayout.Button("현재 맵 자동 검증"))
         {
             var manager = FindObjectOfType<DungeonRunManager>();
             if (manager != null) manager.ValidateGeneratedRun();
         }
         GUILayout.Label("원정 종료 시 CSV 자동 저장:");
-        GUILayout.TextArea(M3MeasurementAutomation.OutputPath, GUILayout.Height(54f));
+        GUILayout.TextArea(M3MeasurementAutomation.OutputPath, GUILayout.Height(42f));
         GUILayout.EndArea();
     }
 

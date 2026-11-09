@@ -59,9 +59,7 @@ public class DungeonRunManager : MonoBehaviour
 
     private void Awake()
     {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        runSeed = M3MeasurementAutomation.ConfiguredSeed;
-#endif
+        runSeed = M3MeasurementAutomation.ResolveRunSeed();
         if (floorTile == null || wallTile == null)
         {
             Debug.LogError("[DungeonRunManager] floorTile/wallTile이 인스펙터에 안 물려있어서 생성을 중단합니다.");
@@ -202,7 +200,7 @@ public class DungeonRunManager : MonoBehaviour
             floorWallTilemaps.Add(wallTilemap);
         }
 
-        Debug.Log($"[DungeonRunManager] Seed {runSeed}, {m1FloorCount}개 층 생성 완료.");
+        Debug.Log($"[DungeonRunManager] Seed {runSeed} ({M3MeasurementAutomation.CurrentSeedMode}), {m1FloorCount}개 층 생성 완료.");
     }
 
     private void SpawnDoors(FloorLayout layout, Tilemap floorTilemap, Tilemap wallTilemap, Transform parent)

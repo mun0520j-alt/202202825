@@ -241,9 +241,11 @@ public sealed class M3QaAutomationWindow : EditorWindow
 
     private static QaResult AnalyzeRunCsv()
     {
+        M3MeasurementAutomation.RebuildSeedSummary();
+        string v3 = Path.Combine(OutputDirectory, "expedition_runs_v3.csv");
         string v2 = Path.Combine(OutputDirectory, "expedition_runs_v2.csv");
         string v1 = Path.Combine(OutputDirectory, "expedition_runs.csv");
-        string path = File.Exists(v2) ? v2 : v1;
+        string path = File.Exists(v3) ? v3 : File.Exists(v2) ? v2 : v1;
         if (!File.Exists(path)) return new QaResult(true, "분석할 원정 CSV 없음", "Play 원정 종료 후 다시 실행하세요.");
 
         string[] lines = File.ReadAllLines(path);
@@ -260,20 +262,24 @@ public sealed class M3QaAutomationWindow : EditorWindow
         }
         if (rows.Count == 0) return new QaResult(false, "유효한 CSV 행 0개", path);
 
-        var escaped = rows.Where(row => Get(row, "result") == "Escaped").ToList();
+        var measurementRows = headers.Contains("seed_mode")
+            ? rows.Where(row => Get(row, "seed_mode") == "Random").ToList()
+            : rows;
+        var escaped = measurementRows.Where(row => Get(row, "result") == "Escaped").ToList();
         double avg = Average(escaped, "total_ticks");
         int target = escaped.Count(row => Number(row, "total_ticks") >= 300d && Number(row, "total_ticks") <= 450d);
         var detail = new StringBuilder();
         detail.AppendLine($"파일: {path}");
-        detail.AppendLine($"전체 {rows.Count}, 생환 {escaped.Count}, 사망 {rows.Count(row => Get(row, "result") == "Dead")}, MIA {rows.Count(row => Get(row, "result") == "MIA")}");
+        detail.AppendLine($"전체 {rows.Count}, 목표 판단 표본 {measurementRows.Count}, 생환 {escaped.Count}, 사망 {measurementRows.Count(row => Get(row, "result") == "Dead")}, MIA {measurementRows.Count(row => Get(row, "result") == "MIA")}");
+        if (headers.Contains("seed_mode")) detail.AppendLine("목표 Tick 판단은 Random 모드만 포함하며 Fixed 반복 표본은 제외했다.");
         detail.AppendLine($"생환 평균 Tick: {F(avg)}, 목표 300~450 진입: {target}/{escaped.Count}");
-        detail.AppendLine($"평균 이동/대기/공격/루팅: {F(Average(rows, "move_ticks"))}/{F(Average(rows, "wait_ticks"))}/{F(Average(rows, "attack_ticks"))}/{F(Average(rows, "loot_ticks"))}");
+        detail.AppendLine($"평균 이동/대기/공격/루팅: {F(Average(measurementRows, "move_ticks"))}/{F(Average(measurementRows, "wait_ticks"))}/{F(Average(measurementRows, "attack_ticks"))}/{F(Average(measurementRows, "loot_ticks"))}");
         if (headers.Contains("enemy_encounters"))
         {
-            detail.AppendLine($"평균 조우/처치/받은 피해/회복: {F(Average(rows, "enemy_encounters"))}/{F(Average(rows, "enemies_killed"))}/{F(Average(rows, "damage_taken"))}/{F(Average(rows, "healing_received"))}");
-            detail.AppendLine($"평균 상자/획득/출구 경로/출구 방 Enemy: {F(Average(rows, "chests_opened"))}/{F(Average(rows, "items_acquired"))}/{F(Average(rows, "exit_path_tiles"))}/{F(Average(rows, "exit_room_enemies"))}");
+            detail.AppendLine($"평균 조우/처치/받은 피해/회복: {F(Average(measurementRows, "enemy_encounters"))}/{F(Average(measurementRows, "enemies_killed"))}/{F(Average(measurementRows, "damage_taken"))}/{F(Average(measurementRows, "healing_received"))}");
+            detail.AppendLine($"평균 상자/획득/출구 경로/출구 방 Enemy: {F(Average(measurementRows, "chests_opened"))}/{F(Average(measurementRows, "items_acquired"))}/{F(Average(measurementRows, "exit_path_tiles"))}/{F(Average(measurementRows, "exit_room_enemies"))}");
         }
-        var longest = rows.OrderByDescending(row => Number(row, "total_ticks")).Take(5);
+        var longest = measurementRows.OrderByDescending(row => Number(row, "total_ticks")).Take(5);
         detail.AppendLine("긴 원정 TOP 5: " + string.Join(", ", longest.Select(row => $"Seed {Get(row, "seed")} {Get(row, "total_ticks")}Tick/{Get(row, "result")}")));
         return new QaResult(true, $"{rows.Count}행 분석, 생환 평균 {F(avg)}Tick", detail.ToString());
     }
