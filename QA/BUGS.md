@@ -913,3 +913,22 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 - **원인:** 문과 상자가 각자 E 입력을 폴링하며 실행 순서에 따라 `LootInteractionGate`를 경쟁했다.
 - **수정:** 우선 실행되는 중앙 선택 메뉴가 문+상자 동시 인접 상황을 감지해 E를 한 번만 점유한다. 선택한 문 또는 상자의 기존 실행 API만 호출하고 다른 대상은 처리하지 않는다.
 - **회귀 범위:** 문 단독 1Tick, 상자 단독 5Tick, 문 닫기 Actor 차단, 주변 아이템 선택 UI.
+
+## BUG-029 — 탈출 완료 Tick에 Space 유지 시 생환이 지연되고 Tick이 계속 경과
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Fixed (Play 재검증 대기) |
+| Jira | 등록 여부 사용자 확인 대기 |
+| 심각도 | Critical 후보 |
+| 우선순위 | P0 |
+| 발견 단계 | M3 방 수 축소 후 Random 원정 Play 검증 |
+| 관련 코드 | `DungeonStairs`, `TickManager`, `PlayerTurnActor` |
+
+- **재현:** 3층 탈출 구역에 진입해 Space를 누른 채 10Tick 이상 계속 대기한다.
+- **기대:** 예약된 Enemy 행동과 사망·MIA 판정을 처리한 뒤 정확히 체류 10Tick에서 입력을 중단하고 생환한다.
+- **실제:** Player `Update()`가 탈출구 `Update()`보다 먼저 다음 대기 Tick을 소비해 `IsReadyForInput` 조건이 계속 거짓이 된다. Space를 놓을 때까지 Tick이 흐르고 생환이 지연된다.
+- **로그 근거:** 385Tick에 탈출 구역 진입 후 395Tick에 완료되어야 하지만, Space 유지로 403Tick까지 `Wait/1`이 반복된 뒤 입력을 놓자 생환했다.
+- **영향:** 마감 근처에서 정상 생환할 원정이 1,440Tick을 넘어 MIA로 잘못 판정될 수 있으며 원정 Tick 측정값도 오염된다.
+- **수정:** 프레임 `Update()` 순서가 아니라 Player 행동과 해당 Tick에 예약된 Enemy 행동이 모두 끝난 직후 탈출 완료를 판정한다. 기존 탈출구 `Update()`도 같은 공통 완료 판정을 사용한다.
+- **회귀 범위:** Space 유지 완료, 1,439/1,440 경계, 완료 Tick 사망 우선순위, 탈출 구역 이탈 초기화.
