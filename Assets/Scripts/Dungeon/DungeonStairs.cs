@@ -55,6 +55,49 @@ public sealed class DungeonStairs : MonoBehaviour
         return false;
     }
 
+    public static void PrepareExtractionForAction(PlayerTurnActor player, string actionName)
+    {
+        // Move/Wait는 이동 완료 후 전달되므로 진입 이동 1Tick까지 체류로 계산하지 않는다.
+        // 실제 대기는 명시적인 "Wait" 이름으로 들어온다.
+        if (player == null || actionName == "Move/Wait") return;
+
+        foreach (var stairs in stairsByCell.Values)
+        {
+            if (stairs == null || !stairs.isFinalExit || stairs.requestSent
+                || stairs.extractionStartTick >= 0f
+                || !stairs.IsInsideExtractionZone(player.CurrentCell)) continue;
+
+            var manager = ExpeditionManager.Instance;
+            if (manager == null) return;
+            stairs.extractionStartTick = manager.ElapsedTicks;
+            Debug.Log($"[Extraction] 탈출 구역 행동 시작 — {manager.EscapeProcedureTickCost:0.##} Tick 체류 필요.");
+            return;
+        }
+    }
+
+    // Player Update와 탈출구 Update의 실행 순서에 의존하지 않고, 한 행동에 예약된 Enemy 턴까지
+    // 모두 끝난 직후 탈출을 확정한다. Space를 누른 채 대기를 연속 입력해도 완료 Tick에서 멈춘다.
+    public static bool TryResolveCompletedExtraction(PlayerTurnActor player)
+    {
+        if (player == null || !player.IsReadyForInput) return false;
+
+        foreach (var stairs in stairsByCell.Values)
+        {
+            if (stairs == null || !stairs.isFinalExit || stairs.requestSent
+                || stairs.extractionStartTick < 0f
+                || !stairs.IsInsideExtractionZone(player.CurrentCell)) continue;
+
+            var manager = ExpeditionManager.Instance;
+            if (manager == null
+                || manager.ElapsedTicks - stairs.extractionStartTick < manager.EscapeProcedureTickCost) continue;
+
+            stairs.requestSent = manager.TryCompleteExtraction(player);
+            return stairs.requestSent;
+        }
+
+        return false;
+    }
+
     private void Update()
     {
         var player = PlayerTurnActor.Instance;
@@ -77,10 +120,7 @@ public sealed class DungeonStairs : MonoBehaviour
                 Debug.Log($"[Extraction] 탈출 구역 진입 — {manager.EscapeProcedureTickCost:0.##} Tick 체류 필요.");
             }
 
-            if (manager.ElapsedTicks - extractionStartTick < manager.EscapeProcedureTickCost) return;
-            // 같은 Tick에 예약된 Enemy 행동과 사망 판정을 모두 끝낸 뒤에만 생환을 확정한다.
-            if (!player.IsReadyForInput) return;
-            requestSent = manager.TryCompleteExtraction(player);
+            TryResolveCompletedExtraction(player);
             return;
         }
         else

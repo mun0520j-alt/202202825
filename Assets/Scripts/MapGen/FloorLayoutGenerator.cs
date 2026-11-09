@@ -37,7 +37,7 @@ public static class FloorLayoutGenerator
         BuildConnections(layout);
 
         int desiredLoops = rng.Next(1, 3); // 1~2개 추가 순환 경로를 시도(후보 없으면 트리로 남음)
-        int loopsAdded = AddExtraLoops(layout, rng, desiredLoops);
+        int loopsAdded = AddExtraLoops(layout, rng, desiredLoops, targetRooms: maxRooms);
         layout.Shape = loopsAdded > 0 ? FloorShape.Loop : FloorShape.Tree;
 
         layout.BossCell = FindFarthestCell(layout, layout.StartCell);
@@ -125,7 +125,7 @@ public static class FloorLayoutGenerator
 
     // 서로 안 이어진 방 두 개가 사이에 빈 칸 하나만 두고 가까우면(맨해튼 거리 2), 그 사이를
     // 채워서 지름길을 놓는다 — 트리 구조에 최소 1~2개의 진짜 순환 경로를 보장하기 위함.
-    private static int AddExtraLoops(FloorLayout layout, System.Random rng, int desiredLoops)
+    private static int AddExtraLoops(FloorLayout layout, System.Random rng, int desiredLoops, int targetRooms)
     {
         var cells = layout.RoomCells.ToList();
         var candidates = new HashSet<Vector2Int>();
@@ -160,6 +160,7 @@ public static class FloorLayoutGenerator
         foreach (var bridge in shuffled)
         {
             if (added >= desiredLoops) break;
+            if (layout.RoomCount >= targetRooms) break;
             if (layout.RoomCells.Contains(bridge)) continue; // 다른 다리가 먼저 채웠을 수 있음
             layout.RoomCells.Add(bridge);
             added++;

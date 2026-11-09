@@ -1,5 +1,7 @@
 # Tick 시스템 설계 문서
 
+> **역사 문서:** 초기 프로토타입 설계안이며 현재 런타임 명세가 아니다. 현재 기준은 `MILESTONES.md`와 `QA/TESTCASES_M1.md`~`M3.md`를 따른다. 현재 구현은 이동 1Tick, 공격 5Tick, 상자 개봉 5Tick, 문 1Tick, 장비 교체 2Tick, MIA 1,440Tick이다.
+
 > 상태: **Draft — 사용자 피드백 대기 중, 코드 작성 전 단계** (`DEV_WORKFLOW_RULES.md` 규칙 1 적용)
 > 목표: `DUNGEON_RUNTIME_ARCHITECTURE.md` 1장에서 논의됐던 Tick/스케줄러 개념과 `MAP_GENERATOR_DESIGN.md` 2장에서 확정된 수치를 실제 클래스 구조로 옮긴다. 코드는 아직 없음 — 이 문서에 대한 피드백을 받은 뒤 착수.
 

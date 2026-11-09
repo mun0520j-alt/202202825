@@ -59,6 +59,7 @@ public class DungeonSceneBootstrapper : MonoBehaviour
         var legacyBagPanel = FindObjectOfType<M2BagPanel>();
         if (legacyBagPanel != null) Destroy(legacyBagPanel);
         if (FindObjectOfType<MinimapController>() == null) gameObject.AddComponent<MinimapController>();
+        if (FindObjectOfType<DungeonInteractionMenu>() == null) gameObject.AddComponent<DungeonInteractionMenu>();
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         if (FindObjectOfType<ExpeditionDebugCommands>() == null) gameObject.AddComponent<ExpeditionDebugCommands>();
@@ -96,5 +97,16 @@ public class DungeonSceneBootstrapper : MonoBehaviour
         bool finalExit = ExpeditionSession.CurrentFloor >= ExpeditionSession.FinalFloor;
         var exitObject = new GameObject(finalExit ? "EscapeExit(AutoCreated)" : "DownStairs(AutoCreated)");
         exitObject.AddComponent<DungeonStairs>().Initialize(floor, exitCell, finalExit);
+
+        int exitRoomId = DungeonRoomRegistry.GetRoomId(floor, exitCell);
+        int enemiesInExitRoom = 0;
+        foreach (var enemy in FindObjectsByType<EnemyTurnActor>())
+        {
+            if (enemy != null && enemy.FloorTilemap == floor
+                && DungeonRoomRegistry.GetRoomId(floor, enemy.CurrentCell) == exitRoomId)
+                enemiesInExitRoom++;
+        }
+        int shortestPathTiles = TilePathfinder.FindPath(playerCell, exitCell, walls, floor).Count;
+        M3MeasurementAutomation.RecordFloorExitMetrics(shortestPathTiles, enemiesInExitRoom);
     }
 }

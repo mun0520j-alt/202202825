@@ -1,5 +1,7 @@
 # 아이템 시스템 설계 논의 문서
 
+> **장기 설계 문서:** Tick·MIA 수치는 초기안이다. 현재 데이터는 `Assets/Resources/Data/items.csv`, 스키마는 `docs/ITEM_CSV_DATA_DICTIONARY.md`를 따른다.
+
 > 상태: **구조/카테고리 설계 완료.** 실제 데이터는 `ITEM_DATA_DRAFT.xlsx`(별도 파일)에 v1 초안으로 옮겨져 있음 — 이 문서는 "왜 이렇게 정했는지"를 담은 설계 근거 문서, xlsx는 "실제 수치"를 담은 데이터 소스.
 > `DUNGEON_RUNTIME_ARCHITECTURE.md`와 같은 방식: 먼저 구조를 글로 합의 → 그 다음 실제 데이터표 작성. 이 프로젝트는 그 두 번째 단계까지 진행됨.
 

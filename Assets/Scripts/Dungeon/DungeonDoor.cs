@@ -10,6 +10,7 @@ public sealed class DungeonDoor : MonoBehaviour
     private Tilemap walls;
     private SpriteRenderer view;
     public bool IsOpen { get; private set; }
+    public string InteractionLabel => IsOpen ? $"문 닫기 ({TickCost.PerTileMove:0} Tick)" : $"문 열기 ({TickCost.PerTileMove:0} Tick)";
 
     public void Initialize(Tilemap floorTilemap, Tilemap wallsTilemap, IEnumerable<Vector3Int> occupiedCells, bool horizontal)
     {
@@ -45,10 +46,7 @@ public sealed class DungeonDoor : MonoBehaviour
         var player = PlayerTurnActor.Instance;
         if (player == null || player.FloorTilemap != floor || !player.IsReadyForInput
             || !IsAdjacent(player.CurrentCell) || !LootInteractionGate.TryClaim()) return;
-        if (!IsOpen) SetOpen(true);
-        else if (!ContainsActor() && !HasAdjacentEnemy()) SetOpen(false);
-        else return;
-        TickManager.Instance.CompleteTurn(player, TickCost.PerTileMove, IsOpen ? "OpenDoor" : "CloseDoor");
+        TryInteractFromMenu(player);
     }
 
     public static bool IsClosedAt(Tilemap map, Vector3Int cell) => byCell.TryGetValue((map, cell), out var door) && door != null && !door.IsOpen;
@@ -68,6 +66,29 @@ public sealed class DungeonDoor : MonoBehaviour
         if (!byCell.TryGetValue((map, cell), out var door) || door == null || door.IsOpen) return false;
         door.SetOpen(true);
         TickManager.Instance.CompleteTurn(enemy, 2f, "OpenDoor");
+        return true;
+    }
+
+    public static void CollectAdjacent(Tilemap floorTilemap, Vector3Int playerCell, List<DungeonDoor> results)
+    {
+        if (floorTilemap == null || results == null) return;
+        var unique = new HashSet<DungeonDoor>();
+        foreach (var pair in byCell)
+        {
+            DungeonDoor door = pair.Value;
+            if (pair.Key.Item1 != floorTilemap || door == null || !unique.Add(door)) continue;
+            if (door.IsAdjacent(playerCell)) results.Add(door);
+        }
+    }
+
+    public bool TryInteractFromMenu(PlayerTurnActor player)
+    {
+        if (player == null || player.FloorTilemap != floor || !player.IsReadyForInput || !IsAdjacent(player.CurrentCell))
+            return false;
+        if (!IsOpen) SetOpen(true);
+        else if (!ContainsActor() && !HasAdjacentEnemy()) SetOpen(false);
+        else return false;
+        TickManager.Instance.CompleteTurn(player, TickCost.PerTileMove, IsOpen ? "OpenDoor" : "CloseDoor");
         return true;
     }
 

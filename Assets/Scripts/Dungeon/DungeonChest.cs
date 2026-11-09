@@ -98,6 +98,7 @@ public sealed class DungeonChest : MonoBehaviour
         if (!ExpeditionSession.IsActive || player == null || player.IsDead) yield break;
 
         opened = true;
+        M3MeasurementAutomation.RecordChestOpened();
         if (chestRenderer != null) chestRenderer.color = new Color(0.24f, 0.15f, 0.08f);
 
         LootItemData definition = LootItemDatabase.Roll(floorNumber, new System.Random(lootSeed));
@@ -110,10 +111,12 @@ public sealed class DungeonChest : MonoBehaviour
         var item = new LootItemInstance(definition);
         if (LootRuntimeState.TryAddToRunBag(item))
         {
+            M3MeasurementAutomation.RecordItemAcquired();
             Debug.Log($"[Chest] {definition.Name} ({definition.Rarity}) 획득 — {LootRuntimeState.RunBag.Count}/{LootRuntimeState.BagCapacity}");
         }
         else
         {
+            M3MeasurementAutomation.RecordItemGrounded();
             new GameObject("GroundLoot").AddComponent<GroundLoot>().Initialize(floor, cell, item);
             Debug.Log($"[Chest] 가방이 가득 차 {definition.Name}을(를) 바닥에 남겼습니다.");
         }

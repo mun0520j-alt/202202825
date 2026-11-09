@@ -17,8 +17,8 @@ public class DungeonRunManager : MonoBehaviour
     [SerializeField] private int floorCount = 10;
     [SerializeField] private int gridWidth = 16;
     [SerializeField] private int gridHeight = 16;
-    [SerializeField] private int minRooms = 12;
-    [SerializeField] private int maxRooms = 16;
+    [SerializeField] private int minRooms = 9;
+    [SerializeField] private int maxRooms = 12;
     [SerializeField] private int chunkSize = 16;
     [SerializeField] private float floorSpacingMargin = 32f;
     [SerializeField] private int runSeed = 20261106;
@@ -59,9 +59,7 @@ public class DungeonRunManager : MonoBehaviour
 
     private void Awake()
     {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        runSeed = M3MeasurementAutomation.ConfiguredSeed;
-#endif
+        runSeed = M3MeasurementAutomation.ResolveRunSeed();
         if (floorTile == null || wallTile == null)
         {
             Debug.LogError("[DungeonRunManager] floorTile/wallTile이 인스펙터에 안 물려있어서 생성을 중단합니다.");
@@ -118,12 +116,17 @@ public class DungeonRunManager : MonoBehaviour
             Tilemap activeFloor = playerActor.FloorTilemap;
             Tilemap activeWalls = playerActor.WallsTilemap;
             var occupied = new HashSet<Vector3Int> { playerActor.CurrentCell };
+            var enemyRooms = new HashSet<int>();
+            int playerRoom = DungeonRoomRegistry.GetRoomId(activeFloor, playerActor.CurrentCell);
             foreach (var enemy in FindObjectsOfType<EnemyTurnActor>())
             {
                 if (enemy.FloorTilemap != activeFloor) continue;
                 if (!occupied.Add(enemy.CurrentCell)) errors.Add($"현재 층 Actor 겹침: {enemy.CurrentCell}");
                 if (!activeFloor.HasTile(enemy.CurrentCell) || activeWalls.HasTile(enemy.CurrentCell))
                     errors.Add($"Enemy 비정상 시작 칸: {enemy.CurrentCell}");
+                int enemyRoom = DungeonRoomRegistry.GetRoomId(activeFloor, enemy.CurrentCell);
+                if (enemyRoom == playerRoom) errors.Add($"시작 방 Enemy 배치: Room {enemyRoom}");
+                if (enemyRoom >= 0 && !enemyRooms.Add(enemyRoom)) errors.Add($"같은 방 Enemy 중복 배치: Room {enemyRoom}");
             }
             foreach (var chest in FindObjectsOfType<DungeonChest>())
             {
@@ -179,6 +182,7 @@ public class DungeonRunManager : MonoBehaviour
             int seed = rng.Next();
             floorSeeds.Add(seed);
             var layout = FloorLayoutGenerator.Generate(gridWidth, gridHeight, minRooms, maxRooms, seed);
+            Debug.Log($"[DungeonRunManager] F{i + 1} 방 {layout.RoomCount}개 — Floor Seed {seed}");
 
             var floorRoot = new GameObject($"Floor_{i + 1}", typeof(Grid));
             floorRoot.transform.SetParent(transform, false);
@@ -197,7 +201,7 @@ public class DungeonRunManager : MonoBehaviour
             floorWallTilemaps.Add(wallTilemap);
         }
 
-        Debug.Log($"[DungeonRunManager] Seed {runSeed}, {m1FloorCount}개 층 생성 완료.");
+        Debug.Log($"[DungeonRunManager] Seed {runSeed} ({M3MeasurementAutomation.CurrentSeedMode}), {m1FloorCount}개 층 생성 완료.");
     }
 
     private void SpawnDoors(FloorLayout layout, Tilemap floorTilemap, Tilemap wallTilemap, Transform parent)
@@ -325,34 +329,62 @@ public class DungeonRunManager : MonoBehaviour
             ? playerActor.CurrentCell
             : floorTilemap.WorldToCell(player.transform.position);
 
-        var candidates = new List<Vector3Int>();
+        int playerRoomId = DungeonRoomRegistry.GetRoomId(floorTilemap, playerCell);
+        var candidatesByRoom = new Dictionary<int, List<Vector3Int>>();
         foreach (var cell in floorTilemap.cellBounds.allPositionsWithin)
         {
             if (!floorTilemap.HasTile(cell) || wallTilemap.HasTile(cell) || cell == playerCell) continue;
             if (Mathf.Abs(cell.x - playerCell.x) + Mathf.Abs(cell.y - playerCell.y) < 6) continue;
-            candidates.Add(cell);
+            int roomId = DungeonRoomRegistry.GetRoomId(floorTilemap, cell);
+            if (roomId < 0 || roomId == playerRoomId) continue;
+            if (!candidatesByRoom.TryGetValue(roomId, out var cells))
+            {
+                cells = new List<Vector3Int>();
+                candidatesByRoom.Add(roomId, cells);
+            }
+            cells.Add(cell);
         }
-        candidates.Sort((a, b) =>
-        {
-            int distanceA = Mathf.Abs(a.x - playerCell.x) + Mathf.Abs(a.y - playerCell.y);
-            int distanceB = Mathf.Abs(b.x - playerCell.x) + Mathf.Abs(b.y - playerCell.y);
-            return distanceB.CompareTo(distanceA);
-        });
+
+        // Enemy 수를 늘려도 특정 먼 방이나 계단 방에 몰리지 않도록 방마다 최대 1마리만 뽑는다.
+        // 층 Seed에서 파생한 RNG를 써서 같은 Run Seed의 배치는 항상 동일하다.
+        var rng = new System.Random(floorSeeds[floorIndex] ^ 0x4D335F45);
+        var roomIds = new List<int>(candidatesByRoom.Keys);
+        Shuffle(roomIds, rng);
 
         var occupied = new List<Vector3Int> { playerCell };
         int spawned = 0;
-        foreach (var cell in candidates)
+        foreach (int roomId in roomIds)
         {
-            bool tooClose = occupied.Exists(other => Mathf.Abs(other.x - cell.x) + Mathf.Abs(other.y - cell.y) < 3);
-            if (tooClose) continue;
+            var roomCells = candidatesByRoom[roomId];
+            Shuffle(roomCells, rng);
+            bool placed = false;
+            foreach (var cell in roomCells)
+            {
+                bool tooClose = occupied.Exists(other => Mathf.Abs(other.x - cell.x) + Mathf.Abs(other.y - cell.y) < 3);
+                if (tooClose) continue;
 
-            CreateRuntimeEnemy(floorIndex, spawned, cell, floorTilemap, wallTilemap);
-            occupied.Add(cell);
-            spawned++;
+                CreateRuntimeEnemy(floorIndex, spawned, cell, floorTilemap, wallTilemap);
+                occupied.Add(cell);
+                spawned++;
+                placed = true;
+                break;
+            }
+            if (!placed) continue;
             if (spawned >= enemiesPerFloor) break;
         }
 
         Debug.Log($"[DungeonRunManager] {floorIndex + 1}층 Enemy {spawned}개 배치 및 TickManager 등록 완료.");
+    }
+
+    private static void Shuffle<T>(IList<T> values, System.Random rng)
+    {
+        for (int i = values.Count - 1; i > 0; i--)
+        {
+            int j = rng.Next(i + 1);
+            T value = values[i];
+            values[i] = values[j];
+            values[j] = value;
+        }
     }
 
     private void CreateRuntimeEnemy(int floorIndex, int enemyIndex, Vector3Int cell, Tilemap floorTilemap, Tilemap wallTilemap)

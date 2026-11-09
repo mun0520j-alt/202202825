@@ -532,6 +532,11 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     // 애니메이션(홉 등)은 지금 단계 범위 밖 — 데미지 판정 자체가 먼저(placeholder 목표).
     private void AttackEnemy(EnemyTurnActor enemy)
     {
+        // 이동·대기·장비 행동과 동일하게 비용 처리 전에 현재 Player 턴을 닫는다.
+        // 이 값이 true인 채로 남으면 Enemy 예약 행동/이동 연출 중에도 추가 공격 입력이 들어와
+        // 데미지만 적용되고 CompleteTurn은 "자기 차례 아님"으로 무시될 수 있다.
+        if (!isMyTurn || isAnimating || isDead || enemy == null || TickManager.Instance == null) return;
+        isMyTurn = false;
         ResetWaitProgress();
         // [2026-09-04 신규] 공격 대상 쪽으로 바라보기 — 이동할 때(UpdateFacingDirection)와 동일한
         // 좌우 반전 로직을 그대로 재사용한다. 지금까지는 공격해도 캐릭터가 원래 보던 방향 그대로라
@@ -572,6 +577,7 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
 
         int before = currentHP;
         currentHP = Mathf.Min(maxHP, currentHP + 1);
+        M3MeasurementAutomation.RecordPlayerHealing(currentHP - before);
         ExpeditionSession.RecordPlayerHealth(currentHP);
         healthBar?.SetFill((float)currentHP / maxHP);
         healthViewDirty = true;
@@ -587,7 +593,9 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         if (isDead) return;
 
         int damage = Mathf.Max(1, incomingAttackPower - EffectiveDefensePower);
+        int before = currentHP;
         currentHP = Mathf.Max(0, currentHP - damage);
+        M3MeasurementAutomation.RecordPlayerDamage(before - currentHP);
         CancelAutoRest(true);
         ExpeditionSession.RecordPlayerHealth(currentHP);
         healthBar?.SetFill((float)currentHP / maxHP);

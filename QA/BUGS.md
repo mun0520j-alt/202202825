@@ -860,3 +860,94 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 - **기획 확정:** `마지막 목격 위치까지 추적 → 도착 후 Search 3회`로 변경한다.
 - **수정:** 시야를 잃은 행동 횟수로 추적을 만료하지 않는다. 마지막 목격 셀에 도착할 때까지 기존 추적 경로와 Enemy 문 개방을 유지하고, 도착한 턴부터 Search 3회를 수행한다.
 - **회귀 검증:** 먼 거리에서 시야를 끊고 문을 닫아도 Enemy가 마지막 목격 위치를 향해 이동했다. 경로상 문이 수색 범위 안에 있으면 `OpenDoor/2`로 개방하고, 도착 후 Search 3회 뒤 종료했다.
+
+## BUG-026 — 탈출 구역 진입 직후 공격 Tick이 체류 진행도에서 누락
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Closed (사용자 Play·경계 로그 확인, 2026-11-09) |
+| 심각도 | Major |
+| 우선순위 | P1 |
+| 발견 단계 | M3 원정 CSV 수동 검증 |
+| 관련 코드 | `DungeonStairs`, `TickManager` |
+| Jira | DUN-41 |
+
+- **재현:** 3층 탈출 구역 진입 직후 Player가 공격 2회를 연속 실행해 10Tick을 소비한다.
+- **기대:** 공격 5Tick×2가 탈출 체류 10Tick으로 인정되어 생환한다.
+- **실제:** `DungeonStairs.Update` 실행 순서에 따라 첫 공격 완료 후 탈출 시작 Tick이 저장되어 5Tick이 누락될 수 있다.
+- **수정:** Player 행동 비용을 적용하기 전, 탈출 구역 안의 첫 비이동 행동이면 체류 시작 시각을 먼저 확정한다.
+- **추가 보호:** F4/QA 디버그 맵, F5 가방 채우기, QA Tick·Player HP 강제 설정을 사용한 원정은 M3 CSV에 행을 저장하지 않는다.
+
+## BUG-027 — 일반 출격이 기본 고정 Seed를 재사용해 측정 표본과 맵 다양성 왜곡
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Closed (사용자 Play·Random CSV 확인, 2026-11-09) |
+| Jira | DUN-43 |
+| 심각도 | Major |
+| 우선순위 | P1 |
+| 발견 단계 | M3 목표 Tick 측정 준비 |
+| 관련 코드 | `M3MeasurementAutomation`, `DungeonRunManager`, `ExpeditionDebugCommands` |
+
+- **재현:** F6에서 Seed를 별도로 변경하지 않고 일반 출격을 여러 번 시작한다.
+- **기대:** 일반 출격은 원정마다 새로운 Seed와 맵을 사용하고, Fixed Seed는 결함 재현·비교 시에만 명시적으로 선택한다.
+- **실제:** PlayerPrefs 기본값 `20261106`을 모든 출격에서 재사용해 같은 맵이 반복되고, 맵 학습 효과가 목표 Tick 표본에 섞였다.
+- **원인:** 설정 Seed와 이번 원정의 실제 Seed가 분리되지 않았고 Seed 모드 상태가 없었다.
+- **수정:** 기본 Random/명시적 Fixed 모드를 분리하고, 원정 시작 때 실제 Run Seed를 한 번만 확정해 1~3층에서 유지한다. CSV v3에 모드와 Seed 반복 차수를 기록하고 Fixed 표본은 목표 Tick 자동 분석에서 제외한다.
+- **회귀 범위:** TC-M3-01·21·24·27·30·31~36.
+
+## BUG-028 — 문과 상자가 동시에 인접하면 문이 E 입력을 선점
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Closed (사용자 Play 확인, 2026-11-09) |
+| Jira | DUN-42 |
+| 심각도 | Major |
+| 우선순위 | P1 |
+| 발견 단계 | M3 Random 원정 Play 검증 |
+| 관련 코드 | `DungeonInteractionMenu`, `DungeonDoor`, `DungeonChest`, `GroundLoot` |
+
+- **재현:** Player가 문과 미개봉 상자 모두에 인접한 위치에서 E를 누르고 상자 열기를 시도한다.
+- **기대:** 선택 UI에서 문과 상자를 모두 보여주고 사용자가 선택한 대상 하나만 처리한다.
+- **실제:** 상자 안내는 표시되지만 문 `Update()`가 같은 프레임의 상호작용 게이트를 먼저 점유해 문 열기·닫기만 실행된다.
+- **원인:** 문과 상자가 각자 E 입력을 폴링하며 실행 순서에 따라 `LootInteractionGate`를 경쟁했다.
+- **수정:** 우선 실행되는 중앙 선택 메뉴가 문+상자 동시 인접 상황을 감지해 E를 한 번만 점유한다. 선택한 문 또는 상자의 기존 실행 API만 호출하고 다른 대상은 처리하지 않는다.
+- **회귀 범위:** 문 단독 1Tick, 상자 단독 5Tick, 문 닫기 Actor 차단, 주변 아이템 선택 UI.
+
+## BUG-029 — 탈출 완료 Tick에 Space 유지 시 생환이 지연되고 Tick이 계속 경과
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Closed (사용자 Play·경계 로그 확인, 2026-11-09) |
+| Jira | DUN-44 |
+| 심각도 | Critical 후보 |
+| 우선순위 | P0 |
+| 발견 단계 | M3 방 수 축소 후 Random 원정 Play 검증 |
+| 관련 코드 | `DungeonStairs`, `TickManager`, `PlayerTurnActor` |
+
+- **재현:** 3층 탈출 구역에 진입해 Space를 누른 채 10Tick 이상 계속 대기한다.
+- **기대:** 예약된 Enemy 행동과 사망·MIA 판정을 처리한 뒤 정확히 체류 10Tick에서 입력을 중단하고 생환한다.
+- **실제:** Player `Update()`가 탈출구 `Update()`보다 먼저 다음 대기 Tick을 소비해 `IsReadyForInput` 조건이 계속 거짓이 된다. Space를 놓을 때까지 Tick이 흐르고 생환이 지연된다.
+- **로그 근거:** 385Tick에 탈출 구역 진입 후 395Tick에 완료되어야 하지만, Space 유지로 403Tick까지 `Wait/1`이 반복된 뒤 입력을 놓자 생환했다.
+- **영향:** 마감 근처에서 정상 생환할 원정이 1,440Tick을 넘어 MIA로 잘못 판정될 수 있으며 원정 Tick 측정값도 오염된다.
+- **수정:** 프레임 `Update()` 순서가 아니라 Player 행동과 해당 Tick에 예약된 Enemy 행동이 모두 끝난 직후 탈출 완료를 판정한다. 기존 탈출구 `Update()`도 같은 공통 완료 판정을 사용한다.
+- **회귀 범위:** Space 유지 완료, 1,439/1,440 경계, 완료 Tick 사망 우선순위, 탈출 구역 이탈 초기화.
+
+## BUG-030 — Enemy 턴 중 연속 공격 입력이 데미지만 적용하고 Player 공격 Tick을 누락
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Closed (사용자 Play·첨부 로그 확인, 2026-11-09) |
+| Jira | DUN-45 |
+| 심각도 | Critical 후보 |
+| 우선순위 | P0 |
+| 발견 단계 | M3 탈출 구역 전투 Play 검증 |
+| 관련 코드 | `PlayerTurnActor.AttackEnemy`, `TickManager.CompleteTurn` |
+
+- **재현:** Enemy와 인접한 상태에서 첫 공격 뒤 Enemy 예약 행동·연출이 끝나기 전에 같은 방향 공격을 연속 입력한다.
+- **기대:** 정상 Player 턴마다 데미지 1회와 `Attack/5` 1행이 함께 처리된다. Enemy 3타 처치에는 Player 공격 로그 3행과 총 15Tick이 필요하다.
+- **실제:** Enemy는 3타 피해로 죽지만 Player `Attack/5`는 1행만 남고 탈출 체류도 5Tick만 증가한다.
+- **로그 근거:** 수정 전 원정은 `damage_dealt=12`인데 `attack_ticks=5`만 기록됐다. 수정 후 Seed `-1542686671`은 3타 처치에 `Player/Attack/5` 3행, `attack_ticks=15`, `damage_dealt=12`로 일치했다.
+- **원인:** `AttackEnemy()`가 다른 행동과 달리 행동 시작 전에 `isMyTurn=false`로 닫지 않았다. Enemy 턴 중 추가 입력이 데미지를 먼저 적용하고, 이후 `CompleteTurn()`은 현재 스케줄 액터 불일치로 무시될 수 있었다.
+- **수정:** 공격 진입 시 Player 턴·애니메이션·사망·대상·TickManager를 검증하고 즉시 `isMyTurn=false`로 전환한 뒤 데미지와 5Tick을 처리한다.
+- **회귀 범위:** 방향키 연타, 마우스 연타, 탈출 구역 3타 전투, Enemy 사망 후 반격 없음, 공격 1회당 로그·CSV 5Tick 일치.
