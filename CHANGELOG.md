@@ -26,6 +26,8 @@
 - Chase·Search 중 자동 휴식을 차단하되 수동 Space 1Tick과 같은 칸 5Tick 누적 회복은 유지
 ### 구현
 - 문과 상자가 동시에 인접할 때 중앙 상호작용 선택 UI를 표시해 E 입력 선점 충돌을 제거
+- 층당 방 수를 9~12로 줄이고 Loop용 다리 방도 설정된 최대 방 수를 넘지 않도록 제한
+- Space 유지 중 탈출 완료가 다음 대기에 계속 밀리지 않도록, Player·Enemy 예약 행동 종료 직후 결과를 확정
 - 원정 CSV v3에 `schema_version`·`seed_mode`·`seed_attempt`을 추가하고 Seed별 파생 요약 `seed_summary.csv` 자동 생성을 추가. v1·v2는 보존
 - 고정 Run Seed와 Seed 기반 층 생성 추가
 - 병합 방을 포함한 안정적인 Room ID 데이터와 런타임 조회 레지스트리 추가
@@ -37,7 +39,10 @@
 - 탈출 구역 진입 직후 첫 공격 Tick 누락을 막고, F4·F5·QA Tick·HP 조작 원정을 CSV 저장에서 제외
 ### 검증
 - Unity 6000.4.5f1 배치 컴파일 통과, C# 오류 0
-- `QA/TESTCASES_M3.md` 문·시야·경보·추적·휴식 TC Play 통과. TC-M3-21~29 자동화·CSV 검증 대기
+- `QA/TESTCASES_M3.md` 문·시야·경보·추적·휴식 TC Play 통과. TC-M3-27~29 자동화 통과, 나머지 Seed·CSV Play 검증은 진행 중
+- Run Seed 1,000개·총 3,000층 자동 생성에서 연결·Room ID·결정성·방 수 범위 실패 0. Loop 2,492층, Tree 508층
+- 층별 100,000회 드롭에서 Unique 약 1%, 1~4층 Legendary 0건, 아이템 ID 중복 없음 확인
+- 방 수 축소 후 유효 Random 2판은 372·410Tick(평균 391Tick). BUG-029 재현 403Tick 표본은 분석 제외하고 3판 추가 측정 대기
 
 ## v0.2-m2 — 2026-11-06 (M2 루팅과 손실)
 ### 기획 확정
