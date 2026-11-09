@@ -27,8 +27,8 @@
 
 - [x] M3 측정 보고서 작성
 - [x] `MILESTONES.md`, `CHANGELOG.md`, TC 갱신
-- [ ] BUG-027~030 Jira DUN 등록·스프린트 배정 (사용자 결정 대기)
-- [ ] Confluence 원본 커밋 해시 갱신
+- [x] BUG-027~030 Jira DUN 등록·스프린트 배정 및 완료 처리
+- [x] Confluence 원본 커밋 해시 갱신
 - [x] 씬·프리팹 변경 없음 확인
 
 ## Git·릴리스

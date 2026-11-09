@@ -177,7 +177,7 @@
 | Seed·CSV | Random·Fixed·재현·층 유지·시도 번호·요약 집계 Pass |
 | 경계·우선순위 | 1,439 생환, 1,440 MIA, 사망 우선순위 Pass |
 | 이관 | 지도는 M4. 낮은 상자 개봉률은 `docs/meetings/COMBAT_GROWTH_BACKLOG_2026-11-09.md`의 M4 이후 전투·성장 백로그. 디버그 사유 로그·Fixed 표시기는 백로그 |
-| 남은 것 | push·Jira·Confluence·PR·main 병합·`v0.3-m3` 태그는 사용자 승인 후 진행 |
+| 남은 것 | PR·main 병합·`v0.3-m3` 태그는 사용자 승인 후 진행 |
 
 ### QA
 | 항목 | 내용 |

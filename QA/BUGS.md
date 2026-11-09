@@ -865,7 +865,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Fixed (Play 검증 대기, 2026-11-08) |
+| 상태 | Closed (사용자 Play·경계 로그 확인, 2026-11-09) |
 | 심각도 | Major |
 | 우선순위 | P1 |
 | 발견 단계 | M3 원정 CSV 수동 검증 |
@@ -883,7 +883,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 항목 | 내용 |
 |---|---|
 | 상태 | Closed (사용자 Play·Random CSV 확인, 2026-11-09) |
-| Jira | 등록 여부 사용자 확인 대기 |
+| Jira | DUN-43 |
 | 심각도 | Major |
 | 우선순위 | P1 |
 | 발견 단계 | M3 목표 Tick 측정 준비 |
@@ -901,7 +901,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 항목 | 내용 |
 |---|---|
 | 상태 | Closed (사용자 Play 확인, 2026-11-09) |
-| Jira | 등록 여부 사용자 확인 대기 |
+| Jira | DUN-42 |
 | 심각도 | Major |
 | 우선순위 | P1 |
 | 발견 단계 | M3 Random 원정 Play 검증 |
@@ -919,7 +919,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 항목 | 내용 |
 |---|---|
 | 상태 | Closed (사용자 Play·경계 로그 확인, 2026-11-09) |
-| Jira | 등록 여부 사용자 확인 대기 |
+| Jira | DUN-44 |
 | 심각도 | Critical 후보 |
 | 우선순위 | P0 |
 | 발견 단계 | M3 방 수 축소 후 Random 원정 Play 검증 |
@@ -938,7 +938,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 항목 | 내용 |
 |---|---|
 | 상태 | Closed (사용자 Play·첨부 로그 확인, 2026-11-09) |
-| Jira | 등록 여부 사용자 확인 대기 |
+| Jira | DUN-45 |
 | 심각도 | Critical 후보 |
 | 우선순위 | P0 |
 | 발견 단계 | M3 탈출 구역 전투 Play 검증 |
