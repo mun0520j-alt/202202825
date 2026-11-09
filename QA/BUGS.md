@@ -882,7 +882,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Fixed (Play 재검증 대기) |
+| 상태 | Closed (사용자 Play·Random CSV 확인, 2026-11-09) |
 | Jira | 등록 여부 사용자 확인 대기 |
 | 심각도 | Major |
 | 우선순위 | P1 |
@@ -900,7 +900,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Fixed (Play 재검증 대기) |
+| 상태 | Closed (사용자 Play 확인, 2026-11-09) |
 | Jira | 등록 여부 사용자 확인 대기 |
 | 심각도 | Major |
 | 우선순위 | P1 |
@@ -918,7 +918,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Fixed (Play 재검증 대기) |
+| 상태 | Closed (사용자 Play·경계 로그 확인, 2026-11-09) |
 | Jira | 등록 여부 사용자 확인 대기 |
 | 심각도 | Critical 후보 |
 | 우선순위 | P0 |
@@ -937,7 +937,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Fixed (Play 재검증 대기) |
+| 상태 | Closed (사용자 Play·첨부 로그 확인, 2026-11-09) |
 | Jira | 등록 여부 사용자 확인 대기 |
 | 심각도 | Critical 후보 |
 | 우선순위 | P0 |
