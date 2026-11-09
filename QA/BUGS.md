@@ -932,3 +932,21 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 - **영향:** 마감 근처에서 정상 생환할 원정이 1,440Tick을 넘어 MIA로 잘못 판정될 수 있으며 원정 Tick 측정값도 오염된다.
 - **수정:** 프레임 `Update()` 순서가 아니라 Player 행동과 해당 Tick에 예약된 Enemy 행동이 모두 끝난 직후 탈출 완료를 판정한다. 기존 탈출구 `Update()`도 같은 공통 완료 판정을 사용한다.
 - **회귀 범위:** Space 유지 완료, 1,439/1,440 경계, 완료 Tick 사망 우선순위, 탈출 구역 이탈 초기화.
+
+## BUG-030 — Enemy 턴 중 연속 공격 입력이 데미지만 적용하고 Player 공격 Tick을 누락
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Fixed (Play 재검증 대기) |
+| Jira | 등록 여부 사용자 확인 대기 |
+| 심각도 | Critical 후보 |
+| 우선순위 | P0 |
+| 발견 단계 | M3 탈출 구역 전투 Play 검증 |
+| 관련 코드 | `PlayerTurnActor.AttackEnemy`, `TickManager.CompleteTurn` |
+
+- **재현:** Enemy와 인접한 상태에서 첫 공격 뒤 Enemy 예약 행동·연출이 끝나기 전에 같은 방향 공격을 연속 입력한다.
+- **기대:** 정상 Player 턴마다 데미지 1회와 `Attack/5` 1행이 함께 처리된다. Enemy 3타 처치에는 Player 공격 로그 3행과 총 15Tick이 필요하다.
+- **실제:** Enemy는 3타 피해로 죽지만 Player `Attack/5`는 1행만 남고 탈출 체류도 5Tick만 증가한다.
+- **원인:** `AttackEnemy()`가 다른 행동과 달리 행동 시작 전에 `isMyTurn=false`로 닫지 않았다. Enemy 턴 중 추가 입력이 데미지를 먼저 적용하고, 이후 `CompleteTurn()`은 현재 스케줄 액터 불일치로 무시될 수 있었다.
+- **수정:** 공격 진입 시 Player 턴·애니메이션·사망·대상·TickManager를 검증하고 즉시 `isMyTurn=false`로 전환한 뒤 데미지와 5Tick을 처리한다.
+- **회귀 범위:** 방향키 연타, 마우스 연타, 탈출 구역 3타 전투, Enemy 사망 후 반격 없음, 공격 1회당 로그·CSV 5Tick 일치.
