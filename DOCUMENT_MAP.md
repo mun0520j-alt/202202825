@@ -15,7 +15,9 @@
 |---|---|
 | `QA/M3_TRACEABILITY.md` | 요구사항·Jira·TC·증거 연결 |
 | `QA/M3_MEASUREMENT_REPORT_TEMPLATE.md` | 자동화·플레이 결과 양식 |
+| `QA/M3_MEASUREMENT_REPORT.md` | M3 자동화·플레이 측정 확정 결과 |
 | `QA/M3_RELEASE_CHECKLIST.md` | M3 종료 절차 |
+| `docs/meetings/COMBAT_GROWTH_BACKLOG_2026-11-09.md` | 상자 개봉률에서 출발한 M4 이후 전투·성장 논의와 미정 결정 |
 | `docs/STATUS_REPORT_2026-11-06.md` | Jira·진행 상태 |
 | `docs/PORTFOLIO_ONE_PAGE_BRIEF.md` | 대외 설명용 요약 |
 
@@ -29,7 +31,7 @@
 |---|---|
 | 현재 아이템 | `Assets/Resources/Data/items.csv` |
 | 아이템 스키마 | `docs/ITEM_CSV_DATA_DICTIONARY.md` |
-| 원정 측정 | 실행 후 생성되는 `expedition_runs_v2.csv` |
+| 원정 측정 | 실행 후 생성되는 `expedition_runs_v3.csv` (`seed_summary.csv`는 파생 요약) |
 
 ## 외부 동기화
 
