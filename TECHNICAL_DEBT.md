@@ -6,6 +6,8 @@
 | TD-002 | Stash 영구 저장 도입 | 현재 Stash는 실행 중 여러 원정에는 유지되지만 게임 종료 후에는 초기화되는 런타임 저장소임. 기존 목표 시점인 `M3 이전`을 넘겨 일정 재결정이 필요함 | Medium | Open — 일정 재검토 | M3 결정 필요 |
 | TD-003 | Unity 6 폐기 예정 탐색 API 교체 | 컴파일은 성공하지만 `FindObjectOfType`, `FindObjectsOfType`, `GetInstanceID` 경고가 누적되어 향후 Unity 버전 호환성과 탐색 비용에 위험이 있음 | Low | Open | M3.1 |
 | TD-004 | Confluence 테스트 결과 수동 동기화 | 리포의 TC가 Pass로 갱신돼도 Confluence 초기 업로드본이 미실행 상태로 남을 수 있음 | Medium | Open | M3.1 |
+| TD-005 | 디버그 원정 제외 로그에 조작 원인 표시 | F4·F5·Tick·HP 조작이 모두 같은 제외 문구를 사용해 측정 데이터 감사 시 원인을 구분하기 어려움 | Low | Open | M4 |
+| TD-006 | Fixed Seed 모드 화면 표시 | Fixed 모드가 PlayerPrefs에 유지되어 일반 측정 원정이 Fixed로 기록될 위험이 있음 | Medium | Open | M4 |
 
 ## 관리 규칙
 
