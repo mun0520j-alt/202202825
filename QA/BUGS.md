@@ -877,3 +877,21 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 - **실제:** `DungeonStairs.Update` 실행 순서에 따라 첫 공격 완료 후 탈출 시작 Tick이 저장되어 5Tick이 누락될 수 있다.
 - **수정:** Player 행동 비용을 적용하기 전, 탈출 구역 안의 첫 비이동 행동이면 체류 시작 시각을 먼저 확정한다.
 - **추가 보호:** F4/QA 디버그 맵, F5 가방 채우기, QA Tick·Player HP 강제 설정을 사용한 원정은 M3 CSV에 행을 저장하지 않는다.
+
+## BUG-027 — 일반 출격이 기본 고정 Seed를 재사용해 측정 표본과 맵 다양성 왜곡
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Fixed (Play 재검증 대기) |
+| Jira | 등록 여부 사용자 확인 대기 |
+| 심각도 | Major |
+| 우선순위 | P1 |
+| 발견 단계 | M3 목표 Tick 측정 준비 |
+| 관련 코드 | `M3MeasurementAutomation`, `DungeonRunManager`, `ExpeditionDebugCommands` |
+
+- **재현:** F6에서 Seed를 별도로 변경하지 않고 일반 출격을 여러 번 시작한다.
+- **기대:** 일반 출격은 원정마다 새로운 Seed와 맵을 사용하고, Fixed Seed는 결함 재현·비교 시에만 명시적으로 선택한다.
+- **실제:** PlayerPrefs 기본값 `20261106`을 모든 출격에서 재사용해 같은 맵이 반복되고, 맵 학습 효과가 목표 Tick 표본에 섞였다.
+- **원인:** 설정 Seed와 이번 원정의 실제 Seed가 분리되지 않았고 Seed 모드 상태가 없었다.
+- **수정:** 기본 Random/명시적 Fixed 모드를 분리하고, 원정 시작 때 실제 Run Seed를 한 번만 확정해 1~3층에서 유지한다. CSV v3에 모드와 Seed 반복 차수를 기록하고 Fixed 표본은 목표 Tick 자동 분석에서 제외한다.
+- **회귀 범위:** TC-M3-01·21·24·27·30·31~36.

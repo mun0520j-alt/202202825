@@ -20,14 +20,20 @@
 | TC-M3-20 | 멀리서 Player를 발견한 Enemy와 거리를 벌린 뒤 문 닫기 | 마지막 목격 위치까지 이동하며 닫힌 문을 2Tick으로 열고, 도착 후 Search 3회 | Pass (첨부 로그 확인, 2026-11-06) |
 | TC-M3-21 | F6에서 Seed 입력 후 재시작하고 같은 Seed를 다시 적용 | 방·연결·Room ID·문·Enemy·상자 배치가 동일하고 `[M3Validate] PASS` | Play 검증 대기 |
 | TC-M3-22 | F6의 현재 맵 자동 검증 실행 | 전체 방 연결, Actor·상자·출구 겹침 없음, 출구 경로 존재 | Play 검증 대기 |
-| TC-M3-23 | 이동·공격·대기·문·상자 행동 후 생환/사망/MIA | `expedition_runs.csv`에 결과 1행과 행동별 Tick·방문 방 수 저장 | Play 검증 대기 |
+| TC-M3-23 | 이동·공격·대기·문·상자 행동 후 생환/사망/MIA | `expedition_runs_v3.csv`에 결과 1행과 행동별 Tick·방문 방 수 저장 | Play 검증 대기 |
 | TC-M3-24 | 1→2→3층 진행 후 원정 종료 | 층마다 별도 행이 아닌 원정 전체가 한 행으로 기록되고 Seed 유지 | Play 검증 대기 |
 | TC-M3-25 | F6에서 여러 Seed를 적용하고 현재 층 Enemy의 Room ID 확인 | 시작 방에는 Enemy가 없고, 각 Room ID에는 초기 Enemy가 0~1마리만 배치되며 같은 Seed에서 배치가 동일 | Play 검증 대기 |
 | TC-M3-26 | 전투·회복·상자·줍기를 포함한 원정 종료 후 `expedition_runs_v2.csv` 확인 | 조우·처치·준 피해·받은 피해·회복·상자·획득·바닥 드롭·출구 경로·출구 방 Enemy가 실제 플레이와 일치. 기존 v1 CSV는 보존 | Play 검증 대기 |
 | TC-M3-27 | M3 Automation에서 Run Seed 1,000개 자동 검증 | 3,000개 층의 연결·양방향 연결·Room ID·동일 Seed 결정성 통과, 실패 시 재현 Seed CSV 저장 | Editor 실행 대기 |
 | TC-M3-28 | M3 Automation에서 층별 드롭 100,000회 실행 | 설정 분포 ±0.5%p, 1~4층 Legendary 0건, 결과 CSV 저장 | Editor 실행 대기 |
 | TC-M3-29 | M3 Automation 전체 실행 | Tick·가방·Seed 핵심 회귀 통과 및 원정 CSV 자동 요약 보고서 생성 | Editor 실행 대기 |
-| TC-M3-30 | 원정 중 F4, F5, QA/Set Elapsed Tick, QA/Set Player HP를 각각 사용한 뒤 종료 | Console에 디버그 원정 제외 로그가 나오고 `expedition_runs_v2.csv`에 행이 추가되지 않음 | Play 검증 대기 |
+| TC-M3-30 | 원정 중 F4, F5, QA/Set Elapsed Tick, QA/Set Player HP를 각각 사용한 뒤 종료 | Console에 디버그 원정 제외 로그가 나오고 `expedition_runs_v3.csv`에 행이 추가되지 않음 | Play 검증 대기 |
+| TC-M3-31 | Random 모드에서 연속 3회 출격 | 매번 다른 Seed·다른 맵. CSV v3 3행 모두 `seed_mode=Random`, Seed가 서로 다름 | Play 검증 대기 |
+| TC-M3-32 | F6에서 Seed 입력 후 적용, 원정 종료 후 다시 출격 | 두 원정의 Seed·맵 동일, `seed_mode=Fixed` | Play 검증 대기 |
+| TC-M3-33 | Fixed 상태에서 `Random 모드로 전환` 후 다음 출격 | 새 Seed 생성, `seed_mode=Random` | Play 검증 대기 |
+| TC-M3-34 | Random 원정 CSV의 Seed를 F6 Fixed로 입력 | 해당 원정과 같은 맵·Room ID·문·Enemy·상자 배치 재현 | Play 검증 대기 |
+| TC-M3-35 | 원정 중 1→2→3층 이동 | 원정 도중 Seed가 바뀌지 않고 CSV v3 한 행에 하나의 Seed 기록 | Play 검증 대기 |
+| TC-M3-36 | Fixed로 같은 Seed 3회 + Random 2회 종료 후 `seed_summary.csv` 확인 | Fixed Seed는 `runs=3`, v3의 `seed_attempt=1·2·3`; Random Seed는 각각 한 행, 1회차 Tick 일치 | Play 검증 대기 |
 | TC-M3-14 | 마우스로 닫힌 문 너머를 선택 | 경로 미리보기가 닫힌 문을 통과하지 않음. 문 개폐는 키보드 E 전용 | Pass (사용자 Play, 2026-11-06) |
 | TC-M3-15 | 1→2→3층에서 동일 셀 좌표의 문 확인 | 다른 층 문 상태가 서로 덮어쓰이지 않음 | Pass (사용자 Play, 2026-11-06) |
 | TC-M3-16 | F3에서 연결된 두 방의 경계와 문 점유 셀 확인 | 공용 벽은 1칸 두께, 문은 그 경계의 3칸만 점유하고 양쪽 상호작용 거리가 대칭 | Pass (사용자 Play, 2026-11-06) |

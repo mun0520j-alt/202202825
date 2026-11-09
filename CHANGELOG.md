@@ -17,12 +17,14 @@
 
 ## Unreleased — M3 측정과 1차 밸런스
 ### 기획 확정
+- 일반 출격은 원정마다 새 Seed를 생성하는 Random 모드, F6 입력은 재현·비교용 Fixed 모드로 분리
 - Player 문 열기·닫기 1Tick, Enemy 문 열기 2Tick. Enemy는 문을 닫지 못하며 열린 문은 Player가 닫을 때까지 유지
 - 닫힌 문은 이동·시야·같은 방 경보를 차단하고 잠금·열쇠·문 파괴는 후순위로 제외
 - Enemy가 Player를 3회 행동 동안 재인식하지 못하면 Search 3회 후 기본 상태로 복귀
 - 같은 Room ID 안에서 최초 발견 경보를 한 번만 전달하고 연쇄 경보는 차단
 - Chase·Search 중 자동 휴식을 차단하되 수동 Space 1Tick과 같은 칸 5Tick 누적 회복은 유지
 ### 구현
+- 원정 CSV v3에 `schema_version`·`seed_mode`·`seed_attempt`을 추가하고 Seed별 파생 요약 `seed_summary.csv` 자동 생성을 추가. v1·v2는 보존
 - 고정 Run Seed와 Seed 기반 층 생성 추가
 - 병합 방을 포함한 안정적인 Room ID 데이터와 런타임 조회 레지스트리 추가
 - 방 연결부에 런타임 문을 생성하고 Player·Enemy 상호작용 비용, 경로·시야 차단 연결
