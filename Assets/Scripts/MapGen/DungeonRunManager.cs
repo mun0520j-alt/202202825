@@ -17,8 +17,8 @@ public class DungeonRunManager : MonoBehaviour
     [SerializeField] private int floorCount = 10;
     [SerializeField] private int gridWidth = 16;
     [SerializeField] private int gridHeight = 16;
-    [SerializeField] private int minRooms = 12;
-    [SerializeField] private int maxRooms = 16;
+    [SerializeField] private int minRooms = 9;
+    [SerializeField] private int maxRooms = 12;
     [SerializeField] private int chunkSize = 16;
     [SerializeField] private float floorSpacingMargin = 32f;
     [SerializeField] private int runSeed = 20261106;
@@ -182,6 +182,7 @@ public class DungeonRunManager : MonoBehaviour
             int seed = rng.Next();
             floorSeeds.Add(seed);
             var layout = FloorLayoutGenerator.Generate(gridWidth, gridHeight, minRooms, maxRooms, seed);
+            Debug.Log($"[DungeonRunManager] F{i + 1} 방 {layout.RoomCount}개 — Floor Seed {seed}");
 
             var floorRoot = new GameObject($"Floor_{i + 1}", typeof(Grid));
             floorRoot.transform.SetParent(transform, false);

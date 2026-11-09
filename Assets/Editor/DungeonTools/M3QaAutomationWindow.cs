@@ -108,12 +108,12 @@ public sealed class M3QaAutomationWindow : EditorWindow
             for (int floor = 1; floor <= ExpeditionSession.FinalFloor; floor++)
             {
                 int floorSeed = runRng.Next();
-                FloorLayout layout = FloorLayoutGenerator.Generate(16, 16, 12, 16, floorSeed);
+                FloorLayout layout = FloorLayoutGenerator.Generate(16, 16, 9, 12, floorSeed);
                 if (layout.Shape == FloorShape.Loop) loopFloors++; else treeFloors++;
                 foreach (string error in ValidateLayout(layout))
                     failures.Add($"{runSeed},{floor},{floorSeed},{Csv(error)}");
 
-                FloorLayout replay = FloorLayoutGenerator.Generate(16, 16, 12, 16, floorSeed);
+                FloorLayout replay = FloorLayoutGenerator.Generate(16, 16, 9, 12, floorSeed);
                 if (LayoutSignature(layout) != LayoutSignature(replay))
                     failures.Add($"{runSeed},{floor},{floorSeed},{Csv("동일 Seed 재생성 불일치")}");
             }
@@ -135,7 +135,7 @@ public sealed class M3QaAutomationWindow : EditorWindow
     private static IEnumerable<string> ValidateLayout(FloorLayout layout)
     {
         if (layout == null) { yield return "Layout null"; yield break; }
-        if (layout.RoomCount < 12 || layout.RoomCount > 18) yield return $"방 수 범위 이탈: {layout.RoomCount}";
+        if (layout.RoomCount < 9 || layout.RoomCount > 12) yield return $"방 수 범위 이탈: {layout.RoomCount}";
         if (!layout.RoomCells.Contains(layout.StartCell)) yield return "시작 방 누락";
         if (!layout.RoomCells.Contains(layout.BossCell)) yield return "최원거리 방 누락";
 
@@ -226,8 +226,8 @@ public sealed class M3QaAutomationWindow : EditorWindow
         for (int i = 0; i < 100; i++)
         {
             int seed = 20261106 + i;
-            layoutDeterministic &= LayoutSignature(FloorLayoutGenerator.Generate(16, 16, 12, 16, seed))
-                                   == LayoutSignature(FloorLayoutGenerator.Generate(16, 16, 12, 16, seed));
+            layoutDeterministic &= LayoutSignature(FloorLayoutGenerator.Generate(16, 16, 9, 12, seed))
+                                   == LayoutSignature(FloorLayoutGenerator.Generate(16, 16, 9, 12, seed));
             LootItemData a = LootItemDatabase.Roll(1 + i % 4, new System.Random(seed));
             LootItemData b = LootItemDatabase.Roll(1 + i % 4, new System.Random(seed));
             lootDeterministic &= a != null && b != null && a.Id == b.Id && a.Type != LootItemType.Bag;

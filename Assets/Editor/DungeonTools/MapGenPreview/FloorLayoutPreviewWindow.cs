@@ -10,8 +10,8 @@ public class FloorLayoutPreviewWindow : EditorWindow
 {
     private int gridWidth = 8;
     private int gridHeight = 8;
-    private int minRooms = 12;
-    private int maxRooms = 18;
+    private int minRooms = 9;
+    private int maxRooms = 12;
     private int seed = 12345;
     private bool randomSeedOnGenerate = true;
 

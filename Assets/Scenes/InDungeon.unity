@@ -166,8 +166,8 @@ MonoBehaviour:
   floorCount: 10
   gridWidth: 16
   gridHeight: 16
-  minRooms: 12
-  maxRooms: 16
+  minRooms: 9
+  maxRooms: 12
   chunkSize: 16
   floorSpacingMargin: 32
   floorTile: {fileID: 11400000, guid: d2a42e5d22cbf194f898173c5e6be0cb, type: 2}
