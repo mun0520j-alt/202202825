@@ -947,6 +947,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 - **재현:** Enemy와 인접한 상태에서 첫 공격 뒤 Enemy 예약 행동·연출이 끝나기 전에 같은 방향 공격을 연속 입력한다.
 - **기대:** 정상 Player 턴마다 데미지 1회와 `Attack/5` 1행이 함께 처리된다. Enemy 3타 처치에는 Player 공격 로그 3행과 총 15Tick이 필요하다.
 - **실제:** Enemy는 3타 피해로 죽지만 Player `Attack/5`는 1행만 남고 탈출 체류도 5Tick만 증가한다.
+- **로그 근거:** 수정 전 원정은 `damage_dealt=12`인데 `attack_ticks=5`만 기록됐다. 수정 후 Seed `-1542686671`은 3타 처치에 `Player/Attack/5` 3행, `attack_ticks=15`, `damage_dealt=12`로 일치했다.
 - **원인:** `AttackEnemy()`가 다른 행동과 달리 행동 시작 전에 `isMyTurn=false`로 닫지 않았다. Enemy 턴 중 추가 입력이 데미지를 먼저 적용하고, 이후 `CompleteTurn()`은 현재 스케줄 액터 불일치로 무시될 수 있었다.
 - **수정:** 공격 진입 시 Player 턴·애니메이션·사망·대상·TickManager를 검증하고 즉시 `isMyTurn=false`로 전환한 뒤 데미지와 5Tick을 처리한다.
 - **회귀 범위:** 방향키 연타, 마우스 연타, 탈출 구역 3타 전투, Enemy 사망 후 반격 없음, 공격 1회당 로그·CSV 5Tick 일치.
