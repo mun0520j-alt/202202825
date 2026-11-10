@@ -21,6 +21,7 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.F4)) BuildM1DebugMap();
         if (Input.GetKeyDown(KeyCode.F5)) FillM2Bag();
         if (Input.GetKeyDown(KeyCode.F6)) showM3Panel = !showM3Panel;
+        if (Input.GetKeyDown(KeyCode.F7)) JumpToFloorFive();
     }
 
     private void OnGUI()
@@ -116,6 +117,21 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
         if (PlayerTurnActor.Instance == null) return;
         M3MeasurementAutomation.MarkDebugRun();
         PlayerTurnActor.Instance.DebugSetCurrentHP(targetPlayerHP);
+    }
+
+    [ContextMenu("QA/Jump To Floor 5 (F7)")]
+    public void JumpToFloorFive()
+    {
+        if (!ExpeditionSession.IsActive)
+        {
+            Debug.LogWarning("[QA] 활성 원정이 없어 5층으로 이동할 수 없습니다.");
+            return;
+        }
+
+        M3MeasurementAutomation.MarkDebugRun();
+        ExpeditionSession.DebugSetCurrentFloor(5);
+        Debug.Log($"[QA] F7 — 누적 {ExpeditionSession.ElapsedTicks:0.##} Tick과 현재 장비·가방·HP를 유지하고 5층 보스 검증으로 이동합니다.");
+        SceneManager.LoadScene("InDungeon");
     }
 
     public static bool SetElapsedTicks(float elapsedTicks)
@@ -218,7 +234,7 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
         }
 
         GUI.Box(new Rect(12f, 12f, 460f, 108f),
-            "F3: Grid 끄기 / F4: 빠른 검증 배치\n초록=Floor / 빨강=Wall / 노랑=Player / 보라=Actor\n" +
+            "F3: Grid 끄기 / F4: 빠른 검증 배치 / F7: 5층 보스 직행\n초록=Floor / 빨강=Wall / 노랑=Player / 보라=Actor\n" +
             "주황=D:CLOSED / 하늘=D:OPEN / 갈색=CHEST / 파랑=STAIRS·EXIT\n" +
             "R번호=Room ID / 주황 테두리=Player 인접 검색 칸\nF4: 왼쪽 상자 / 위 Enemy / 오른쪽 탈출구");
     }
