@@ -74,6 +74,7 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     private bool bossAoePending;
     private Vector3Int bossAoeCell;
     private int bossLootSeed;
+    [SerializeField, Min(1)] private int bossAoeAttackPower = 6;
     private GameObject bossTelegraph;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -326,7 +327,7 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
             bossAoePending = false;
             if (bossTelegraph != null) Destroy(bossTelegraph);
             var delta = player.CurrentCell - bossAoeCell;
-            if (Mathf.Abs(delta.x) <= 2 && Mathf.Abs(delta.y) <= 2) player.TakeDamage(4);
+            if (Mathf.Abs(delta.x) <= 2 && Mathf.Abs(delta.y) <= 2) player.TakeDamage(bossAoeAttackPower);
             Debug.Log($"[Boss] 광역 발동 — 중심 {bossAoeCell}");
             bossPatternStep = 0;
             TickManager.Instance.CompleteTurn(this, TickCost.Attack, "BossAoE");
