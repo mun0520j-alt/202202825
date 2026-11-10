@@ -98,6 +98,24 @@ public class DungeonSceneBootstrapper : MonoBehaviour
         var exitObject = new GameObject(finalExit ? "EscapeExit(AutoCreated)" : "DownStairs(AutoCreated)");
         exitObject.AddComponent<DungeonStairs>().Initialize(floor, exitCell, finalExit);
 
+        // M4에서도 3층 생환 선택은 유지한다. 하강 계단과 겹치지 않도록 두 번째로 먼 칸에
+        // 별도 탈출 구역을 둔다.
+        if (ExpeditionSession.CurrentFloor == 3)
+        {
+            Vector3Int escapeCell = playerCell;
+            int secondDistance = -1;
+            foreach (var position in floor.cellBounds.allPositionsWithin)
+            {
+                if (position == exitCell || !floor.HasTile(position) || (walls != null && walls.HasTile(position))) continue;
+                if (TickManager.Instance != null && TickManager.Instance.IsCellOccupied(position)) continue;
+                int distance = Mathf.Abs(position.x - playerCell.x) + Mathf.Abs(position.y - playerCell.y);
+                if (distance <= secondDistance) continue;
+                secondDistance = distance;
+                escapeCell = position;
+            }
+            new GameObject("EscapeExit_F3(AutoCreated)").AddComponent<DungeonStairs>().Initialize(floor, escapeCell, true);
+        }
+
         int exitRoomId = DungeonRoomRegistry.GetRoomId(floor, exitCell);
         int enemiesInExitRoom = 0;
         foreach (var enemy in FindObjectsByType<EnemyTurnActor>())

@@ -64,13 +64,14 @@ public sealed class DungeonStairs : MonoBehaviour
         foreach (var stairs in stairsByCell.Values)
         {
             if (stairs == null || !stairs.isFinalExit || stairs.requestSent
+                || stairs.IsLockedByBoss()
                 || stairs.extractionStartTick >= 0f
                 || !stairs.IsInsideExtractionZone(player.CurrentCell)) continue;
 
             var manager = ExpeditionManager.Instance;
             if (manager == null) return;
             stairs.extractionStartTick = manager.ElapsedTicks;
-            Debug.Log($"[Extraction] 탈출 구역 행동 시작 — {manager.EscapeProcedureTickCost:0.##} Tick 체류 필요.");
+            Debug.Log($"[Extraction] 탈출 구역 행동 시작 — {stairs.RequiredExtractionTicks(manager):0.##} Tick 체류 필요.");
             return;
         }
     }
@@ -84,12 +85,13 @@ public sealed class DungeonStairs : MonoBehaviour
         foreach (var stairs in stairsByCell.Values)
         {
             if (stairs == null || !stairs.isFinalExit || stairs.requestSent
+                || stairs.IsLockedByBoss()
                 || stairs.extractionStartTick < 0f
                 || !stairs.IsInsideExtractionZone(player.CurrentCell)) continue;
 
             var manager = ExpeditionManager.Instance;
             if (manager == null
-                || manager.ElapsedTicks - stairs.extractionStartTick < manager.EscapeProcedureTickCost) continue;
+                || manager.ElapsedTicks - stairs.extractionStartTick < stairs.RequiredExtractionTicks(manager)) continue;
 
             stairs.requestSent = manager.TryCompleteExtraction(player);
             return stairs.requestSent;
@@ -106,6 +108,11 @@ public sealed class DungeonStairs : MonoBehaviour
 
         if (isFinalExit)
         {
+            if (IsLockedByBoss())
+            {
+                extractionStartTick = -1f;
+                return;
+            }
             var manager = ExpeditionManager.Instance;
             if (!IsInsideExtractionZone(player.CurrentCell))
             {
@@ -117,7 +124,7 @@ public sealed class DungeonStairs : MonoBehaviour
             if (extractionStartTick < 0f)
             {
                 extractionStartTick = manager.ElapsedTicks;
-                Debug.Log($"[Extraction] 탈출 구역 진입 — {manager.EscapeProcedureTickCost:0.##} Tick 체류 필요.");
+                Debug.Log($"[Extraction] 탈출 구역 진입 — {RequiredExtractionTicks(manager):0.##} Tick 체류 필요.");
             }
 
             TryResolveCompletedExtraction(player);
@@ -142,7 +149,13 @@ public sealed class DungeonStairs : MonoBehaviour
         string label;
         if (isFinalExit)
         {
-            float required = ExpeditionManager.Instance?.EscapeProcedureTickCost ?? 10f;
+            if (IsLockedByBoss())
+            {
+                label = "보스를 처치해야 탈출할 수 있습니다.";
+                GUI.Box(new Rect(Screen.width * 0.5f - 180f, Screen.height - 90f, 360f, 40f), label);
+                return;
+            }
+            float required = RequiredExtractionTicks(ExpeditionManager.Instance);
             float elapsed = extractionStartTick < 0f ? 0f : (ExpeditionManager.Instance?.ElapsedTicks ?? 0f) - extractionStartTick;
             float remaining = Mathf.Max(0f, required - elapsed);
             label = $"탈출 구역 체류 중 — {remaining:0.##} Tick 남음 (Space: 대기)";
@@ -157,5 +170,15 @@ public sealed class DungeonStairs : MonoBehaviour
     private bool IsInsideExtractionZone(Vector3Int playerCell)
     {
         return Mathf.Abs(playerCell.x - cell.x) <= 1 && Mathf.Abs(playerCell.y - cell.y) <= 1;
+    }
+
+    private bool IsLockedByBoss()
+    {
+        return ExpeditionSession.CurrentFloor == 5 && GameObject.Find("Boss_F5") != null;
+    }
+
+    private float RequiredExtractionTicks(ExpeditionManager manager)
+    {
+        return ExpeditionSession.CurrentFloor == 5 ? 5f : manager?.EscapeProcedureTickCost ?? 10f;
     }
 }

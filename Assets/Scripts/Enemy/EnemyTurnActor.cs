@@ -133,6 +133,15 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
         TryInitialize();
     }
 
+    public void ConfigureCombatStats(int hp, int attack, int defense)
+    {
+        maxHP = Mathf.Max(1, hp);
+        currentHP = maxHP;
+        attackPower = Mathf.Max(1, attack);
+        defensePower = Mathf.Max(0, defense);
+        healthBar?.SetFill(1f);
+    }
+
     private bool TryInitialize()
     {
         if (isInitialized) return true;

@@ -20,6 +20,7 @@ public class DungeonRunManager : MonoBehaviour
     [SerializeField] private int minRooms = 9;
     [SerializeField] private int maxRooms = 12;
     [SerializeField] private int chunkSize = 16;
+    [SerializeField, Min(20)] private int bossArenaSize = 28;
     [SerializeField] private float floorSpacingMargin = 32f;
     [SerializeField] private int runSeed = 20261106;
 
@@ -88,7 +89,9 @@ public class DungeonRunManager : MonoBehaviour
         for (int i = 0; i < floors.Count; i++)
         {
             FloorLayout actual = floors[i];
-            FloorLayout replay = FloorLayoutGenerator.Generate(gridWidth, gridHeight, minRooms, maxRooms, floorSeeds[i]);
+            FloorLayout replay = i + 1 == 5
+                ? CreateBossArenaLayout()
+                : FloorLayoutGenerator.Generate(gridWidth, gridHeight, minRooms, maxRooms, floorSeeds[i]);
             string actualSignature = BuildLayoutSignature(actual);
             string replaySignature = BuildLayoutSignature(replay);
             if (actualSignature != replaySignature) errors.Add($"F{i + 1}: 동일 Seed 재생성 결과 불일치");
@@ -181,7 +184,9 @@ public class DungeonRunManager : MonoBehaviour
         {
             int seed = rng.Next();
             floorSeeds.Add(seed);
-            var layout = FloorLayoutGenerator.Generate(gridWidth, gridHeight, minRooms, maxRooms, seed);
+            bool bossFloor = i + 1 == 5;
+            int paintChunkSize = bossFloor ? bossArenaSize : chunkSize;
+            var layout = bossFloor ? CreateBossArenaLayout() : FloorLayoutGenerator.Generate(gridWidth, gridHeight, minRooms, maxRooms, seed);
             Debug.Log($"[DungeonRunManager] F{i + 1} 방 {layout.RoomCount}개 — Floor Seed {seed}");
 
             var floorRoot = new GameObject($"Floor_{i + 1}", typeof(Grid));
@@ -191,10 +196,10 @@ public class DungeonRunManager : MonoBehaviour
             var floorTilemap = CreateTilemapChild(floorRoot.transform, "Floor", 0);
             var wallTilemap = CreateTilemapChild(floorRoot.transform, "Walls", 1);
 
-            var painter = new FloorTilemapPainter(floorTilemap, wallTilemap, floorTile, wallTile) { ChunkSize = chunkSize };
+            var painter = new FloorTilemapPainter(floorTilemap, wallTilemap, floorTile, wallTile) { ChunkSize = paintChunkSize };
             painter.Paint(layout);
-            DungeonRoomRegistry.Register(floorTilemap, layout, chunkSize);
-            SpawnDoors(layout, floorTilemap, wallTilemap, floorRoot.transform);
+            DungeonRoomRegistry.Register(floorTilemap, layout, paintChunkSize);
+            if (!bossFloor) SpawnDoors(layout, floorTilemap, wallTilemap, floorRoot.transform);
 
             floors.Add(layout);
             floorTileTilemaps.Add(floorTilemap);
@@ -202,6 +207,23 @@ public class DungeonRunManager : MonoBehaviour
         }
 
         Debug.Log($"[DungeonRunManager] Seed {runSeed} ({M3MeasurementAutomation.CurrentSeedMode}), {m1FloorCount}개 층 생성 완료.");
+    }
+
+    private static FloorLayout CreateBossArenaLayout()
+    {
+        var cell = Vector2Int.zero;
+        var layout = new FloorLayout
+        {
+            GridWidth = 1,
+            GridHeight = 1,
+            Shape = FloorShape.Tree,
+            StartCell = cell,
+            BossCell = cell
+        };
+        layout.RoomCells.Add(cell);
+        layout.Connections[cell] = new List<Vector2Int>();
+        layout.RoomIdByCell[cell] = 1;
+        return layout;
     }
 
     private void SpawnDoors(FloorLayout layout, Tilemap floorTilemap, Tilemap wallTilemap, Transform parent)
@@ -256,9 +278,10 @@ public class DungeonRunManager : MonoBehaviour
         var floorTilemap = floorTileTilemaps[floorIndex];
         var wallTilemap = floorWallTilemaps[floorIndex];
 
+        int activeChunkSize = floorIndex + 1 == 5 ? bossArenaSize : chunkSize;
         var startTilePos = new Vector3Int(
-            layout.StartCell.x * chunkSize + chunkSize / 2,
-            layout.StartCell.y * chunkSize + chunkSize / 2,
+            layout.StartCell.x * activeChunkSize + activeChunkSize / 2,
+            layout.StartCell.y * activeChunkSize + (floorIndex + 1 == 5 ? 2 : activeChunkSize / 2),
             0);
         Vector3 worldPos = floorTilemap.CellToWorld(startTilePos) +
                            new Vector3(playerCellOffsetX, playerCellOffsetY, 0f);
@@ -322,6 +345,12 @@ public class DungeonRunManager : MonoBehaviour
     {
         if (floorIndex < 0 || floorIndex >= floors.Count || player == null) return;
 
+        if (floorIndex + 1 == 5)
+        {
+            SpawnBoss(floorIndex);
+            return;
+        }
+
         var floorTilemap = floorTileTilemaps[floorIndex];
         var wallTilemap = floorWallTilemaps[floorIndex];
         var playerActor = player.GetComponent<PlayerTurnActor>();
@@ -376,6 +405,20 @@ public class DungeonRunManager : MonoBehaviour
         Debug.Log($"[DungeonRunManager] {floorIndex + 1}층 Enemy {spawned}개 배치 및 TickManager 등록 완료.");
     }
 
+    private void SpawnBoss(int floorIndex)
+    {
+        var floorTilemap = floorTileTilemaps[floorIndex];
+        var wallTilemap = floorWallTilemaps[floorIndex];
+        var bossCell = new Vector3Int(bossArenaSize / 2, bossArenaSize - 4, 0);
+        GameObject boss = CreateRuntimeEnemy(floorIndex, 0, bossCell, floorTilemap, wallTilemap);
+        boss.name = "Boss_F5";
+        boss.transform.localScale = new Vector3(1.35f, 1.35f, 1f);
+        var renderer = boss.GetComponent<SpriteRenderer>();
+        if (renderer != null) renderer.color = new Color(0.75f, 0.15f, 0.2f, 1f);
+        boss.GetComponent<EnemyTurnActor>().ConfigureCombatStats(24, 4, 1);
+        Debug.Log("[DungeonRunManager] 5층 단일 보스 아레나 생성 — 일반 Enemy 0, 일반 상자 0.");
+    }
+
     private static void Shuffle<T>(IList<T> values, System.Random rng)
     {
         for (int i = values.Count - 1; i > 0; i--)
@@ -387,7 +430,7 @@ public class DungeonRunManager : MonoBehaviour
         }
     }
 
-    private void CreateRuntimeEnemy(int floorIndex, int enemyIndex, Vector3Int cell, Tilemap floorTilemap, Tilemap wallTilemap)
+    private GameObject CreateRuntimeEnemy(int floorIndex, int enemyIndex, Vector3Int cell, Tilemap floorTilemap, Tilemap wallTilemap)
     {
         var enemy = new GameObject($"Enemy_F{floorIndex + 1}_{enemyIndex + 1}");
         enemy.SetActive(false);
@@ -408,11 +451,17 @@ public class DungeonRunManager : MonoBehaviour
         var actor = enemy.AddComponent<EnemyTurnActor>();
         actor.ConfigureRuntime(wallTilemap, floorTilemap, EnemyBehaviorType.Wander, enemyMoveDuration, enemyHopHeight);
         enemy.SetActive(true);
+        return enemy;
     }
 
     private void SpawnChestsAtFloor(int floorIndex)
     {
         if (floorIndex < 0 || floorIndex >= floors.Count || player == null) return;
+        if (floorIndex + 1 == 5)
+        {
+            Debug.Log("[DungeonRunManager] 5층은 보스 전용 층 — 일반 상자 0개.");
+            return;
+        }
 
         var layout = floors[floorIndex];
         var floorTilemap = floorTileTilemaps[floorIndex];

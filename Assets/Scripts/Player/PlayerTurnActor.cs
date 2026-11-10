@@ -576,12 +576,15 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         if (!ExpeditionSession.IsActive || isDead) return;
 
         int before = currentHP;
-        currentHP = Mathf.Min(maxHP, currentHP + 1);
+        bool bossDefeatedOnFloorFive = ExpeditionSession.CurrentFloor == 5 && GameObject.Find("Boss_F5") == null;
+        int healAmount = bossDefeatedOnFloorFive ? 2 : 1;
+        currentHP = Mathf.Min(maxHP, currentHP + healAmount);
         M3MeasurementAutomation.RecordPlayerHealing(currentHP - before);
         ExpeditionSession.RecordPlayerHealth(currentHP);
         healthBar?.SetFill((float)currentHP / maxHP);
         healthViewDirty = true;
-        Debug.Log($"[Rest] 연속 대기 5 Tick — HP {before} → {currentHP}/{maxHP}");
+        string context = bossDefeatedOnFloorFive ? " (보스 처치 후 정비)" : string.Empty;
+        Debug.Log($"[Rest] 연속 대기 5 Tick{context} — HP {before} → {currentHP}/{maxHP}");
         if (currentHP >= maxHP) autoRestActive = false;
     }
 
