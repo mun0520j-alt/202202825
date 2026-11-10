@@ -45,6 +45,12 @@ public class DungeonRunManager : MonoBehaviour
     [SerializeField, Min(1)] private int enemiesPerFloor = 3;
     [SerializeField, Min(0.01f)] private float enemyMoveDuration = 0.1f;
     [SerializeField, Min(0f)] private float enemyHopHeight = 0.4f;
+    [SerializeField, Min(1)] private int enemyMaxHP = 200;
+    [SerializeField, Min(1)] private int enemyAttackPower = 50;
+    [SerializeField, Min(0)] private int enemyDefensePower = 10;
+    [SerializeField, Min(1)] private int bossMaxHP = 320;
+    [SerializeField, Min(1)] private int bossAttackPower = 43;
+    [SerializeField, Min(0)] private int bossDefensePower = 10;
 
     [Header("Camera")]
     [SerializeField] private Camera targetCamera;
@@ -416,7 +422,7 @@ public class DungeonRunManager : MonoBehaviour
         var renderer = boss.GetComponent<SpriteRenderer>();
         if (renderer != null) renderer.color = new Color(0.75f, 0.15f, 0.2f, 1f);
         var bossActor = boss.GetComponent<EnemyTurnActor>();
-        bossActor.ConfigureCombatStats(24, 4, 1);
+        bossActor.ConfigureCombatStats(bossMaxHP, bossAttackPower, bossDefensePower);
         bossActor.ConfigureBoss(floorSeeds[floorIndex] ^ 0x4D345F42);
         Debug.Log("[DungeonRunManager] 5층 단일 보스 아레나 생성 — 일반 Enemy 0, 일반 상자 0.");
     }
@@ -451,6 +457,7 @@ public class DungeonRunManager : MonoBehaviour
         enemy.transform.position = cellOrigin + new Vector3(floorTilemap.cellSize.x * 0.5f, 0.375f, 0f);
 
         var actor = enemy.AddComponent<EnemyTurnActor>();
+        actor.ConfigureCombatStats(enemyMaxHP, enemyAttackPower, enemyDefensePower);
         actor.ConfigureRuntime(wallTilemap, floorTilemap, EnemyBehaviorType.Wander, enemyMoveDuration, enemyHopHeight);
         enemy.SetActive(true);
         return enemy;

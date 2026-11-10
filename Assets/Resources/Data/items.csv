@@ -1,14 +1,14 @@
 item_id,item_name,item_type,rarity,attack_bonus,defense_bonus,capacity_bonus,icon_key,drop_weight
-weapon_normal,낡은 검,Weapon,Normal,1,0,0,weapon_rusty_sword,100
-shield_normal,나무 방패,Shield,Normal,0,1,0,,100
-armor_normal,누빈 갑옷,Armor,Normal,0,1,0,,100
-weapon_rare,용병의 검,Weapon,Rare,2,0,0,weapon_regular_sword,100
-shield_rare,강철 방패,Shield,Rare,0,2,0,,100
-armor_rare,사슬 갑옷,Armor,Rare,0,2,0,,100
-weapon_epic,기사의 검,Weapon,Epic,3,0,0,weapon_knight_sword,100
-shield_epic,수호자의 방패,Shield,Epic,0,3,0,,100
-armor_epic,기사 판금갑옷,Armor,Epic,0,3,0,,100
-weapon_unique,붉은 보석검,Weapon,Unique,4,0,0,weapon_red_gem_sword,100
-shield_unique,왕실 방패,Shield,Unique,0,4,0,,100
-armor_unique,왕실 판금갑옷,Armor,Unique,0,4,0,,100
+weapon_normal,낡은 검,Weapon,Normal,30,0,0,weapon_rusty_sword,100
+shield_normal,나무 방패,Shield,Normal,0,7,0,,100
+armor_normal,누빈 갑옷,Armor,Normal,0,7,0,,100
+weapon_rare,용병의 검,Weapon,Rare,40,0,0,weapon_regular_sword,100
+shield_rare,강철 방패,Shield,Rare,0,8,0,,100
+armor_rare,사슬 갑옷,Armor,Rare,0,8,0,,100
+weapon_epic,기사의 검,Weapon,Epic,50,0,0,weapon_knight_sword,100
+shield_epic,수호자의 방패,Shield,Epic,0,9,0,,100
+armor_epic,기사 판금갑옷,Armor,Epic,0,9,0,,100
+weapon_unique,붉은 보석검,Weapon,Unique,80,0,0,weapon_red_gem_sword,100
+shield_unique,왕실 방패,Shield,Unique,0,10,0,,100
+armor_unique,왕실 판금갑옷,Armor,Unique,0,10,0,,100
 bag_basic,여행용 가방,Bag,Normal,0,0,4,,0

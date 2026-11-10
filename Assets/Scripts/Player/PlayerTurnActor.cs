@@ -41,10 +41,10 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     // 아래 EffectiveAttackPower/EffectiveDefensePower(기본값 + 장비 보너스 합)를 쓴다. 데미지
     // 공식은 여전히 "공격력 - 방어력"(0 밑으로는 안 내려감)으로 동일.
     [Header("전투 (기본 스탯 — 장비 보너스는 EffectiveAttackPower/EffectiveDefensePower에서 합산됨)")]
-    [SerializeField] private int maxHP = 10;
-    [SerializeField] private int currentHP = 10;
-    [SerializeField] private int attackPower = 3;
-    [SerializeField] private int defensePower = 1;
+    [SerializeField] private int maxHP = 100;
+    [SerializeField] private int currentHP = 100;
+    [SerializeField] private int attackPower = 30;
+    [SerializeField] private int defensePower = 25;
 
     // [2026-09-04 신규] 장착 장비 — 보너스 합계만 여기서 더해서 쓰고, "무엇을 장착했는지"
     // 자체의 관리는 PlayerEquipment 책임(단일 책임 유지). InventoryPanel도 이 프로퍼티를 통해
@@ -583,7 +583,7 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
 
         int before = currentHP;
         bool bossDefeatedOnFloorFive = ExpeditionSession.CurrentFloor == 5 && GameObject.Find("Boss_F5") == null;
-        int healAmount = bossDefeatedOnFloorFive ? 2 : 1;
+        int healAmount = bossDefeatedOnFloorFive ? 20 : 10;
         currentHP = Mathf.Min(maxHP, currentHP + healAmount);
         M3MeasurementAutomation.RecordPlayerHealing(currentHP - before);
         ExpeditionSession.RecordPlayerHealth(currentHP);

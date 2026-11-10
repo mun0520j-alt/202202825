@@ -951,6 +951,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 - **원인:** `AttackEnemy()`가 다른 행동과 달리 행동 시작 전에 `isMyTurn=false`로 닫지 않았다. Enemy 턴 중 추가 입력이 데미지를 먼저 적용하고, 이후 `CompleteTurn()`은 현재 스케줄 액터 불일치로 무시될 수 있었다.
 - **수정:** 공격 진입 시 Player 턴·애니메이션·사망·대상·TickManager를 검증하고 즉시 `isMyTurn=false`로 전환한 뒤 데미지와 5Tick을 처리한다.
 - **회귀 범위:** 방향키 연타, 마우스 연타, 탈출 구역 3타 전투, Enemy 사망 후 반격 없음, 공격 1회당 로그·CSV 5Tick 일치.
+- **2026-11-10 기준 변경:** 위 3타·15Tick·12피해는 수정 당시 증거로 보존한다. 전투 단위 재조정 후 회귀 기대값은 기본 장비 5타·25Tick·총 200피해이며 TC-M3-40·TC-M4-81~82에서 재검증한다.
 
 ## BUG-031 — 보스 광역 예고가 전역 5Tick 전에 발동
 
