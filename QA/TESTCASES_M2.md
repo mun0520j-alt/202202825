@@ -70,7 +70,7 @@
 | TC-M2-30 | 1,434Tick에서 상자 개봉 | 1,439Tick에 Loot 지급 | Pass (1차 Play) |
 | TC-M2-31 | 1,435Tick에서 상자 개봉 | 1,440Tick MIA, Loot 지급 무효 | Pass (1차 Play) |
 | TC-M2-32 | 상자 개봉 마지막 Tick에 HP 0 | Dead, Loot 지급 무효 | Pass (1차 Play) |
-| TC-M2-33 | 1,434Tick·HP 미최대에서 Space를 5Tick 연속 입력 | 1,439Tick에 HP +1 | Pass (마감 Play) |
+| TC-M2-33 | 1,434Tick·HP 미최대에서 Space를 5Tick 연속 입력 | 1,439Tick에 HP +10 | Play 재검증 대기 (기존 +1 결과는 재조정 전 기준) |
 | TC-M2-34 | 1,435Tick·HP 미최대에서 Space 장기 휴식 | 1,440Tick MIA, 회복 무효 | Pass (2차 Play) |
 | TC-M2-35 | 연속 대기 다섯 번째 Tick에 HP 0 | Dead, 회복 무효 | Deferred (Enemy 추적·회피 수단과 함께 M3 재검증) |
 
@@ -87,10 +87,10 @@
 
 | ID | 사전 조건·절차 | 기대 결과 | 결과 |
 |---|---|---|---|
-| TC-M2-50 | HP 미최대에서 Space를 5Tick 연속 입력 | 매 Tick Enemy 행동·생존·시간 판정 후 다섯 번째 Tick에 HP +1 | Pass (3차 Play, HP바 갱신 포함) |
+| TC-M2-50 | HP 미최대에서 Space를 5Tick 연속 입력 | 매 Tick Enemy 행동·생존·시간 판정 후 다섯 번째 Tick에 HP +10 | Play 재검증 대기 (HP바 포함) |
 | TC-M2-51 | 최대 HP에서 Space 장기 휴식 | HP가 최대치를 넘지 않고 자동 휴식 종료 | Pass (2차 Play) |
 | TC-M2-52 | Space 짧게 1회 | M1과 동일하게 1Tick 대기하며 5회 미만이면 회복 없음 | Pass (1차 Play) |
-| TC-M2-52A | Space를 길게 누름 | 1Tick 대기를 자동 반복하고 5Tick마다 HP +1 | Pass (2차 Play) |
+| TC-M2-52A | Space를 길게 누름 | 1Tick 대기를 자동 반복하고 5Tick마다 HP +10 | Play 재검증 대기 |
 | TC-M2-52B | 장기 휴식 중 최대 HP 도달·Enemy 발견·피격·키 해제·다른 입력 | 자동 반복 즉시 종료. 피격·Enemy 발견·다른 행동은 미완료 누적도 초기화하며 키 해제는 자동 반복만 종료 | Pass (2차 Play) |
 | TC-M2-52C | 대기 사이에 이동·공격·상호작용 수행 | 연속 대기 누적 초기화 | Pass (2차 Play) |
 | TC-M2-53 | 이동·공격·층 이동·탈출 경계값·결과 우선순위 | M1 TC 결과와 동일 | Pass (1차 Play) |
@@ -147,3 +147,5 @@
 - 보험은 사망·MIA 확정 순간 몸에 있던 착용품과 가방 아이템만 보장하는 안을 검토한다.
 - 바닥에 버린 아이템은 포기한 것으로 간주해 보험 대상에서 제외한다.
 - M2에는 보험 기능을 구현하지 않는다.
+- 2026-11-10 변경: 보험 장비를 바닥에 버린 경우 생환을 포함해 반환 판정 대상으로 두는 전략을 M5에서 허용한다. 반환율·대기 시간·수령 기한을 적용하며 MIA·8층 이상 진입은 반환 불가다.
+- 원본 결정: `docs/meetings/M5_INSURANCE_DECISIONS_2026-11-10.md`

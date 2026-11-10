@@ -65,7 +65,7 @@ public sealed class ExpeditionManager : MonoBehaviour
     public bool TryCompleteExtraction(PlayerTurnActor player)
     {
         if (transitionRequested || player == null || player.IsDead || !ExpeditionSession.IsActive) return false;
-        if (ExpeditionSession.CurrentFloor < ExpeditionSession.FinalFloor) return false;
+        if (ExpeditionSession.CurrentFloor != 3 && ExpeditionSession.CurrentFloor != 5) return false;
         if (miaResolutionPending || (dungeonClock != null && dungeonClock.IsMIA)) return false;
 
         transitionRequested = true;

@@ -1,0 +1,6 @@
+﻿schema_version,timestamp,seed,seed_mode,seed_attempt,result,total_ticks,reached_floor,player_actions,enemy_actions,enemy_action_ticks,move_ticks,wait_ticks,attack_ticks,door_ticks,loot_ticks,interact_ticks,other_ticks,visited_rooms,room_revisits,bag_items,hp,enemy_encounters,enemies_killed,damage_dealt,damage_taken,healing_received,chests_opened,items_acquired,items_grounded,exit_path_tiles,exit_room_enemies
+3,"2026-11-10 21:59:00",-1438665259,Random,1,Dead,211,2,155,491,523,135,1,45,5,20,5,0,7,0,4,0,2,1,360,100,0,4,4,0,139,0
+3,"2026-11-10 22:01:55",-2070528383,Random,1,Escaped,676,5,588,1661,1689,503,36,40,18,46,20,13,22,2,3,100,1,2,520,50,50,9,10,0,267,4
+3,"2026-11-10 22:06:30",936516636,Random,1,Escaped,632,5,553,1552,1580,496,8,40,25,36,20,7,25,2,6,96,3,2,520,24,20,7,8,0,362,2
+3,"2026-11-10 22:44:56",-1435048743,Random,1,Dead,89,1,57,179,211,46,1,40,2,0,0,0,3,0,0,0,2,1,320,100,0,0,0,0,62,0
+3,"2026-11-10 23:10:31",1346580894,Random,1,Escaped,861,5,745,2271,2315,648,33,65,26,56,20,13,27,5,5,48,1,2,520,102,50,11,12,0,330,2

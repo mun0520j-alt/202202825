@@ -18,6 +18,10 @@
 | `QA/M3_MEASUREMENT_REPORT.md` | M3 자동화·플레이 측정 확정 결과 |
 | `QA/M3_RELEASE_CHECKLIST.md` | M3 종료 절차 |
 | `docs/meetings/COMBAT_GROWTH_BACKLOG_2026-11-09.md` | 상자 개봉률에서 출발한 M4 이후 전투·성장 논의와 미정 결정 |
+| `docs/meetings/M4_BOSS_DECISIONS_2026-11-10.md` | 5층 보스 구성·패턴·탈출·처치 후 정비·드롭 규칙 확정 |
+| `docs/meetings/M5_INSURANCE_DECISIONS_2026-11-10.md` | 보험 장비 바닥 투기·반환 판정·악용 허용 원칙 확정 |
+| `docs/M4_WORKLIST.md` | M4 구현 순서·완료 조건·사용자 결정 목록 |
+| `QA/TESTCASES_M4.md` | M4 깊이 확장 QA 초안 |
 | `docs/STATUS_REPORT_2026-11-06.md` | Jira·진행 상태 |
 | `docs/PORTFOLIO_ONE_PAGE_BRIEF.md` | 대외 설명용 요약 |
 

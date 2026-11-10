@@ -98,6 +98,25 @@ public class DungeonSceneBootstrapper : MonoBehaviour
         var exitObject = new GameObject(finalExit ? "EscapeExit(AutoCreated)" : "DownStairs(AutoCreated)");
         exitObject.AddComponent<DungeonStairs>().Initialize(floor, exitCell, finalExit);
 
+        // 중간 생환 지점은 3층에 유지한다. M4의 최종 진행 목표는 5층이지만,
+        // Player는 3층에서 조기 생환하거나 4층으로 계속 내려갈 수 있다.
+        if (ExpeditionSession.CurrentFloor == 3)
+        {
+            Vector3Int escapeCell = playerCell;
+            int distanceFromStairs = -1;
+            foreach (var position in floor.cellBounds.allPositionsWithin)
+            {
+                if (position == exitCell || !floor.HasTile(position) || (walls != null && walls.HasTile(position))) continue;
+                if (TickManager.Instance != null && TickManager.Instance.IsCellOccupied(position)) continue;
+                int distance = Mathf.Abs(position.x - exitCell.x) + Mathf.Abs(position.y - exitCell.y);
+                if (distance <= distanceFromStairs) continue;
+                if (TilePathfinder.FindPath(playerCell, position, walls, floor).Count == 0) continue;
+                distanceFromStairs = distance;
+                escapeCell = position;
+            }
+            new GameObject("EscapeExit_F3(AutoCreated)").AddComponent<DungeonStairs>().Initialize(floor, escapeCell, true);
+        }
+
         int exitRoomId = DungeonRoomRegistry.GetRoomId(floor, exitCell);
         int enemiesInExitRoom = 0;
         foreach (var enemy in FindObjectsByType<EnemyTurnActor>())

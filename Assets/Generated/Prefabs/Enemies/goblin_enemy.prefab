@@ -180,7 +180,7 @@ MonoBehaviour:
   hopDuration: 0.1
   hopHeight: 0.4
   sightRangeInTiles: 5
-  maxHP: 12
-  currentHP: 12
-  attackPower: 5
-  defensePower: 1
+  maxHP: 200
+  currentHP: 200
+  attackPower: 50
+  defensePower: 10

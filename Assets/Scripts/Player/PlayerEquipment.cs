@@ -19,6 +19,11 @@ using UnityEngine;
 // ================================================================================================
 public class PlayerEquipment : MonoBehaviour
 {
+    [Header("기본 지급 장비 수치")]
+    [SerializeField, Min(0)] private int basicWeaponAttackBonus = 20;
+    [SerializeField, Min(0)] private int basicShieldDefenseBonus = 6;
+    [SerializeField, Min(0)] private int basicArmorDefenseBonus = 6;
+
     [Header("시작 장비 (비워두면 테스트용 기본 장비를 자동 생성해서 장착)")]
     [SerializeField] private EquipmentItemDefinition startingMainWeapon1;
     [SerializeField] private EquipmentItemDefinition startingOffHandShield;
@@ -46,17 +51,17 @@ public class PlayerEquipment : MonoBehaviour
     private void Awake()
     {
         var defaultWeapon = startingMainWeapon1 != null ? startingMainWeapon1 : CreateDefaultItem(
-            "기본 검", EquipmentSlotType.MainWeapon1, attackBonus: 2, defenseBonus: 0, new Color(0.85f, 0.35f, 0.25f));
+            "기본 검", EquipmentSlotType.MainWeapon1, attackBonus: basicWeaponAttackBonus, defenseBonus: 0, new Color(0.85f, 0.35f, 0.25f));
         defaultItems[EquipmentSlotType.MainWeapon1] = defaultWeapon;
         Equip(defaultWeapon);
 
         var defaultShield = startingOffHandShield != null ? startingOffHandShield : CreateDefaultItem(
-            "낡은 방패", EquipmentSlotType.OffHandShield, attackBonus: 0, defenseBonus: 1, new Color(0.3f, 0.55f, 0.9f));
+            "낡은 방패", EquipmentSlotType.OffHandShield, attackBonus: 0, defenseBonus: basicShieldDefenseBonus, new Color(0.3f, 0.55f, 0.9f));
         defaultItems[EquipmentSlotType.OffHandShield] = defaultShield;
         Equip(defaultShield);
 
         var defaultArmor = startingArmor != null ? startingArmor : CreateDefaultItem(
-            "가죽 갑옷", EquipmentSlotType.Armor, attackBonus: 0, defenseBonus: 1, new Color(0.4f, 0.75f, 0.35f));
+            "가죽 갑옷", EquipmentSlotType.Armor, attackBonus: 0, defenseBonus: basicArmorDefenseBonus, new Color(0.4f, 0.75f, 0.35f));
         defaultItems[EquipmentSlotType.Armor] = defaultArmor;
         Equip(defaultArmor);
         LootRuntimeState.Changed += RefreshLootEquipment;

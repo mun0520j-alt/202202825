@@ -1,0 +1,7 @@
+﻿group,category,samples,count,actual_pct,expected_pct,within_0_5pp
+quantity,0,100000,9858,9.86,10,True
+quantity,1,100000,70108,70.11,70,True
+quantity,2,100000,20034,20.03,20,True
+rarity,Rare,110176,54990,49.91,50,True
+rarity,Epic,110176,44083,40.01,40,True
+rarity,Unique,110176,11103,10.08,10,True

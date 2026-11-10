@@ -41,10 +41,10 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     // 아래 EffectiveAttackPower/EffectiveDefensePower(기본값 + 장비 보너스 합)를 쓴다. 데미지
     // 공식은 여전히 "공격력 - 방어력"(0 밑으로는 안 내려감)으로 동일.
     [Header("전투 (기본 스탯 — 장비 보너스는 EffectiveAttackPower/EffectiveDefensePower에서 합산됨)")]
-    [SerializeField] private int maxHP = 10;
-    [SerializeField] private int currentHP = 10;
-    [SerializeField] private int attackPower = 3;
-    [SerializeField] private int defensePower = 1;
+    [SerializeField] private int maxHP = 100;
+    [SerializeField] private int currentHP = 100;
+    [SerializeField] private int attackPower = 30;
+    [SerializeField] private int defensePower = 25;
 
     // [2026-09-04 신규] 장착 장비 — 보너스 합계만 여기서 더해서 쓰고, "무엇을 장착했는지"
     // 자체의 관리는 PlayerEquipment 책임(단일 책임 유지). InventoryPanel도 이 프로퍼티를 통해
@@ -55,10 +55,12 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     // 실제 전투 계산(공격/피격)에 쓰는 값 — 기본 스탯 + 장비 보너스 합계.
     private int EffectiveAttackPower => attackPower + (equipment != null ? equipment.TotalAttackBonus : 0);
     private int EffectiveDefensePower => defensePower + (equipment != null ? equipment.TotalDefenseBonus : 0);
+    public int EffectiveDefense => EffectiveDefensePower;
 
     // HP가 0 이하가 된 다음 프레임에 영지(BaseCamp)로 씬 전환한다 — TakeDamage 호출 시점에서
     // 바로 SceneManager.LoadScene을 부르지 않는 이유는 아래 Update() 주석 참고.
     private bool isDead;
+    private bool deathResolutionRequested;
 
     // [2026-09-04 신규] 머리 위 HP바 — Enemy와 통일된 막대 형식(ProceduralHealthBar.cs 참고,
     // 사용자 요청: "enemy하고 player 통일해야하잖아"). 완전 자체 생성 컴포넌트라 Inspector
@@ -275,13 +277,17 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         // 자신의 Update()로 한 프레임 미뤄서 그 호출 스택과 완전히 분리시키면 이 문제가 없다.
         if (isDead)
         {
-            enabled = false; // 다음 프레임부터 또 호출되는 것 방지(씬 전환은 즉시 시작되지만 방어적으로)
+            if (deathResolutionRequested) return;
+            deathResolutionRequested = true;
             if (ExpeditionManager.Instance != null)
             {
+                // enabled=false를 먼저 적용하면 OnDisable → Player 등록 해제 → 남은 AI만으로
+                // 스케줄러가 동기 반복되어 씬 전환 호출까지 도달하지 못할 수 있다.
                 ExpeditionManager.Instance.CompleteDeath();
             }
             else
             {
+                enabled = false;
                 Debug.LogError("[PlayerTurnActor] ExpeditionManager가 없어 사망 결과를 처리할 수 없습니다.");
             }
             return;
@@ -576,12 +582,15 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         if (!ExpeditionSession.IsActive || isDead) return;
 
         int before = currentHP;
-        currentHP = Mathf.Min(maxHP, currentHP + 1);
+        bool bossDefeatedOnFloorFive = ExpeditionSession.CurrentFloor == 5 && GameObject.Find("Boss_F5") == null;
+        int healAmount = bossDefeatedOnFloorFive ? 20 : 10;
+        currentHP = Mathf.Min(maxHP, currentHP + healAmount);
         M3MeasurementAutomation.RecordPlayerHealing(currentHP - before);
         ExpeditionSession.RecordPlayerHealth(currentHP);
         healthBar?.SetFill((float)currentHP / maxHP);
         healthViewDirty = true;
-        Debug.Log($"[Rest] 연속 대기 5 Tick — HP {before} → {currentHP}/{maxHP}");
+        string context = bossDefeatedOnFloorFive ? " (보스 처치 후 정비)" : string.Empty;
+        Debug.Log($"[Rest] 연속 대기 5 Tick{context} — HP {before} → {currentHP}/{maxHP}");
         if (currentHP >= maxHP) autoRestActive = false;
     }
 
