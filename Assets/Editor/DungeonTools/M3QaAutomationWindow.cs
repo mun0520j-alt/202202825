@@ -219,7 +219,7 @@ public sealed class M3QaAutomationWindow : EditorWindow
         Check(checks, TickCost.Drop == 1f, "버리기 1Tick");
         Check(checks, TickCost.SwapWeaponInCombat == 2f, "장비 교체 2Tick");
         Check(checks, LootRuntimeState.BaseBagCapacity == 6, "기본 가방 6칸");
-        Check(checks, ExpeditionSession.FirstFloor == 1 && ExpeditionSession.FinalFloor == 3, "원정 1~3층");
+        Check(checks, ExpeditionSession.FirstFloor == 1 && ExpeditionSession.FinalFloor == 5, "M4 원정 1~5층");
 
         bool layoutDeterministic = true;
         bool lootDeterministic = true;
@@ -266,13 +266,17 @@ public sealed class M3QaAutomationWindow : EditorWindow
             ? rows.Where(row => Get(row, "seed_mode") == "Random").ToList()
             : rows;
         var escaped = measurementRows.Where(row => Get(row, "result") == "Escaped").ToList();
-        double avg = Average(escaped, "total_ticks");
-        int target = escaped.Count(row => Number(row, "total_ticks") >= 300d && Number(row, "total_ticks") <= 450d);
+        var escapedAtFloor3 = escaped.Where(row => Number(row, "reached_floor") == 3d).ToList();
+        var escapedAtFloor5 = escaped.Where(row => Number(row, "reached_floor") == 5d).ToList();
+        double avgFloor3 = Average(escapedAtFloor3, "total_ticks");
+        double avgFloor5 = Average(escapedAtFloor5, "total_ticks");
+        int floor3Target = escapedAtFloor3.Count(row => Number(row, "total_ticks") >= 300d && Number(row, "total_ticks") <= 450d);
         var detail = new StringBuilder();
         detail.AppendLine($"파일: {path}");
-        detail.AppendLine($"전체 {rows.Count}, 목표 판단 표본 {measurementRows.Count}, 생환 {escaped.Count}, 사망 {measurementRows.Count(row => Get(row, "result") == "Dead")}, MIA {measurementRows.Count(row => Get(row, "result") == "MIA")}");
-        if (headers.Contains("seed_mode")) detail.AppendLine("목표 Tick 판단은 Random 모드만 포함하며 Fixed 반복 표본은 제외했다.");
-        detail.AppendLine($"생환 평균 Tick: {F(avg)}, 목표 300~450 진입: {target}/{escaped.Count}");
+        detail.AppendLine($"전체 {rows.Count}, Random 표본 {measurementRows.Count}, 생환 {escaped.Count}, 사망 {measurementRows.Count(row => Get(row, "result") == "Dead")}, MIA {measurementRows.Count(row => Get(row, "result") == "MIA")}");
+        if (headers.Contains("seed_mode")) detail.AppendLine("Tick 분석은 Random 모드만 포함하며 Fixed 반복 표본은 제외했다.");
+        detail.AppendLine($"3층 생환: {escapedAtFloor3.Count}건, 평균 {F(avgFloor3)}Tick, 기존 목표 300~450 진입 {floor3Target}/{escapedAtFloor3.Count}");
+        detail.AppendLine($"5층 생환: {escapedAtFloor5.Count}건, 평균 {F(avgFloor5)}Tick. M4 목표 범위는 미확정이므로 3층 목표와 비교하지 않는다.");
         detail.AppendLine($"평균 이동/대기/공격/루팅: {F(Average(measurementRows, "move_ticks"))}/{F(Average(measurementRows, "wait_ticks"))}/{F(Average(measurementRows, "attack_ticks"))}/{F(Average(measurementRows, "loot_ticks"))}");
         if (headers.Contains("enemy_encounters"))
         {
@@ -281,7 +285,7 @@ public sealed class M3QaAutomationWindow : EditorWindow
         }
         var longest = measurementRows.OrderByDescending(row => Number(row, "total_ticks")).Take(5);
         detail.AppendLine("긴 원정 TOP 5: " + string.Join(", ", longest.Select(row => $"Seed {Get(row, "seed")} {Get(row, "total_ticks")}Tick/{Get(row, "result")}")));
-        return new QaResult(true, $"{rows.Count}행 분석, 생환 평균 {F(avg)}Tick", detail.ToString());
+        return new QaResult(true, $"{rows.Count}행 분석, 3층 생환 {escapedAtFloor3.Count}건·5층 생환 {escapedAtFloor5.Count}건", detail.ToString());
     }
 
     private static string LayoutSignature(FloorLayout layout)
