@@ -55,6 +55,7 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     // 실제 전투 계산(공격/피격)에 쓰는 값 — 기본 스탯 + 장비 보너스 합계.
     private int EffectiveAttackPower => attackPower + (equipment != null ? equipment.TotalAttackBonus : 0);
     private int EffectiveDefensePower => defensePower + (equipment != null ? equipment.TotalDefenseBonus : 0);
+    public int EffectiveDefense => EffectiveDefensePower;
 
     // HP가 0 이하가 된 다음 프레임에 영지(BaseCamp)로 씬 전환한다 — TakeDamage 호출 시점에서
     // 바로 SceneManager.LoadScene을 부르지 않는 이유는 아래 Update() 주석 참고.
