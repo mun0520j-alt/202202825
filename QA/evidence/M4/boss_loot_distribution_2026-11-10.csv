@@ -1,4 +1,4 @@
-group,category,samples,count,actual_pct,expected_pct,within_0_5pp
+﻿group,category,samples,count,actual_pct,expected_pct,within_0_5pp
 quantity,0,100000,9858,9.86,10,True
 quantity,1,100000,70108,70.11,70,True
 quantity,2,100000,20034,20.03,20,True
