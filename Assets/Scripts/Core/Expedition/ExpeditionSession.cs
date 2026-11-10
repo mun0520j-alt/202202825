@@ -86,5 +86,6 @@ public static class ExpeditionSession
         M3MeasurementAutomation.Finish(result, ElapsedTicks, CurrentFloor);
         LootRuntimeState.ResolveRun(result);
         IsActive = false;
+        M5SaveService.CompleteExpedition();
     }
 }

@@ -42,4 +42,10 @@ public sealed class LootItemInstance
         InstanceId = Guid.NewGuid().ToString("N");
         Definition = definition;
     }
+
+    public LootItemInstance(LootItemData definition, string instanceId)
+    {
+        InstanceId = string.IsNullOrWhiteSpace(instanceId) ? Guid.NewGuid().ToString("N") : instanceId;
+        Definition = definition;
+    }
 }

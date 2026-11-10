@@ -36,6 +36,13 @@ public static class LootItemDatabase
         return candidates[candidates.Count - 1];
     }
 
+    public static LootItemData FindById(string itemId)
+    {
+        if (string.IsNullOrWhiteSpace(itemId)) return null;
+        EnsureLoaded();
+        return items.FirstOrDefault(item => string.Equals(item.Id, itemId, StringComparison.Ordinal));
+    }
+
     public static LootItemData Roll(LootRarity rarity, System.Random rng)
     {
         EnsureLoaded();

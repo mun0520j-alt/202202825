@@ -35,6 +35,9 @@ public sealed class ExpeditionResultPanel : MonoBehaviour
             body = $"원정 결과: {resultName}\n\n경과 Tick: {result.ElapsedTicks:0}\n도달 층: {result.ReachedFloor}층";
         }
 
+        string recoveryNotice = M5SaveService.ConsumeRecoveryNotice();
+        if (!string.IsNullOrEmpty(recoveryNotice)) body = recoveryNotice + "\n\n" + body;
+
         var textGo = CreateUiObject("ResultText", panel.transform);
         var text = textGo.AddComponent<Text>();
         text.font = HudFont.GetDefault();
@@ -80,6 +83,7 @@ public sealed class ExpeditionResultPanel : MonoBehaviour
 
     private static void StartExpedition()
     {
+        M5SaveService.PrepareForExpedition();
         ExpeditionSession.BeginNewRun();
         SceneManager.LoadScene("InDungeon");
     }

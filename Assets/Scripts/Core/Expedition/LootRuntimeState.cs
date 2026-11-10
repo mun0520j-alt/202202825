@@ -124,4 +124,37 @@ public static class LootRuntimeState
         HasBasicLoadout = false;
         Changed?.Invoke();
     }
+
+    public static void RestorePersistentState(
+        IEnumerable<LootItemInstance> restoredRunBag,
+        IEnumerable<LootItemInstance> restoredStash,
+        IEnumerable<LootItemInstance> restoredEquipment,
+        IEnumerable<LootItemType> restoredUnequippedBasicSlots,
+        bool hasBasicLoadout)
+    {
+        runBag.Clear();
+        stash.Clear();
+        equippedLoot.Clear();
+        unequippedBasicSlots.Clear();
+
+        if (restoredRunBag != null) runBag.AddRange(restoredRunBag);
+        if (restoredStash != null) stash.AddRange(restoredStash);
+        if (restoredEquipment != null)
+        {
+            foreach (var item in restoredEquipment)
+            {
+                if (item?.Definition == null || item.Definition.Type == LootItemType.Bag) continue;
+                equippedLoot[item.Definition.Type] = item;
+            }
+        }
+        if (restoredUnequippedBasicSlots != null)
+        {
+            foreach (var type in restoredUnequippedBasicSlots) unequippedBasicSlots.Add(type);
+        }
+
+        HasBasicLoadout = hasBasicLoadout;
+        EquippedBagCapacityBonus = equippedLoot.TryGetValue(LootItemType.Bag, out var bag) && bag?.Definition != null
+            ? bag.Definition.CapacityBonus : 0;
+        Changed?.Invoke();
+    }
 }
