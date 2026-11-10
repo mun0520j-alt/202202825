@@ -415,7 +415,9 @@ public class DungeonRunManager : MonoBehaviour
         boss.transform.localScale = new Vector3(1.35f, 1.35f, 1f);
         var renderer = boss.GetComponent<SpriteRenderer>();
         if (renderer != null) renderer.color = new Color(0.75f, 0.15f, 0.2f, 1f);
-        boss.GetComponent<EnemyTurnActor>().ConfigureCombatStats(24, 4, 1);
+        var bossActor = boss.GetComponent<EnemyTurnActor>();
+        bossActor.ConfigureCombatStats(24, 4, 1);
+        bossActor.ConfigureBoss(floorSeeds[floorIndex] ^ 0x4D345F42);
         Debug.Log("[DungeonRunManager] 5층 단일 보스 아레나 생성 — 일반 Enemy 0, 일반 상자 0.");
     }
 

@@ -69,6 +69,12 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     private bool isAnimating;
     private bool isInitialized;
     private bool turnPendingDuringAnimation;
+    private bool isBoss;
+    private int bossPatternStep;
+    private bool bossAoePending;
+    private Vector3Int bossAoeCell;
+    private int bossLootSeed;
+    private GameObject bossTelegraph;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     public void DebugTeleportTo(Vector3Int cell)
@@ -140,6 +146,13 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
         attackPower = Mathf.Max(1, attack);
         defensePower = Mathf.Max(0, defense);
         healthBar?.SetFill(1f);
+    }
+
+    public void ConfigureBoss(int lootSeed)
+    {
+        isBoss = true;
+        bossLootSeed = lootSeed;
+        sightRangeInTiles = 100;
     }
 
     private bool TryInitialize()
@@ -233,6 +246,12 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
         // 된다(다음 턴 맨 위에서 항상 리셋되니까).
         if (alertIndicatorObject != null) alertIndicatorObject.SetActive(false);
 
+        if (isBoss)
+        {
+            RunBossTurn();
+            return;
+        }
+
         if (pendingRoomAlert)
         {
             pendingRoomAlert = false;
@@ -295,6 +314,54 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
         }
 
         RunDefaultBehavior();
+    }
+
+    private void RunBossTurn()
+    {
+        var player = PlayerTurnActor.Instance;
+        if (player == null) { CompleteMyTurn(); return; }
+
+        if (bossAoePending)
+        {
+            bossAoePending = false;
+            if (bossTelegraph != null) Destroy(bossTelegraph);
+            var delta = player.CurrentCell - bossAoeCell;
+            if (Mathf.Abs(delta.x) <= 2 && Mathf.Abs(delta.y) <= 2) player.TakeDamage(4);
+            Debug.Log($"[Boss] 광역 발동 — 중심 {bossAoeCell}");
+            bossPatternStep = 0;
+            TickManager.Instance.CompleteTurn(this, TickCost.Attack, "BossAoE");
+            return;
+        }
+
+        int distance = Mathf.Abs(player.CurrentCell.x - currentCell.x) + Mathf.Abs(player.CurrentCell.y - currentCell.y);
+        if (distance > 1)
+        {
+            TryTraceTowards(player.CurrentCell);
+            return;
+        }
+
+        player.TakeDamage(attackPower);
+        bossPatternStep++;
+        if (bossPatternStep >= 2)
+        {
+            bossAoePending = true;
+            bossAoeCell = player.CurrentCell;
+            CreateBossTelegraph();
+            Debug.Log($"[Boss] 광역 예고 — 중심 {bossAoeCell}, 5 Tick 뒤 발동");
+        }
+        TickManager.Instance.CompleteTurn(this, TickCost.Attack, bossAoePending ? "BossSingle+Telegraph" : "BossSingle");
+    }
+
+    private void CreateBossTelegraph()
+    {
+        if (bossTelegraph != null) Destroy(bossTelegraph);
+        bossTelegraph = new GameObject("BossAoETelegraph");
+        bossTelegraph.transform.position = floorTilemap.GetCellCenterWorld(bossAoeCell);
+        var renderer = bossTelegraph.AddComponent<SpriteRenderer>();
+        renderer.sprite = ProceduralSprite.GetWhiteSpriteCenterPivot();
+        renderer.color = new Color(1f, 0.1f, 0.05f, 0.28f);
+        renderer.sortingOrder = 4;
+        bossTelegraph.transform.localScale = new Vector3(5f, 5f, 1f);
     }
 
     private void AlertSameRoom(Vector3Int playerCell)
@@ -549,6 +616,11 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
 
         if (currentHP <= 0)
         {
+            if (isBoss)
+            {
+                if (bossTelegraph != null) Destroy(bossTelegraph);
+                DropBossLoot();
+            }
             M3MeasurementAutomation.RecordEnemyKill();
             if (TickManager.Instance != null)
             {
@@ -556,5 +628,24 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
             }
             Destroy(gameObject);
         }
+    }
+
+    private void DropBossLoot()
+    {
+        var rng = new System.Random(bossLootSeed);
+        int countRoll = rng.Next(100);
+        int count = countRoll < 10 ? 0 : countRoll < 80 ? 1 : 2;
+        for (int i = 0; i < count; i++)
+        {
+            int rarityRoll = rng.Next(100);
+            LootRarity rarity = rarityRoll < 50 ? LootRarity.Rare : rarityRoll < 90 ? LootRarity.Epic : LootRarity.Unique;
+            LootItemData definition = LootItemDatabase.Roll(rarity, rng);
+            if (definition == null) continue;
+            Vector3Int dropCell = currentCell + (i == 0 ? Vector3Int.left : Vector3Int.right);
+            if (!floorTilemap.HasTile(dropCell) || wallsTilemap.HasTile(dropCell)) dropCell = currentCell;
+            new GameObject("BossGroundLoot").AddComponent<GroundLoot>()
+                .Initialize(floorTilemap, dropCell, new LootItemInstance(definition));
+        }
+        Debug.Log($"[BossLoot] {count}개 드롭 — 수량 10/70/20, 등급 50/40/10");
     }
 }
