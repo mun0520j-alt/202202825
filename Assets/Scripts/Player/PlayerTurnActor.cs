@@ -60,6 +60,7 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     // HP가 0 이하가 된 다음 프레임에 영지(BaseCamp)로 씬 전환한다 — TakeDamage 호출 시점에서
     // 바로 SceneManager.LoadScene을 부르지 않는 이유는 아래 Update() 주석 참고.
     private bool isDead;
+    private bool deathResolutionRequested;
 
     // [2026-09-04 신규] 머리 위 HP바 — Enemy와 통일된 막대 형식(ProceduralHealthBar.cs 참고,
     // 사용자 요청: "enemy하고 player 통일해야하잖아"). 완전 자체 생성 컴포넌트라 Inspector
@@ -276,13 +277,17 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         // 자신의 Update()로 한 프레임 미뤄서 그 호출 스택과 완전히 분리시키면 이 문제가 없다.
         if (isDead)
         {
-            enabled = false; // 다음 프레임부터 또 호출되는 것 방지(씬 전환은 즉시 시작되지만 방어적으로)
+            if (deathResolutionRequested) return;
+            deathResolutionRequested = true;
             if (ExpeditionManager.Instance != null)
             {
+                // enabled=false를 먼저 적용하면 OnDisable → Player 등록 해제 → 남은 AI만으로
+                // 스케줄러가 동기 반복되어 씬 전환 호출까지 도달하지 못할 수 있다.
                 ExpeditionManager.Instance.CompleteDeath();
             }
             else
             {
+                enabled = false;
                 Debug.LogError("[PlayerTurnActor] ExpeditionManager가 없어 사망 결과를 처리할 수 없습니다.");
             }
             return;

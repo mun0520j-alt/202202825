@@ -213,7 +213,7 @@ public class TickManager : MonoBehaviour
     // 그 반복문 "밖에서" 온 건지(=플레이어 입력 콜백처럼 나중에 비동기로 완료 보고) 구분해서:
     //   - 반복문 안이면: 플래그만 세우고 그 반복문이 이어서 처리하게 한다(재귀 안 함)
     //   - 반복문 밖이면: 새 반복문을 시작해도 스택이 안전하니 AdvanceSchedule()을 새로 호출한다
-    public void CompleteTurn(ITurnActor actor, float tickCost, string actionName = null)
+    public void CompleteTurn(ITurnActor actor, float tickCost, string actionName = null, float? minimumNextActionTime = null)
     {
         if (currentTurnActor == null || currentTurnActor.Actor != actor)
         {
@@ -243,10 +243,15 @@ public class TickManager : MonoBehaviour
         if (actor is PlayerTurnActor player)
             DungeonStairs.PrepareExtractionForAction(player, action);
 
-        currentTurnActor.NextActionTime += tickCost;
+        float naturalNextActionTime = currentTurnActor.NextActionTime + tickCost;
+        currentTurnActor.NextActionTime = minimumNextActionTime.HasValue
+            ? Mathf.Max(naturalNextActionTime, minimumNextActionTime.Value)
+            : naturalNextActionTime;
         // [2026-09-04 버그 수정] tickCost가 아니라 갱신된 절대 시각(NextActionTime)을 보고한다 —
         // 위 OnTimeAdvanced 선언부 주석 참고.
-        OnTimeAdvanced?.Invoke(actor, currentTurnActor.NextActionTime);
+        // 예약 지연은 액터의 다음 실행 가능 시각만 늦춘다. 아직 실제로 소비하지 않은 미래
+        // Tick을 전역 시계에 선반영하지 않도록 자연 행동 완료 시각만 보고한다.
+        OnTimeAdvanced?.Invoke(actor, naturalNextActionTime);
         DungeonClock dungeonClock = GetComponent<DungeonClock>();
         float globalTime = dungeonClock != null ? dungeonClock.ElapsedTicks : currentTurnActor.NextActionTime;
         M3MeasurementAutomation.RecordAction(actor, action, tickCost);
@@ -263,6 +268,12 @@ public class TickManager : MonoBehaviour
         // 입력을 누른 채 다음 행동이 즉시 예약되기 전에 탈출 완료를 판정한다. AdvanceSchedule이
         // 먼저 끝났으므로 같은 Tick에 예약된 Enemy 공격과 Dead/MIA 판정 우선순위는 유지된다.
         DungeonStairs.TryResolveCompletedExtraction(PlayerTurnActor.Instance);
+    }
+
+    public float GetActorNextActionTime(ITurnActor actor)
+    {
+        var entry = registeredActors.Find(candidate => candidate.Actor == actor);
+        return entry != null ? entry.NextActionTime : 0f;
     }
 
     // "다음 액터 찾기 → OnTurnStart 호출"을 재귀가 아니라 반복문으로 처리한다. 액터가 OnTurnStart

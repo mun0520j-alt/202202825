@@ -351,7 +351,17 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
             CreateBossTelegraph();
             Debug.Log($"[Boss] 광역 예고 — 중심 {bossAoeCell}, 5 Tick 뒤 발동");
         }
-        TickManager.Instance.CompleteTurn(this, TickCost.Attack, bossAoePending ? "BossSingle+Telegraph" : "BossSingle");
+        float? minimumNextActionTime = null;
+        if (bossAoePending)
+        {
+            // 추격 중 보스의 개인 시간축이 전역 시계보다 뒤처졌더라도 예고 직후 밀린 턴을
+            // 따라잡으며 즉시 발동하지 않게 한다. 다음 행동 시각을 현재 전역 Tick+5 이상으로 맞춘다.
+            float actorTime = TickManager.Instance.GetActorNextActionTime(this);
+            float globalTime = ExpeditionManager.Instance?.ElapsedTicks ?? actorTime;
+            minimumNextActionTime = globalTime + 5f;
+        }
+        TickManager.Instance.CompleteTurn(this, TickCost.Attack,
+            bossAoePending ? "BossSingle+Telegraph" : "BossSingle", minimumNextActionTime);
     }
 
     private void CreateBossTelegraph()

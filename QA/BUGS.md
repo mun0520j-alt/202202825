@@ -951,3 +951,39 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 - **원인:** `AttackEnemy()`가 다른 행동과 달리 행동 시작 전에 `isMyTurn=false`로 닫지 않았다. Enemy 턴 중 추가 입력이 데미지를 먼저 적용하고, 이후 `CompleteTurn()`은 현재 스케줄 액터 불일치로 무시될 수 있었다.
 - **수정:** 공격 진입 시 Player 턴·애니메이션·사망·대상·TickManager를 검증하고 즉시 `isMyTurn=false`로 전환한 뒤 데미지와 5Tick을 처리한다.
 - **회귀 범위:** 방향키 연타, 마우스 연타, 탈출 구역 3타 전투, Enemy 사망 후 반격 없음, 공격 1회당 로그·CSV 5Tick 일치.
+
+## BUG-031 — 보스 광역 예고가 전역 5Tick 전에 발동
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Fixed (Play 재검증 대기, 2026-11-10) |
+| Jira | 미등록 |
+| 심각도 | Major |
+| 우선순위 | P1 |
+| 발견 단계 | M4 5층 보스 Play 검증 |
+| 관련 코드 | `EnemyTurnActor.RunBossTurn`, `TickManager` |
+
+- **재현:** 추격 후 보스와 교전해 두 번째 단일 공격의 광역 예고를 본 뒤 Player가 1칸 이동한다.
+- **기대:** 예고가 생성된 전역 시각으로부터 5Tick 뒤에 광역이 발동한다.
+- **실제:** 보스 개인 시간축이 추격 중 전역 시계보다 뒤처진 경우, 밀린 행동을 따라잡으면서 1Tick 이동 직후 광역이 발동한다.
+- **원인:** 광역을 전역 Tick이 아니라 보스의 다음 행동 1회로만 예약했다.
+- **수정:** 예고 행동 완료 시 보스의 다음 행동 시각을 `현재 전역 Tick + 5` 이상으로 보정한다.
+- **회귀 범위:** 추격 거리별 예고 후 1~4Tick 미발동, 5Tick 발동, 보스 사망 시 예약 광역 취소.
+
+## BUG-032 — 보스에게 사망하면 결과 처리 전에 스케줄러가 멈춤
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Fixed (Play 재검증 대기, 2026-11-10) |
+| Jira | 미등록 |
+| 심각도 | Critical |
+| 우선순위 | P0 |
+| 발견 단계 | M4 5층 보스 Play 검증 |
+| 관련 코드 | `PlayerTurnActor.Update`, `TickManager.UnregisterActor`, `ExpeditionManager.CompleteDeath` |
+
+- **재현:** 5층 보스의 단일·광역 공격으로 Player HP가 0이 되게 한다.
+- **기대:** Dead 결과를 확정하고 BaseCamp 결과 화면으로 전환한다.
+- **실제:** 입력과 진행이 멈추고 결과 화면으로 전환되지 않는다.
+- **원인:** 사망 처리에서 `enabled=false`를 먼저 적용해 Player가 스케줄에서 해제됐다. Player가 현재 액터이면 남은 보스 AI만 동기적으로 계속 턴을 완료해 `CompleteDeath()` 호출까지 복귀하지 못한다.
+- **수정:** 사망 결과 요청을 한 번만 표시한 뒤 Player를 비활성화하기 전에 `CompleteDeath()`를 호출한다.
+- **회귀 범위:** 단일 사망, 광역 사망, 광역과 보스 사망 동시 판정, Dead 결과 화면·재출격.
