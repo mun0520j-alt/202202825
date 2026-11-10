@@ -958,7 +958,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 항목 | 내용 |
 |---|---|
 | 상태 | Closed (사용자 Play 재검증 완료, 2026-11-10) |
-| Jira | 미등록 |
+| Jira | DUN-48 |
 | 심각도 | Major |
 | 우선순위 | P1 |
 | 발견 단계 | M4 5층 보스 Play 검증 |
@@ -977,7 +977,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 항목 | 내용 |
 |---|---|
 | 상태 | Closed (사용자 Play 재검증 완료, 2026-11-10) |
-| Jira | 미등록 |
+| Jira | DUN-49 |
 | 심각도 | Critical |
 | 우선순위 | P0 |
 | 발견 단계 | M4 5층 보스 Play 검증 |
@@ -996,7 +996,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 항목 | 내용 |
 |---|---|
 | 상태 | Closed (자동화 재실행 PASS, 2026-11-10) |
-| Jira | 미등록 |
+| Jira | DUN-50 |
 | 심각도 | Major |
 | 우선순위 | P1 |
 | 발견 단계 | M4 전투 단위 재조정 후 자동화 |
