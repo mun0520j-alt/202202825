@@ -995,7 +995,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Fixed — 자동화 재실행 대기 |
+| 상태 | Closed (자동화 재실행 PASS, 2026-11-10) |
 | Jira | 미등록 |
 | 심각도 | Major |
 | 우선순위 | P1 |
@@ -1008,3 +1008,4 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 - **원인:** M4에서 최종 층이 5층으로 확장됐지만 M3 자동화의 고정 기대값과 CSV 분석 범위를 갱신하지 않았다.
 - **수정:** 핵심 회귀 기대값을 1~5층으로 변경하고 Random 생환을 `reached_floor` 3·5로 나눠 각각 집계한다. M4 5층 목표 범위는 미확정으로 명시한다.
 - **회귀 범위:** 1~5층 핵심 회귀 Pass, 3층 목표 비교, 5층 별도 평균, Fixed Seed 분석 제외.
+- **검증:** 자동화 종합 PASS, 핵심 회귀 9/9, Run Seed 1,000개 × 5층 실패 0. Random CSV는 3층 생환 0건과 5층 생환 2건 평균 654Tick을 분리해 표시했다.
