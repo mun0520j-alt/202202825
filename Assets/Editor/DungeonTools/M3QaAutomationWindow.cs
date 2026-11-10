@@ -51,6 +51,8 @@ public sealed class M3QaAutomationWindow : EditorWindow
             lastSummary = RunSeedValidation(seedStart, seedCount).Summary;
         if (GUILayout.Button("드롭 시뮬레이션"))
             lastSummary = RunLootSimulation(lootSamplesPerFloor).Summary;
+        if (GUILayout.Button("보스 드롭 시뮬레이션"))
+            lastSummary = RunBossLootSimulation(lootSamplesPerFloor).Summary;
         if (GUILayout.Button("CSV 분석"))
             lastSummary = AnalyzeRunCsv().Summary;
         EditorGUILayout.EndHorizontal();
@@ -73,6 +75,7 @@ public sealed class M3QaAutomationWindow : EditorWindow
         Directory.CreateDirectory(OutputDirectory);
         var seed = RunSeedValidation(startSeed, count);
         var loot = RunLootSimulation(lootSamples);
+        var bossLoot = RunBossLootSimulation(lootSamples);
         var regression = RunCoreRegression();
         var runs = AnalyzeRunCsv();
 
@@ -80,10 +83,11 @@ public sealed class M3QaAutomationWindow : EditorWindow
         report.AppendLine("# M3 QA 자동화 보고서");
         report.AppendLine();
         report.AppendLine($"- 생성 시각: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-        report.AppendLine($"- 종합: {(seed.Passed && loot.Passed && regression.Passed ? "PASS" : "FAIL")}");
+        report.AppendLine($"- 종합: {(seed.Passed && loot.Passed && bossLoot.Passed && regression.Passed ? "PASS" : "FAIL")}");
         report.AppendLine();
         AppendSection(report, "다중 Seed 생성 검증", seed);
         AppendSection(report, "아이템 드롭 분포", loot);
+        AppendSection(report, "보스 드롭 분포", bossLoot);
         AppendSection(report, "핵심 회귀", regression);
         AppendSection(report, "원정 CSV 분석", runs);
         File.WriteAllText(ReportPath, report.ToString(), new UTF8Encoding(true));
@@ -210,6 +214,56 @@ public sealed class M3QaAutomationWindow : EditorWindow
             detail + $"아이템 정의: {LootItemDatabase.Items.Count}개, ID 중복 없음 {ids.Count == LootItemDatabase.Items.Count}\n분포 CSV: {output}");
     }
 
+    private static QaResult RunBossLootSimulation(int samples)
+    {
+        samples = Mathf.Max(100, samples);
+        var countResults = new int[3];
+        var rarityResults = new int[3];
+        int itemRollFailures = 0;
+        var rng = new System.Random(0x4D345F42);
+        for (int run = 0; run < samples; run++)
+        {
+            int count = LootItemDatabase.RollBossDropCount(rng);
+            countResults[count]++;
+            for (int item = 0; item < count; item++)
+            {
+                LootRarity rarity = LootItemDatabase.RollBossDropRarity(rng);
+                int rarityIndex = rarity == LootRarity.Rare ? 0 : rarity == LootRarity.Epic ? 1 : 2;
+                rarityResults[rarityIndex]++;
+                if (LootItemDatabase.Roll(rarity, rng) == null) itemRollFailures++;
+            }
+        }
+
+        double[] expectedCount = { 10d, 70d, 20d };
+        double[] expectedRarity = { 50d, 40d, 10d };
+        int totalItems = rarityResults.Sum();
+        double[] countPct = countResults.Select(value => value * 100d / samples).ToArray();
+        double[] rarityPct = rarityResults.Select(value => totalItems == 0 ? 0d : value * 100d / totalItems).ToArray();
+        bool countPass = countPct.Select((value, i) => Math.Abs(value - expectedCount[i]) <= 0.5d).All(value => value);
+        bool rarityPass = rarityPct.Select((value, i) => Math.Abs(value - expectedRarity[i]) <= 0.5d).All(value => value);
+        bool passed = countPass && rarityPass && itemRollFailures == 0;
+
+        string output = Path.Combine(OutputDirectory, "boss_loot_distribution.csv");
+        var lines = new List<string>
+        {
+            "group,category,samples,count,actual_pct,expected_pct,within_0_5pp",
+            $"quantity,0,{samples},{countResults[0]},{F(countPct[0])},10,{Math.Abs(countPct[0] - 10d) <= 0.5d}",
+            $"quantity,1,{samples},{countResults[1]},{F(countPct[1])},70,{Math.Abs(countPct[1] - 70d) <= 0.5d}",
+            $"quantity,2,{samples},{countResults[2]},{F(countPct[2])},20,{Math.Abs(countPct[2] - 20d) <= 0.5d}",
+            $"rarity,Rare,{totalItems},{rarityResults[0]},{F(rarityPct[0])},50,{Math.Abs(rarityPct[0] - 50d) <= 0.5d}",
+            $"rarity,Epic,{totalItems},{rarityResults[1]},{F(rarityPct[1])},40,{Math.Abs(rarityPct[1] - 40d) <= 0.5d}",
+            $"rarity,Unique,{totalItems},{rarityResults[2]},{F(rarityPct[2])},10,{Math.Abs(rarityPct[2] - 10d) <= 0.5d}"
+        };
+        File.WriteAllLines(output, lines, new UTF8Encoding(true));
+
+        string detail =
+            $"원정 {samples:N0}회, 생성 아이템 {totalItems:N0}개, 아이템 판정 실패 {itemRollFailures}\n" +
+            $"수량 0/1/2: {F(countPct[0])}% / {F(countPct[1])}% / {F(countPct[2])}% — {(countPass ? "PASS" : "FAIL")}\n" +
+            $"등급 Rare/Epic/Unique: {F(rarityPct[0])}% / {F(rarityPct[1])}% / {F(rarityPct[2])}% — {(rarityPass ? "PASS" : "FAIL")}\n" +
+            $"분포 CSV: {output}";
+        return new QaResult(passed, $"보스 드롭 {samples:N0}회 {(passed ? "통과" : "실패")}", detail);
+    }
+
     private static QaResult RunCoreRegression()
     {
         var checks = new List<string>();
@@ -266,17 +320,13 @@ public sealed class M3QaAutomationWindow : EditorWindow
             ? rows.Where(row => Get(row, "seed_mode") == "Random").ToList()
             : rows;
         var escaped = measurementRows.Where(row => Get(row, "result") == "Escaped").ToList();
-        var escapedAtFloor3 = escaped.Where(row => Number(row, "reached_floor") == 3d).ToList();
         var escapedAtFloor5 = escaped.Where(row => Number(row, "reached_floor") == 5d).ToList();
-        double avgFloor3 = Average(escapedAtFloor3, "total_ticks");
         double avgFloor5 = Average(escapedAtFloor5, "total_ticks");
-        int floor3Target = escapedAtFloor3.Count(row => Number(row, "total_ticks") >= 300d && Number(row, "total_ticks") <= 450d);
         var detail = new StringBuilder();
         detail.AppendLine($"파일: {path}");
         detail.AppendLine($"전체 {rows.Count}, Random 표본 {measurementRows.Count}, 생환 {escaped.Count}, 사망 {measurementRows.Count(row => Get(row, "result") == "Dead")}, MIA {measurementRows.Count(row => Get(row, "result") == "MIA")}");
         if (headers.Contains("seed_mode")) detail.AppendLine("Tick 분석은 Random 모드만 포함하며 Fixed 반복 표본은 제외했다.");
-        detail.AppendLine($"3층 생환: {escapedAtFloor3.Count}건, 평균 {F(avgFloor3)}Tick, 기존 목표 300~450 진입 {floor3Target}/{escapedAtFloor3.Count}");
-        detail.AppendLine($"5층 생환: {escapedAtFloor5.Count}건, 평균 {F(avgFloor5)}Tick. M4 목표 범위는 미확정이므로 3층 목표와 비교하지 않는다.");
+        detail.AppendLine($"5층 생환: {escapedAtFloor5.Count}건, 평균 {F(avgFloor5)}Tick. M4 목표 범위는 미확정이며 M3의 3층 목표 300~450은 역사 기준으로만 보존한다.");
         detail.AppendLine($"평균 이동/대기/공격/루팅: {F(Average(measurementRows, "move_ticks"))}/{F(Average(measurementRows, "wait_ticks"))}/{F(Average(measurementRows, "attack_ticks"))}/{F(Average(measurementRows, "loot_ticks"))}");
         if (headers.Contains("enemy_encounters"))
         {
@@ -285,7 +335,7 @@ public sealed class M3QaAutomationWindow : EditorWindow
         }
         var longest = measurementRows.OrderByDescending(row => Number(row, "total_ticks")).Take(5);
         detail.AppendLine("긴 원정 TOP 5: " + string.Join(", ", longest.Select(row => $"Seed {Get(row, "seed")} {Get(row, "total_ticks")}Tick/{Get(row, "result")}")));
-        return new QaResult(true, $"{rows.Count}행 분석, 3층 생환 {escapedAtFloor3.Count}건·5층 생환 {escapedAtFloor5.Count}건", detail.ToString());
+        return new QaResult(true, $"{rows.Count}행 분석, 5층 생환 {escapedAtFloor5.Count}건", detail.ToString());
     }
 
     private static string LayoutSignature(FloorLayout layout)

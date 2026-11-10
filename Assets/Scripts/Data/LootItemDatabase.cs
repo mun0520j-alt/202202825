@@ -61,6 +61,18 @@ public static class LootItemDatabase
         return roll < 11 ? LootRarity.Epic : roll < 41 ? LootRarity.Rare : LootRarity.Normal;
     }
 
+    public static int RollBossDropCount(System.Random rng)
+    {
+        int roll = rng.Next(100);
+        return roll < 10 ? 0 : roll < 80 ? 1 : 2;
+    }
+
+    public static LootRarity RollBossDropRarity(System.Random rng)
+    {
+        int roll = rng.Next(100);
+        return roll < 50 ? LootRarity.Rare : roll < 90 ? LootRarity.Epic : LootRarity.Unique;
+    }
+
     private static void EnsureLoaded()
     {
         if (items != null) return;

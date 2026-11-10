@@ -645,12 +645,10 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     private void DropBossLoot()
     {
         var rng = new System.Random(bossLootSeed);
-        int countRoll = rng.Next(100);
-        int count = countRoll < 10 ? 0 : countRoll < 80 ? 1 : 2;
+        int count = LootItemDatabase.RollBossDropCount(rng);
         for (int i = 0; i < count; i++)
         {
-            int rarityRoll = rng.Next(100);
-            LootRarity rarity = rarityRoll < 50 ? LootRarity.Rare : rarityRoll < 90 ? LootRarity.Epic : LootRarity.Unique;
+            LootRarity rarity = LootItemDatabase.RollBossDropRarity(rng);
             LootItemData definition = LootItemDatabase.Roll(rarity, rng);
             if (definition == null) continue;
             Vector3Int dropCell = currentCell + (i == 0 ? Vector3Int.left : Vector3Int.right);
