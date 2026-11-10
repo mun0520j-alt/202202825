@@ -956,7 +956,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Fixed (Play 재검증 대기, 2026-11-10) |
+| 상태 | Closed (사용자 Play 재검증 완료, 2026-11-10) |
 | Jira | 미등록 |
 | 심각도 | Major |
 | 우선순위 | P1 |
@@ -969,12 +969,13 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 - **원인:** 광역을 전역 Tick이 아니라 보스의 다음 행동 1회로만 예약했다.
 - **수정:** 예고 행동 완료 시 보스의 다음 행동 시각을 `현재 전역 Tick + 5` 이상으로 보정한다.
 - **회귀 범위:** 추격 거리별 예고 후 1~4Tick 미발동, 5Tick 발동, 보스 사망 시 예약 광역 취소.
+- **검증:** 거리와 행동 비용을 달리해도 예고 후 정확히 전역 5Tick에 발동하며, 보스 사망 시 예약 광역이 취소됨을 확인했다.
 
 ## BUG-032 — 보스에게 사망하면 결과 처리 전에 스케줄러가 멈춤
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Fixed (Play 재검증 대기, 2026-11-10) |
+| 상태 | Closed (사용자 Play 재검증 완료, 2026-11-10) |
 | Jira | 미등록 |
 | 심각도 | Critical |
 | 우선순위 | P0 |
@@ -987,3 +988,4 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 - **원인:** 사망 처리에서 `enabled=false`를 먼저 적용해 Player가 스케줄에서 해제됐다. Player가 현재 액터이면 남은 보스 AI만 동기적으로 계속 턴을 완료해 `CompleteDeath()` 호출까지 복귀하지 못한다.
 - **수정:** 사망 결과 요청을 한 번만 표시한 뒤 Player를 비활성화하기 전에 `CompleteDeath()`를 호출한다.
 - **회귀 범위:** 단일 사망, 광역 사망, 광역과 보스 사망 동시 판정, Dead 결과 화면·재출격.
+- **검증:** 보스 단일·광역 사망 후 진행 정지 없이 Dead 결과 화면으로 전환됨을 확인했다.
