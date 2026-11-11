@@ -1009,3 +1009,21 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 - **수정:** 핵심 회귀 기대값을 1~5층으로 변경하고 Random CSV의 3층·5층 생환을 각각 집계한다. M4 판단에는 5층 표본을 사용한다.
 - **회귀 범위:** 1~5층 핵심 회귀 Pass, 3층 조기 생환·5층 생환 평균 분리, Fixed Seed 분석 제외.
 - **검증:** 보스 드롭 자동화를 포함한 전체 재실행에서 종합 PASS, 핵심 회귀 9/9, Run Seed 1,000개 × 5층(총 5,000층) 실패 0을 확인했다. CSV에서 3층과 5층 생환이 분리 집계되며, 이후 추가된 세 번째 5층 생환까지 총 3판 676·632·861Tick을 기록했다.
+
+## BUG-034 — 가방 장착 상태에서 보스 사망 후 결과 전환 정지
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Fixed — Play 회귀 대기 (2026-11-11) |
+| Jira | 미등록 |
+| 심각도 | Critical |
+| 우선순위 | P0 |
+| 발견 단계 | M5 가방 통합 Play |
+| 관련 코드 | `PlayerTurnActor`, `ExpeditionManager`, `LootRuntimeState` |
+
+- **재현:** 가방을 장착한 채 F7 5층 보스 전투에서 Player HP가 0이 되게 한다.
+- **기대:** Dead 결과를 확정하고 BaseCamp 결과 화면으로 전환한다. 장착 가방·출격 가방은 전손한다.
+- **실제:** 사망 판정과 전손은 확인됐으나 결과 화면 전환 전에 진행이 멈춼다.
+- **조사:** 해당 Editor 로그에 런타임 C# 예외는 없었고 F7 원정은 CSV 제외라 결과 행이 없다. 증상은 BUG-032와 동일하며 사망 전환이 `PlayerTurnActor.Update()` 다음 프레임에만 의존했다.
+- **수정:** HP 0 시 `ExpeditionManager` 자체에도 다음 프레임 Dead 결과 처리를 예약한다. Player Update 경로와 Manager 코루틴 중 먼저 실행된 하나만 처리되며 `[DeathFlow]` 로그를 남긴다.
+- **회귀 범위:** 보스 단일·광역 사망, 가방 장착/미장착, Dead 결과 화면, 재출격 6칸.
