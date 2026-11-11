@@ -1014,7 +1014,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Fixed — Play 회귀 대기 (2026-11-11) |
+| 상태 | Closed — 사용자 Play 확인 (2026-11-11) |
 | Jira | 미등록 |
 | 심각도 | Critical |
 | 우선순위 | P0 |
@@ -1027,3 +1027,21 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 - **조사:** 해당 Editor 로그에 런타임 C# 예외는 없었고 F7 원정은 CSV 제외라 결과 행이 없다. 증상은 BUG-032와 동일하며 사망 전환이 `PlayerTurnActor.Update()` 다음 프레임에만 의존했다.
 - **수정:** HP 0 시 `ExpeditionManager` 자체에도 다음 프레임 Dead 결과 처리를 예약한다. Player Update 경로와 Manager 코루틴 중 먼저 실행된 하나만 처리되며 `[DeathFlow]` 로그를 남긴다.
 - **회귀 범위:** 보스 단일·광역 사망, 가방 장착/미장착, Dead 결과 화면, 재출격 6칸.
+- **검증:** 가방 장착 상태에서 보스에게 사망한 뒤 Dead 결과 화면 전환과 재출격을 사용자 Play로 확인했다.
+
+## BUG-036 — 자동 이동·휴식 중 Esc 일시정지 시 자동 행동 취소 불확실
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Fixed — Play 회귀 대기 (2026-11-11) |
+| Jira | 미등록 |
+| 심각도 | Major |
+| 우선순위 | P1 |
+| 발견 단계 | M5 통합 Play 준비 |
+| 관련 코드 | `PlayerTurnActor`, `PauseMenuController` |
+
+- **재현:** 자동 이동 또는 Space 자동 휴식 중 Esc로 일시정지 메뉴를 열었다가 닫는다.
+- **기대:** 메뉴가 열리는 즉시 자동 행동을 취소하고 재개하지 않는다. 자동 이동 중에는 취소 방법과 남은 경로를 표시한다.
+- **원인:** 일시정지 메뉴가 Player Update보다 먼저 Esc를 소비해 Player 내부 취소 분기가 프레임 순서에 따라 실행되지 않을 수 있었다. 선택 경로 선도 이동 시작 시 숨겨졌다.
+- **수정:** 메뉴를 여는 시점에 Player 자동 이동·휴식을 명시적으로 취소한다. 이동 중 HUD 안내와 남은 경로 선을 하나의 LineRenderer로 갱신한다.
+- **회귀 범위:** Esc·우클릭·방향키 취소, 적 발견 정지, 자동 휴식 취소, 메뉴 종료 후 자동 행동 미재개.
