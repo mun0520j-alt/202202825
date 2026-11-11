@@ -96,6 +96,10 @@ public class InventoryPanel : MonoBehaviour
     private readonly List<Button> bagDropButtons = new List<Button>();
     private readonly List<Button> bagEquipButtons = new List<Button>();
     private LootGridView bagGridView;
+    private System.Action<LootItemInstance> lootTransferHandler;
+    private GameObject actionRoot;
+    private Text actionLabel;
+    private LootItemInstance selectedBagItem;
 
     private void Awake()
     {
@@ -123,13 +127,17 @@ public class InventoryPanel : MonoBehaviour
         activeInstance.panelRoot.SetActive(true);
         IsOpen = true;
         activeInstance.EnsureBagBindings();
+        activeInstance.lootTransferHandler = transferToLoot;
         activeInstance.bagGridView?.SetItemClickHandler(transferToLoot);
+        activeInstance.HideItemActions();
         activeInstance.RefreshBagSlots();
     }
 
     public static void ClearLootTransferHandler()
     {
-        activeInstance?.bagGridView?.SetItemClickHandler(null);
+        if (activeInstance == null) return;
+        activeInstance.lootTransferHandler = null;
+        activeInstance.bagGridView?.SetItemClickHandler(activeInstance.SelectBagItem);
     }
 
     // [2026-09-04 신규] 에디터 메뉴(BuildHudInScene)가 "컴포넌트는 이미 붙어있는데(Awake가 다시
@@ -302,6 +310,7 @@ public class InventoryPanel : MonoBehaviour
         if (oldLayout != null) oldLayout.enabled = false;
         bagGridView = grid.GetComponent<LootGridView>() ?? grid.gameObject.AddComponent<LootGridView>();
         bagGridView.Bind(LootRuntimeState.RunBagGrid, LootRuntimeState.MoveRunBagItem);
+        bagGridView.SetItemClickHandler(lootTransferHandler ?? SelectBagItem);
     }
 
     private void RefreshBagSlots()
@@ -309,19 +318,33 @@ public class InventoryPanel : MonoBehaviour
         if (bagGridView == null || bagGridView.GetComponent<RectTransform>().sizeDelta.x
             != LootRuntimeState.RunBagGrid.Width * LootGridView.MinimumCellSize) EnsureBagBindings();
         else bagGridView.Refresh();
+        if (selectedBagItem != null && LootRuntimeState.RunBagGrid.Find(selectedBagItem.InstanceId) == null) HideItemActions();
         RefreshEquipmentSlots();
     }
 
-    private static void DropBagItem(string instanceId)
+    private void DropBagItem(string instanceId)
     {
         var player = PlayerTurnActor.Instance;
         if (player == null || player.FloorTilemap == null) return;
         player.TryPerformTimedAction(TickCost.Drop, "Drop", () =>
         {
+            LootGridPlacement placement = LootRuntimeState.RunBagGrid.Find(instanceId);
+            LootItemInstance candidate = placement?.Item;
+            if (candidate == null) return false;
+            if (!GroundLootPile.TryAddOrCreate(player.FloorTilemap, player.CurrentCell, candidate, out GroundLootPile pile))
+            {
+                SetBagNotice("바닥 더미 공간 부족");
+                return false;
+            }
             var item = LootRuntimeState.DropBagItem(instanceId);
-            if (item == null) return false;
-            new GameObject("GroundLoot").AddComponent<GroundLoot>().Initialize(player.FloorTilemap, player.CurrentCell, item);
+            if (item == null)
+            {
+                pile.TryRemove(instanceId, out _);
+                return false;
+            }
             Debug.Log($"[Loot] {item.Definition.Name}을(를) 바닥에 버렸습니다. ({TickCost.Drop:0} Tick)");
+            HideItemActions();
+            SetBagNotice(null);
             return true;
         });
     }
@@ -416,6 +439,7 @@ public class InventoryPanel : MonoBehaviour
 
         BuildEquipmentColumn(contentRect);
         BuildBagGrid(contentRect);
+        BuildItemActions(panelRect);
 
         // 인벤토리(장비 칸 + 가방) 바로 아래, 완전히 별도 섹션으로 빤스칸(보관함)을 붙인다.
         // M6 출격 가방은 장비 슬롯 아래에 둔다. 기존 임시 보관함은 M8 Stash 격자까지 숨긴다.
@@ -481,6 +505,7 @@ public class InventoryPanel : MonoBehaviour
             EnsureUnequipButton(iconTransform.parent, slot);
         }
         EnsureBagBindings();
+        EnsureItemActions(panelRootTransform);
     }
 
     private void EnsureBagEquipmentRow(Transform panelRootTransform)
@@ -616,6 +641,73 @@ public class InventoryPanel : MonoBehaviour
         panelRect.anchorMax = new Vector2(1f, 0.5f);
         panelRect.pivot = new Vector2(1f, 0.5f);
         panelRect.anchoredPosition = new Vector2(-24f, 0f);
+    }
+
+    private void SelectBagItem(LootItemInstance item)
+    {
+        if (item?.Definition == null) return;
+        selectedBagItem = item;
+        EnsureItemActions(panelRoot.transform);
+        actionLabel.text = $"{item.Definition.Name} [{item.Definition.Rarity}]";
+        actionRoot.SetActive(true);
+    }
+
+    private void BuildItemActions(Transform parent)
+    {
+        actionRoot = new GameObject("ItemActions", typeof(RectTransform), typeof(Image));
+        actionRoot.transform.SetParent(parent, false);
+        RectTransform actionRect = actionRoot.GetComponent<RectTransform>();
+        actionRect.anchorMin = new Vector2(0.5f, 0f);
+        actionRect.anchorMax = new Vector2(0.5f, 0f);
+        actionRect.pivot = new Vector2(0.5f, 0f);
+        actionRect.anchoredPosition = new Vector2(0f, 12f);
+        actionRect.sizeDelta = new Vector2(280f, 42f);
+        var layout = actionRoot.AddComponent<HorizontalLayoutGroup>();
+        layout.spacing = 6f;
+        layout.padding = new RectOffset(6, 6, 4, 4);
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = true;
+        actionRoot.GetComponent<Image>().color = new Color(0.06f, 0.07f, 0.09f, 0.96f);
+        var element = actionRoot.AddComponent<LayoutElement>();
+        element.preferredHeight = 42f;
+        element.preferredWidth = 280f;
+        actionLabel = CreateLabel(actionRoot.transform, "SelectedItem", "아이템 선택", 12, TextAnchor.MiddleLeft);
+        actionLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = 140f;
+        CreateActionButton("Equip", "장착", () => { if (selectedBagItem != null) EquipBagItem(selectedBagItem.InstanceId); });
+        CreateActionButton("Drop", "버리기", () => { if (selectedBagItem != null) DropBagItem(selectedBagItem.InstanceId); });
+        actionRoot.SetActive(false);
+    }
+
+    private void EnsureItemActions(Transform parent)
+    {
+        if (actionRoot != null) return;
+        Transform existing = parent.Find("ItemActions");
+        if (existing == null) BuildItemActions(parent);
+        else
+        {
+            actionRoot = existing.gameObject;
+            actionLabel = existing.Find("SelectedItem")?.GetComponent<Text>();
+        }
+    }
+
+    private void CreateActionButton(string name, string label, UnityEngine.Events.UnityAction action)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+        go.transform.SetParent(actionRoot.transform, false);
+        go.GetComponent<Image>().color = new Color(0.16f, 0.36f, 0.48f, 0.95f);
+        go.AddComponent<LayoutElement>().preferredWidth = 58f;
+        Button button = go.GetComponent<Button>();
+        button.onClick.AddListener(action);
+        Text text = CreateLabel(go.transform, "Label", label, 11, TextAnchor.MiddleCenter);
+        text.rectTransform.anchorMin = Vector2.zero;
+        text.rectTransform.anchorMax = Vector2.one;
+        text.rectTransform.offsetMin = text.rectTransform.offsetMax = Vector2.zero;
+    }
+
+    private void HideItemActions()
+    {
+        selectedBagItem = null;
+        if (actionRoot != null) actionRoot.SetActive(false);
     }
 
     // [2026-09-04 신규] "빤스칸"(보관함) 섹션 — 인벤토리(장비 칸+가방) 바로 아래, 완전히 별도의

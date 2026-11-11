@@ -21,7 +21,13 @@ public sealed class GroundLootPile : MonoBehaviour, ILootContainer
 
     public static bool AddOrCreate(Tilemap floor, Vector3Int cell, LootItemInstance item, string name = "바닥 더미")
     {
-        GroundLootPile pile = Find(floor, cell);
+        return TryAddOrCreate(floor, cell, item, out _, name);
+    }
+
+    public static bool TryAddOrCreate(Tilemap floor, Vector3Int cell, LootItemInstance item,
+        out GroundLootPile pile, string name = "바닥 더미")
+    {
+        pile = Find(floor, cell);
         if (pile == null)
         {
             pile = new GameObject($"GroundLootPile_{cell.x}_{cell.y}").AddComponent<GroundLootPile>();

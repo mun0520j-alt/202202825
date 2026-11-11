@@ -17,9 +17,10 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
 
     private void OnGUI()
     {
-        float sideWidth = Mathf.Clamp(Screen.width * 0.27f, 400f, 520f);
+        float sideWidth = Mathf.Clamp(Screen.width * 0.24f, 360f, 480f);
         DrawMerchantPanel(new Rect(20, 20, sideWidth, Screen.height - 40));
-        DrawStashPanel(new Rect(Screen.width - sideWidth - 20, 20, sideWidth, Screen.height - 40));
+        float gridReserve = Mathf.Clamp(Screen.width * 0.25f, 300f, 420f);
+        DrawStashPanel(new Rect(Screen.width - sideWidth - gridReserve - 40, 20, sideWidth, Screen.height - 40));
     }
 
     private void DrawMerchantPanel(Rect area)
@@ -50,11 +51,6 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
         DrawEquipment(LootItemType.Shield, "방패");
         DrawEquipment(LootItemType.Armor, "갑옷");
         DrawEquipment(LootItemType.Bag, "가방");
-
-        GUILayout.Space(6);
-        GUILayout.Label($"출격 가방 {LootRuntimeState.RunBag.Count}/{LootRuntimeState.BagCapacity} " +
-                        $"(기본 {LootRuntimeState.BaseBagCapacity} + 장비 {LootRuntimeState.EquippedBagCapacityBonus})");
-        foreach (var item in LootRuntimeState.RunBag.ToArray()) DrawStorageItem(item, false);
 
         GUILayout.Space(6);
         GUILayout.BeginHorizontal();

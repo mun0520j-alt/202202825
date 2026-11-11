@@ -9,6 +9,7 @@ public sealed class ExpeditionResultPanel : MonoBehaviour
     {
         Build();
         if (GetComponent<BaseCampManagementPanel>() == null) gameObject.AddComponent<BaseCampManagementPanel>();
+        if (GetComponent<BaseCampGridPanel>() == null) gameObject.AddComponent<BaseCampGridPanel>();
     }
 
     private void Build()
