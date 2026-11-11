@@ -117,6 +117,21 @@ public class InventoryPanel : MonoBehaviour
         return true;
     }
 
+    public static void OpenForLoot(System.Action<LootItemInstance> transferToLoot)
+    {
+        if (activeInstance == null || activeInstance.panelRoot == null) return;
+        activeInstance.panelRoot.SetActive(true);
+        IsOpen = true;
+        activeInstance.EnsureBagBindings();
+        activeInstance.bagGridView?.SetItemClickHandler(transferToLoot);
+        activeInstance.RefreshBagSlots();
+    }
+
+    public static void ClearLootTransferHandler()
+    {
+        activeInstance?.bagGridView?.SetItemClickHandler(null);
+    }
+
     // [2026-09-04 신규] 에디터 메뉴(BuildHudInScene)가 "컴포넌트는 이미 붙어있는데(Awake가 다시
     // 안 불림) 만들어뒀던 하이라키 자식만 지워진" 경우를 복구할 수 있게 Build()를 외부에서
     // 강제로 다시 부를 수 있게 노출한다. Build() 자체가 멱등하므로(있으면 재연결, 없으면 새로

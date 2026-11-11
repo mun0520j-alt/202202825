@@ -60,6 +60,11 @@ public sealed class PauseMenuController : MonoBehaviour
             Close();
             return;
         }
+        if (LootingPanel.CloseLootOnly())
+        {
+            escapeConsumedFrame = Time.frameCount;
+            return;
+        }
         if (InventoryPanel.CloseForEscape())
         {
             escapeConsumedFrame = Time.frameCount;
@@ -67,8 +72,9 @@ public sealed class PauseMenuController : MonoBehaviour
         }
         if (GroundLoot.IsSelectionOpen)
         {
+            GroundLoot.CloseSelectionForModalSwitch();
             escapeConsumedFrame = Time.frameCount;
-            return; // 해당 UI가 같은 프레임에 자신을 닫는다.
+            return;
         }
         if (PlayerTurnActor.Instance?.TryCancelAutomationForEscape() == true)
         {

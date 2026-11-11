@@ -646,16 +646,16 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     {
         var rng = new System.Random(bossLootSeed);
         int count = LootItemDatabase.RollBossDropCount(rng);
+        var drops = new System.Collections.Generic.List<LootItemInstance>();
         for (int i = 0; i < count; i++)
         {
             LootRarity rarity = LootItemDatabase.RollBossDropRarity(rng);
             LootItemData definition = LootItemDatabase.Roll(rarity, rng);
             if (definition == null) continue;
-            Vector3Int dropCell = currentCell + (i == 0 ? Vector3Int.left : Vector3Int.right);
-            if (!floorTilemap.HasTile(dropCell) || wallsTilemap.HasTile(dropCell)) dropCell = currentCell;
-            new GameObject("BossGroundLoot").AddComponent<GroundLoot>()
-                .Initialize(floorTilemap, dropCell, new LootItemInstance(definition));
+            drops.Add(new LootItemInstance(definition));
         }
+        if (drops.Count > 0) GroundLootPile.Create(floorTilemap, currentCell, drops, "보스 전리품");
+        M3MeasurementAutomation.RecordBossItemsGenerated(drops.Count);
         Debug.Log($"[BossLoot] {count}개 드롭 — 수량 10/70/20, 등급 50/40/10");
     }
 }

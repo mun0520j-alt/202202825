@@ -18,7 +18,7 @@ public static class M3MeasurementAutomation
     private const string SeedPreferenceKey = "M3.RunSeed";
     private const string SeedModePreferenceKey = "M3.SeedMode";
     private const int DefaultSeed = 20261106;
-    private const string SchemaVersion = "3";
+    private const string SchemaVersion = "4";
     private static readonly Dictionary<string, float> playerActionTicks = new Dictionary<string, float>();
     private static readonly HashSet<string> visitedRooms = new HashSet<string>();
     private static readonly HashSet<string> encounteredEnemies = new HashSet<string>();
@@ -37,6 +37,9 @@ public static class M3MeasurementAutomation
     private static int chestsOpened;
     private static int itemsAcquired;
     private static int itemsGrounded;
+    private static int itemsDroppedToContainer;
+    private static int chestItemsGenerated;
+    private static int bossItemsGenerated;
     private static int exitPathTiles;
     private static int exitRoomEnemies;
     private static bool debugRun;
@@ -60,7 +63,7 @@ public static class M3MeasurementAutomation
     public static M3SeedMode CurrentSeedMode => activeSeedMode;
     public static string OutputDirectory => Path.Combine(Application.persistentDataPath, "M3Measurements");
     // v1·v2는 기존 측정 표본으로 보존한다. Seed 모드가 포함된 스키마는 v3에서 새로 시작한다.
-    public static string OutputPath => Path.Combine(OutputDirectory, "expedition_runs_v3.csv");
+    public static string OutputPath => Path.Combine(OutputDirectory, "expedition_runs_v4.csv");
     public static string SeedSummaryPath => Path.Combine(OutputDirectory, "seed_summary.csv");
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -211,6 +214,27 @@ public static class M3MeasurementAutomation
 #endif
     }
 
+    public static void RecordItemDroppedToContainer()
+    {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (recording) itemsDroppedToContainer++;
+#endif
+    }
+
+    public static void RecordChestItemGenerated()
+    {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (recording) chestItemsGenerated++;
+#endif
+    }
+
+    public static void RecordBossItemsGenerated(int count)
+    {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (recording) bossItemsGenerated += Mathf.Max(0, count);
+#endif
+    }
+
     public static void RecordFloorExitMetrics(int shortestPathTiles, int enemiesInExitRoom)
     {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -237,7 +261,7 @@ public static class M3MeasurementAutomation
         {
             if (writeHeader)
             {
-                writer.WriteLine("schema_version,timestamp,seed,seed_mode,seed_attempt,result,total_ticks,reached_floor,player_actions,enemy_actions,enemy_action_ticks,move_ticks,wait_ticks,attack_ticks,door_ticks,loot_ticks,interact_ticks,other_ticks,visited_rooms,room_revisits,bag_items,hp,enemy_encounters,enemies_killed,damage_dealt,damage_taken,healing_received,chests_opened,items_acquired,items_grounded,exit_path_tiles,exit_room_enemies");
+                writer.WriteLine("schema_version,timestamp,seed,seed_mode,seed_attempt,result,total_ticks,reached_floor,player_actions,enemy_actions,enemy_action_ticks,move_ticks,wait_ticks,attack_ticks,door_ticks,loot_ticks,interact_ticks,other_ticks,visited_rooms,room_revisits,bag_items,hp,enemy_encounters,enemies_killed,damage_dealt,damage_taken,healing_received,chests_opened,items_acquired,items_grounded_legacy,items_dropped_to_container,chest_items_generated,boss_items_generated,exit_path_tiles,exit_room_enemies");
             }
             writer.WriteLine(string.Join(",", new[]
             {
@@ -271,6 +295,9 @@ public static class M3MeasurementAutomation
                 chestsOpened.ToString(CultureInfo.InvariantCulture),
                 itemsAcquired.ToString(CultureInfo.InvariantCulture),
                 itemsGrounded.ToString(CultureInfo.InvariantCulture),
+                itemsDroppedToContainer.ToString(CultureInfo.InvariantCulture),
+                chestItemsGenerated.ToString(CultureInfo.InvariantCulture),
+                bossItemsGenerated.ToString(CultureInfo.InvariantCulture),
                 exitPathTiles.ToString(CultureInfo.InvariantCulture),
                 exitRoomEnemies.ToString(CultureInfo.InvariantCulture)
             }));
@@ -481,6 +508,9 @@ public static class M3MeasurementAutomation
         chestsOpened = 0;
         itemsAcquired = 0;
         itemsGrounded = 0;
+        itemsDroppedToContainer = 0;
+        chestItemsGenerated = 0;
+        bossItemsGenerated = 0;
         exitPathTiles = 0;
         exitRoomEnemies = 0;
         debugRun = false;

@@ -11,6 +11,7 @@ public sealed class LootGridView : MonoBehaviour
 
     private LootGridModel model;
     private Func<string, int, int, bool, bool> moveHandler;
+    private Action<LootItemInstance> itemClickHandler;
     private RectTransform gridRoot;
     private RectTransform preview;
     private Text tooltip;
@@ -28,6 +29,11 @@ public sealed class LootGridView : MonoBehaviour
     {
         if (model == null) return;
         Build();
+    }
+
+    public void SetItemClickHandler(Action<LootItemInstance> handler)
+    {
+        itemClickHandler = handler;
     }
 
     private void Update()
@@ -185,6 +191,11 @@ public sealed class LootGridView : MonoBehaviour
         if (tooltip != null) tooltip.transform.parent.gameObject.SetActive(false);
     }
 
+    internal void ClickItem(LootItemInstance item)
+    {
+        if (dragged == null) itemClickHandler?.Invoke(item);
+    }
+
     private void UpdateDragPreview(Vector2 screenPosition)
     {
         if (dragged == null || preview == null || !TryScreenToCell(screenPosition, out int x, out int y))
@@ -253,7 +264,7 @@ public sealed class LootGridView : MonoBehaviour
 }
 
 public sealed class LootGridItemView : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler,
-    IPointerEnterHandler, IPointerExitHandler, IPointerMoveHandler
+    IPointerEnterHandler, IPointerExitHandler, IPointerMoveHandler, IPointerClickHandler
 {
     private LootGridView owner;
     public LootItemInstance Item { get; private set; }
@@ -272,4 +283,8 @@ public sealed class LootGridItemView : MonoBehaviour, IBeginDragHandler, IDragHa
     public void OnPointerEnter(PointerEventData eventData) => owner.ShowTooltip(this, eventData.position);
     public void OnPointerExit(PointerEventData eventData) => owner.HideTooltip();
     public void OnPointerMove(PointerEventData eventData) => owner.MoveTooltip(eventData.position);
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        if (eventData.button == PointerEventData.InputButton.Left) owner.ClickItem(Item);
+    }
 }
