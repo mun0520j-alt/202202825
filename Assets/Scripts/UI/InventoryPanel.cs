@@ -83,6 +83,11 @@ public class InventoryPanel : MonoBehaviour
     };
 
     private GameObject panelRoot;
+    // BUG-035 장비 슬롯 가독성: 장착 슬롯은 흰색, 빈 슬롯(반지·목걸이 등)은 회색으로 구분한다.
+    private static readonly Color FilledSlotLabelColor = Color.white;
+    private static readonly Color EmptySlotLabelColor = new Color(0.62f, 0.60f, 0.58f, 1f);
+    private const int UnequipButtonReservedWidth = 56;
+
     private PlayerEquipment subscribedEquipment;
     private readonly Dictionary<EquipmentSlotType, Image> equipmentSlotIcons = new Dictionary<EquipmentSlotType, Image>();
     private readonly Dictionary<EquipmentSlotType, Text> equipmentSlotLabels = new Dictionary<EquipmentSlotType, Text>();
@@ -210,9 +215,11 @@ public class InventoryPanel : MonoBehaviour
             }
             if (equipmentSlotLabels.TryGetValue(kvp.Key, out var label))
             {
+                // 가방은 이름과 용량을 두 줄로 나눠 긴 이름에서도 용량이 잘리지 않게 한다 (BUG-035).
                 label.text = kvp.Key == EquipmentSlotType.Bag
-                    ? $"{(item != null ? item.itemName : "가방 없음")}  {LootRuntimeState.RunBag.Count}/{LootRuntimeState.BagCapacity}"
+                    ? $"{(item != null ? item.itemName : "가방 없음")}\n{LootRuntimeState.RunBag.Count}/{LootRuntimeState.BagCapacity}"
                     : item != null ? item.itemName : GetSlotLabel(kvp.Key);
+                label.color = item != null ? FilledSlotLabelColor : EmptySlotLabelColor;
             }
             if (equipmentUnequipButtons.TryGetValue(kvp.Key, out var button))
                 button.gameObject.SetActive(item != null && IsUnequippableSlot(kvp.Key));
@@ -594,7 +601,8 @@ public class InventoryPanel : MonoBehaviour
         rowGo.AddComponent<RectTransform>();
 
         var rowLayout = rowGo.AddComponent<HorizontalLayoutGroup>();
-        rowLayout.padding = new RectOffset(4, 4, 4, 4);
+        // 오른쪽 여백 = 해제 버튼(44) + 버튼 오프셋(4) + 간격(8). 라벨이 버튼 밑으로 들어가지 않게 한다 (BUG-035).
+        rowLayout.padding = new RectOffset(4, UnequipButtonReservedWidth, 4, 4);
         rowLayout.spacing = 8f;
         rowLayout.childAlignment = TextAnchor.MiddleLeft;
         rowLayout.childForceExpandWidth = false;
@@ -612,7 +620,14 @@ public class InventoryPanel : MonoBehaviour
         backgroundRect.offsetMin = Vector2.zero;
         backgroundRect.offsetMax = Vector2.zero;
         var backgroundImage = backgroundGo.AddComponent<Image>();
-        ApplyFrame(backgroundImage, GeneratedUiSprites.FrameThinSmall, new Color(1f, 1f, 1f, 0.05f));
+        // BUG-035: 주황 프레임 아트가 글자 뒤를 가로질러 가독성이 떨어졌다. 글자 뒤는 어두운 단색으로 깔고
+        // 테두리만 옅은 주황 외곽선으로 남긴다. 새 아트 없이 색만 조정.
+        backgroundImage.sprite = ProceduralSprite.GetWhiteSpriteCenterPivot();
+        backgroundImage.type = Image.Type.Simple;
+        backgroundImage.color = new Color(0.09f, 0.07f, 0.06f, 0.92f);
+        var backgroundBorder = backgroundGo.AddComponent<Outline>();
+        backgroundBorder.effectColor = new Color(0.85f, 0.45f, 0.15f, 0.55f);
+        backgroundBorder.effectDistance = new Vector2(1f, -1f);
         var backgroundLayoutElement = backgroundGo.AddComponent<LayoutElement>();
         backgroundLayoutElement.ignoreLayout = true;
 
@@ -628,7 +643,14 @@ public class InventoryPanel : MonoBehaviour
 
         var labelText = CreateLabel(rowGo.transform, "Label", label, 13, TextAnchor.MiddleLeft);
         equipmentSlotLabels[slot] = labelText;
-        labelText.color = new Color(1f, 1f, 1f, 0.75f);
+        labelText.color = EmptySlotLabelColor;
+        // 긴 이름(예: 왕실 원정 가방)은 두 줄로 줄바꿈하고, 넘치면 잘라낸다. 버튼 밑으로 넘어가지 않는다.
+        labelText.horizontalOverflow = HorizontalWrapMode.Wrap;
+        labelText.verticalOverflow = VerticalWrapMode.Truncate;
+        labelText.lineSpacing = 0.9f;
+        var labelShadow = labelText.gameObject.AddComponent<Shadow>();
+        labelShadow.effectColor = new Color(0f, 0f, 0f, 0.85f);
+        labelShadow.effectDistance = new Vector2(1f, -1f);
         var labelLayoutElement = labelText.gameObject.AddComponent<LayoutElement>();
         labelLayoutElement.preferredWidth = labelWidth;
         labelLayoutElement.preferredHeight = iconSize;
