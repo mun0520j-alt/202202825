@@ -1,6 +1,6 @@
 # 아이템 CSV 데이터 사전
 
-> 원본: `Assets/Resources/Data/items.csv`. 현재 M2~M3 런타임에서 사용하는 최소 스키마다.
+> 원본: `Assets/Resources/Data/items.csv`. 현재 M2~M5 런타임에서 사용하는 최소 스키마다.
 
 ## 컬럼
 
@@ -15,6 +15,7 @@
 | `capacity_bonus` | int | Y | 가방 용량 보너스 | Bag 외 사용은 확인 필요 |
 | `icon_key` | string | N | 아이콘 리소스 키 | 빈 값이면 대체 표시 사용 |
 | `drop_weight` | int | Y | 같은 등급·풀 안의 상대 가중치 | 0은 일반 드롭 제외 |
+| `sell_price` | int | Y | BaseCamp 공용 상인 판매가 | Normal 10, Rare 30, Epic 80, Unique 200 초안 |
 
 ## 현재 데이터 요약
 
@@ -35,7 +36,7 @@
 | Armor 방어 보너스 | 7 | 8 | 9 | 10 |
 
 - 기본 지급 장비는 CSV 드롭 장비와 별도로 기본 검 +20, 기본 방패 +6, 기본 갑옷 +6이다.
-- 스키마와 드롭 가중치는 바꾸지 않고 수치만 확대했다.
+- M5에서 판매가 컬럼을 추가했으며 드롭 가중치는 변경하지 않았다.
 
 ## 변경 절차
 

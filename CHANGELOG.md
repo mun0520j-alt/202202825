@@ -2,6 +2,17 @@
 
 형식: 마일스톤 태그 단위. 추가 / 수정 / 알려진 문제 / 테스트 요약.
 
+## Unreleased — M5 세이브·영지 기초·itch 공개
+
+### 추가
+- BaseCamp에서 Stash·출격 가방·장착 장비를 0Tick으로 이동·교체하는 영지 정비 UI
+- 공용 상인 판매와 Gold 적립, 등급별 판매가 CSV 설정
+- Stash 등급·부위·획득 순 정렬과 부위·등급 필터
+- save_version 2 Gold 저장과 v1 기본값 0 마이그레이션
+
+### 검증
+- 전체 구현 완료 후 `QA/TESTCASES_M5.md` 통합 체크리스트로 Play 검증 예정
+
 ## Unreleased — M5 itch 공개와 영구 세이브
 
 ### 추가
