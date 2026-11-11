@@ -17,4 +17,5 @@ public enum EquipmentSlotType
     Ring1,
     Ring2,
     Necklace,
+    Bag,
 }

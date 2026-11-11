@@ -81,6 +81,7 @@ public class PlayerEquipment : MonoBehaviour
         ApplyLootSlot(LootItemType.Weapon, EquipmentSlotType.MainWeapon1);
         ApplyLootSlot(LootItemType.Shield, EquipmentSlotType.OffHandShield);
         ApplyLootSlot(LootItemType.Armor, EquipmentSlotType.Armor);
+        ApplyLootSlot(LootItemType.Bag, EquipmentSlotType.Bag);
         RecalculateBonuses();
         OnEquipmentChanged?.Invoke();
     }
@@ -156,6 +157,9 @@ public class PlayerEquipment : MonoBehaviour
                 return true;
             case EquipmentSlotType.Armor:
                 type = LootItemType.Armor;
+                return true;
+            case EquipmentSlotType.Bag:
+                type = LootItemType.Bag;
                 return true;
             default:
                 type = default;
