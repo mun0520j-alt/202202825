@@ -1041,7 +1041,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 관련 코드 | `PlayerTurnActor`, `PauseMenuController` |
 
 - **재현:** 자동 이동 또는 Space 자동 휴식 중 Esc로 일시정지 메뉴를 열었다가 닫는다.
-- **기대:** 메뉴가 열리는 즉시 자동 행동을 취소하고 재개하지 않는다. 자동 이동 중에는 취소 방법과 남은 경로를 표시한다.
+- **기대:** 자동 행동 중 Esc는 해당 행동만 취소하고 메뉴를 열지 않는다. 자동 행동이 없을 때 다시 Esc를 눌러야 메뉴가 열린다. 자동 이동 중에는 취소 방법과 남은 경로를 표시한다.
 - **원인:** 일시정지 메뉴가 Player Update보다 먼저 Esc를 소비해 Player 내부 취소 분기가 프레임 순서에 따라 실행되지 않을 수 있었다. 선택 경로 선도 이동 시작 시 숨겨졌다.
-- **수정:** 메뉴를 여는 시점에 Player 자동 이동·휴식을 명시적으로 취소한다. 이동 중 HUD 안내와 남은 경로 선을 하나의 LineRenderer로 갱신한다.
+- **수정:** Pause 입력 우선순위에서 Player 자동 이동·휴식을 먼저 취소하고 해당 Esc를 소비한다. 이동 중 HUD 안내와 남은 경로 선을 하나의 LineRenderer로 갱신한다.
 - **회귀 범위:** Esc·우클릭·방향키 취소, 적 발견 정지, 자동 휴식 취소, 메뉴 종료 후 자동 행동 미재개.
