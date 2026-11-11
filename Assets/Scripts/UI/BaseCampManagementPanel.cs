@@ -10,14 +10,41 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
     private SortMode sortMode;
     private LootItemType? typeFilter;
     private LootRarity? rarityFilter;
-    private Vector2 scroll;
+    private Vector2 merchantScroll;
+    private Vector2 stashScroll;
     private string notice;
     private string pendingUniqueSale;
 
     private void OnGUI()
     {
-        GUILayout.BeginArea(new Rect(20, 20, 520, Screen.height - 40), GUI.skin.box);
-        GUILayout.Label($"영지 정비   Gold {LootRuntimeState.Gold}");
+        const float sideWidth = 360f;
+        DrawMerchantPanel(new Rect(20, 20, sideWidth, Screen.height - 40));
+        DrawStashPanel(new Rect(Screen.width - sideWidth - 20, 20, sideWidth, Screen.height - 40));
+    }
+
+    private void DrawMerchantPanel(Rect area)
+    {
+        GUILayout.BeginArea(area, GUI.skin.box);
+        GUILayout.Label($"상인   Gold {LootRuntimeState.Gold}");
+        GUILayout.Label("판매할 아이템");
+
+        merchantScroll = GUILayout.BeginScrollView(merchantScroll);
+        GUILayout.Label("Stash");
+        foreach (var item in LootRuntimeState.Stash.ToArray()) DrawSaleItem(item, "Stash");
+        GUILayout.Space(6);
+        GUILayout.Label("출격 가방");
+        foreach (var item in LootRuntimeState.RunBag.ToArray()) DrawSaleItem(item, "가방");
+        GUILayout.EndScrollView();
+
+        DrawUniqueSaleConfirmation();
+        if (!string.IsNullOrEmpty(notice)) GUILayout.Label(notice);
+        GUILayout.EndArea();
+    }
+
+    private void DrawStashPanel(Rect area)
+    {
+        GUILayout.BeginArea(area, GUI.skin.box);
+        GUILayout.Label("장비 · 가방 · Stash");
         GUILayout.Label("장착 장비");
         DrawEquipment(LootItemType.Weapon, "무기");
         DrawEquipment(LootItemType.Shield, "방패");
@@ -25,7 +52,7 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
 
         GUILayout.Space(6);
         GUILayout.Label($"출격 가방 {LootRuntimeState.RunBag.Count}/{LootRuntimeState.BagCapacity}");
-        foreach (var item in LootRuntimeState.RunBag.ToArray()) DrawItem(item, false);
+        foreach (var item in LootRuntimeState.RunBag.ToArray()) DrawStorageItem(item, false);
 
         GUILayout.Space(6);
         GUILayout.BeginHorizontal();
@@ -35,18 +62,9 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
         GUILayout.EndHorizontal();
 
         GUILayout.Label("Stash");
-        scroll = GUILayout.BeginScrollView(scroll);
-        foreach (var item in FilteredStash()) DrawItem(item, true);
+        stashScroll = GUILayout.BeginScrollView(stashScroll);
+        foreach (var item in FilteredStash()) DrawStorageItem(item, true);
         GUILayout.EndScrollView();
-
-        if (!string.IsNullOrEmpty(pendingUniqueSale))
-        {
-            GUILayout.Label("Unique 장비를 판매할까요?");
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Button("판매 확정")) { LootRuntimeState.TrySell(pendingUniqueSale); pendingUniqueSale = null; }
-            if (GUILayout.Button("취소")) pendingUniqueSale = null;
-            GUILayout.EndHorizontal();
-        }
         if (!string.IsNullOrEmpty(notice)) GUILayout.Label(notice);
         GUILayout.EndArea();
     }
@@ -62,11 +80,11 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
         GUILayout.EndHorizontal();
     }
 
-    private void DrawItem(LootItemInstance item, bool inStash)
+    private void DrawStorageItem(LootItemInstance item, bool inStash)
     {
         if (item?.Definition == null) return;
         GUILayout.BeginHorizontal();
-        GUILayout.Label($"[{item.Definition.Rarity}] {item.Definition.Name}", GUILayout.Width(245));
+        GUILayout.Label($"[{item.Definition.Rarity}] {item.Definition.Name}", GUILayout.Width(170));
         if (GUILayout.Button(inStash ? "가방" : "Stash", GUILayout.Width(60)))
         {
             bool ok = inStash ? LootRuntimeState.MoveStashItemToBag(item.InstanceId) : LootRuntimeState.MoveBagItemToStash(item.InstanceId);
@@ -77,11 +95,33 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
             if (inStash) LootRuntimeState.TryEquipFromStash(item.InstanceId);
             else LootRuntimeState.TryEquipFromBaseCampBag(item.InstanceId);
         }
-        if (GUILayout.Button($"판매 {item.Definition.SellPrice}G", GUILayout.Width(80)))
+        GUILayout.EndHorizontal();
+    }
+
+    private void DrawSaleItem(LootItemInstance item, string source)
+    {
+        if (item?.Definition == null) return;
+        GUILayout.BeginHorizontal();
+        GUILayout.Label($"[{source}] [{item.Definition.Rarity}] {item.Definition.Name}");
+        if (GUILayout.Button($"{item.Definition.SellPrice}G", GUILayout.Width(70)))
         {
             if (item.Definition.Rarity >= LootRarity.Unique) pendingUniqueSale = item.InstanceId;
-            else LootRuntimeState.TrySell(item.InstanceId);
+            else if (LootRuntimeState.TrySell(item.InstanceId)) notice = $"{item.Definition.Name} 판매 완료";
         }
+        GUILayout.EndHorizontal();
+    }
+
+    private void DrawUniqueSaleConfirmation()
+    {
+        if (string.IsNullOrEmpty(pendingUniqueSale)) return;
+        GUILayout.Label("Unique 장비를 판매할까요?");
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("판매 확정"))
+        {
+            LootRuntimeState.TrySell(pendingUniqueSale);
+            pendingUniqueSale = null;
+        }
+        if (GUILayout.Button("취소")) pendingUniqueSale = null;
         GUILayout.EndHorizontal();
     }
 

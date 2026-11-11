@@ -10,6 +10,9 @@
 - Stash 등급·부위·획득 순 정렬과 부위·등급 필터
 - save_version 2 Gold 저장과 v1 기본값 0 마이그레이션
 
+### 수정
+- BaseCamp에 중복 생성되던 기존 Stash 패널을 제거하고 왼쪽 상인·오른쪽 장비·가방·Stash로 역할 분리
+
 ### 검증
 - 전체 구현 완료 후 `QA/TESTCASES_M5.md` 통합 체크리스트로 Play 검증 예정
 
