@@ -1050,7 +1050,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Fixed — Play 회귀 대기 (2026-11-11) |
+| 상태 | Closed — 사용자 Play 확인 (2026-11-11, TC-M5-87) |
 | Jira | 미등록 |
 | 심각도 | Major (사용자 판단: 장비 확인이 핵심 정보라 중요) |
 | 우선순위 | P1 |
