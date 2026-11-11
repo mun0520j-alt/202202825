@@ -109,7 +109,8 @@ public static class LootItemDatabase
                 DefenseBonus = ParseInt(fields[5]),
                 CapacityBonus = ParseInt(fields[6]),
                 IconKey = fields[7].Trim(),
-                DropWeight = ParseInt(fields[8])
+                DropWeight = ParseInt(fields[8]),
+                SellPrice = fields.Length > 9 ? ParseInt(fields[9]) : DefaultSellPrice(rarity)
             });
         }
         Debug.Log($"[LootItemDatabase] CSV 아이템 {items.Count}개 로드 완료.");
@@ -118,5 +119,16 @@ public static class LootItemDatabase
     private static int ParseInt(string value)
     {
         return int.TryParse(value.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int result) ? result : 0;
+    }
+
+    private static int DefaultSellPrice(LootRarity rarity)
+    {
+        switch (rarity)
+        {
+            case LootRarity.Rare: return 30;
+            case LootRarity.Epic: return 80;
+            case LootRarity.Unique: return 200;
+            default: return 10;
+        }
     }
 }

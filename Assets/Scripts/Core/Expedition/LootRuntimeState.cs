@@ -16,6 +16,7 @@ public static class LootRuntimeState
     public static IReadOnlyDictionary<LootItemType, LootItemInstance> EquippedLoot => equippedLoot;
     public static int EquippedBagCapacityBonus { get; private set; }
     public static bool HasBasicLoadout { get; private set; }
+    public static int Gold { get; private set; }
     public static int BagCapacity => BaseBagCapacity + Mathf.Max(0, EquippedBagCapacityBonus);
     public static event Action Changed;
 
@@ -28,6 +29,7 @@ public static class LootRuntimeState
         unequippedBasicSlots.Clear();
         EquippedBagCapacityBonus = 0;
         HasBasicLoadout = false;
+        Gold = 0;
         Changed = null;
     }
 
@@ -114,6 +116,51 @@ public static class LootRuntimeState
         return true;
     }
 
+    public static bool MoveStashItemToBag(string instanceId)
+    {
+        var item = stash.Find(candidate => candidate.InstanceId == instanceId);
+        if (item == null || runBag.Count >= BagCapacity) return false;
+        stash.Remove(item);
+        runBag.Add(item);
+        Changed?.Invoke();
+        return true;
+    }
+
+    public static bool TryEquipFromStash(string instanceId)
+    {
+        var item = stash.Find(candidate => candidate.InstanceId == instanceId);
+        if (item?.Definition == null || item.Definition.Type == LootItemType.Bag) return false;
+        stash.Remove(item);
+        if (equippedLoot.TryGetValue(item.Definition.Type, out var previous) && previous != null) stash.Add(previous);
+        equippedLoot[item.Definition.Type] = item;
+        unequippedBasicSlots.Remove(item.Definition.Type);
+        Changed?.Invoke();
+        return true;
+    }
+
+    public static bool TryEquipFromBaseCampBag(string instanceId)
+    {
+        var item = runBag.Find(candidate => candidate.InstanceId == instanceId);
+        if (item?.Definition == null || item.Definition.Type == LootItemType.Bag) return false;
+        runBag.Remove(item);
+        if (equippedLoot.TryGetValue(item.Definition.Type, out var previous) && previous != null) stash.Add(previous);
+        equippedLoot[item.Definition.Type] = item;
+        unequippedBasicSlots.Remove(item.Definition.Type);
+        Changed?.Invoke();
+        return true;
+    }
+
+    public static bool TrySell(string instanceId)
+    {
+        var item = stash.Find(candidate => candidate.InstanceId == instanceId)
+            ?? runBag.Find(candidate => candidate.InstanceId == instanceId);
+        if (item?.Definition == null || item.Definition.Id.StartsWith("basic_", StringComparison.Ordinal)) return false;
+        if (!stash.Remove(item)) runBag.Remove(item);
+        Gold += Mathf.Max(0, item.Definition.SellPrice);
+        Changed?.Invoke();
+        return true;
+    }
+
     public static void ResolveRun(ExpeditionResult result)
     {
         if (result == ExpeditionResult.Escaped) return;
@@ -130,7 +177,8 @@ public static class LootRuntimeState
         IEnumerable<LootItemInstance> restoredStash,
         IEnumerable<LootItemInstance> restoredEquipment,
         IEnumerable<LootItemType> restoredUnequippedBasicSlots,
-        bool hasBasicLoadout)
+        bool hasBasicLoadout,
+        int gold = 0)
     {
         runBag.Clear();
         stash.Clear();
@@ -153,6 +201,7 @@ public static class LootRuntimeState
         }
 
         HasBasicLoadout = hasBasicLoadout;
+        Gold = Mathf.Max(0, gold);
         EquippedBagCapacityBonus = equippedLoot.TryGetValue(LootItemType.Bag, out var bag) && bag?.Definition != null
             ? bag.Definition.CapacityBonus : 0;
         Changed?.Invoke();

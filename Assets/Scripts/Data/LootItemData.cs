@@ -29,6 +29,7 @@ public sealed class LootItemData
     public int CapacityBonus;
     public string IconKey;
     public int DropWeight;
+    public int SellPrice;
 }
 
 [Serializable]

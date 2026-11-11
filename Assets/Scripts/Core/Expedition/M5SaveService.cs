@@ -8,7 +8,7 @@ using UnityEngine;
 // LootRuntimeState가 상태를 소유하고, 이 클래스는 저장 파일 직렬화와 교체만 담당한다.
 public static class M5SaveService
 {
-    private const int CurrentSaveVersion = 1;
+    private const int CurrentSaveVersion = 2;
     private const string SaveFolderName = "Save";
     private const string SaveFileName = "save.json";
     private const string BackupFileName = "save.bak";
@@ -112,7 +112,8 @@ public static class M5SaveService
                 RestoreItems(data.stash),
                 RestoreItems(data.equipped),
                 RestoreBasicSlots(data.unequipped_basic_slots),
-                data.has_basic_loadout);
+                data.has_basic_loadout,
+                data.gold);
         }
         finally
         {
@@ -185,6 +186,7 @@ public static class M5SaveService
                 : new List<string>(),
             settings = new SaveSettings(),
             expedition_in_progress = expeditionInProgress
+            ,gold = LootRuntimeState.Gold
         };
     }
 
@@ -247,6 +249,7 @@ public static class M5SaveService
         public List<string> unequipped_basic_slots = new List<string>();
         public SaveSettings settings = new SaveSettings();
         public bool expedition_in_progress;
+        public int gold;
     }
 
     [Serializable]
