@@ -10,6 +10,7 @@
 | TD-006 | Fixed Seed 모드 화면 표시 | Fixed 모드가 PlayerPrefs에 유지되어 일반 측정 원정이 Fixed로 기록될 위험이 있음 | Medium | Open | M4 |
 | TD-007 | 작은 정수 단위로 인한 방어 성장 상한 | 기존 수치에서는 Rare 방어구 1부위만으로 최소 피해에 도달해 상위 등급의 가치가 사라졌음 | High | Resolved — 전투 단위 확대 및 등급별 방어 수치 재조정 | M4 |
 | TD-008 | 휴식 회복량 설정값 분리 | 일반 휴식 +10과 보스 처치 후 +20이 `PlayerTurnActor`의 `bossDefeated ? 20 : 10` 조건식에 직접 들어 있어 향후 회복 배율 조정 시 코드 수정이 필요함 | Low | Open | M5 후보 |
+| TD-009 | 출격 가방 목록·격자 이중 표현 제거 | 기존 저장·측정 호환을 위해 `runBag` 목록과 `LootGridModel`을 함께 유지해 모든 이동에서 동기화 누락 위험이 있음 | Medium | Open | M6.1 |
 
 ## 관리 규칙
 
