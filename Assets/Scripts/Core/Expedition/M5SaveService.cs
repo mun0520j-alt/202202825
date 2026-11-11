@@ -8,7 +8,7 @@ using UnityEngine;
 // LootRuntimeState가 상태를 소유하고, 이 클래스는 저장 파일 직렬화와 교체만 담당한다.
 public static class M5SaveService
 {
-    private const int CurrentSaveVersion = 2;
+    private const int CurrentSaveVersion = 3;
     private const string SaveFolderName = "Save";
     private const string SaveFileName = "save.json";
     private const string BackupFileName = "save.bak";
@@ -108,10 +108,20 @@ public static class M5SaveService
         }
 
         if (recoveredFromBackup) Debug.LogWarning("[Save] save.json이 손상되어 save.bak으로 복구했습니다.");
+        bool migrated = data.save_version < CurrentSaveVersion;
         Restore(data);
-        if (!data.expedition_in_progress) return;
+        if (!data.expedition_in_progress)
+        {
+            if (migrated)
+            {
+                Write(Capture(expeditionInProgress: false, includeExpeditionItems: true));
+                Debug.Log($"[Save] v{data.save_version} 세이브를 v{CurrentSaveVersion}으로 마이그레이션했습니다.");
+            }
+            return;
+        }
 
         recoveryNotice = "이전 원정이 종료되어 MIA 처리되었습니다.";
+        data.save_version = CurrentSaveVersion;
         data.expedition_in_progress = false;
         data.saved_at = DateTime.UtcNow.ToString("O");
         Write(data);
@@ -145,7 +155,7 @@ public static class M5SaveService
         try
         {
             LootRuntimeState.RestorePersistentState(
-                RestoreItems(data.run_bag),
+                RestoreRunBag(data.run_bag, data.save_version),
                 RestoreItems(data.stash),
                 RestoreItems(data.equipped),
                 RestoreBasicSlots(data.unequipped_basic_slots),
@@ -157,6 +167,24 @@ public static class M5SaveService
         {
             isRestoring = false;
         }
+    }
+
+    private static List<LootGridRestoreItem> RestoreRunBag(List<SavedItem> savedItems, int saveVersion)
+    {
+        var result = new List<LootGridRestoreItem>();
+        if (savedItems == null) return result;
+        foreach (var saved in savedItems)
+        {
+            LootItemData definition = ResolveDefinition(saved.item_id);
+            if (definition == null)
+            {
+                Debug.LogWarning($"[Save] CSV에 없는 item_id를 건너뜁니다: {saved.item_id}");
+                continue;
+            }
+            var item = new LootItemInstance(definition, saved.instance_id);
+            result.Add(new LootGridRestoreItem(item, saved.x, saved.y, saved.rotated, saveVersion >= 3));
+        }
+        return result;
     }
 
     private static List<LootItemInstance> RestoreItems(List<SavedItem> savedItems)
@@ -217,7 +245,7 @@ public static class M5SaveService
             save_version = CurrentSaveVersion,
             saved_at = DateTime.UtcNow.ToString("O"),
             stash = SaveItems(LootRuntimeState.Stash),
-            run_bag = includeExpeditionItems ? SaveItems(LootRuntimeState.RunBag) : new List<SavedItem>(),
+            run_bag = includeExpeditionItems ? SaveRunBagItems() : new List<SavedItem>(),
             equipped = includeExpeditionItems ? SaveItems(LootRuntimeState.EquippedLoot.Values) : new List<SavedItem>(),
             has_basic_loadout = includeExpeditionItems && LootRuntimeState.HasBasicLoadout,
             unequipped_basic_slots = includeExpeditionItems
@@ -228,6 +256,26 @@ public static class M5SaveService
             expedition_in_progress = expeditionInProgress
             ,gold = LootRuntimeState.Gold
         };
+    }
+
+    private static List<SavedItem> SaveRunBagItems()
+    {
+        var result = new List<SavedItem>();
+        foreach (LootItemInstance item in LootRuntimeState.RunBag)
+        {
+            if (item?.Definition == null) continue;
+            LootGridPlacement placement = LootRuntimeState.RunBagGrid.Find(item.InstanceId);
+            if (placement == null) continue;
+            result.Add(new SavedItem
+            {
+                item_id = item.Definition.Id,
+                instance_id = item.InstanceId,
+                x = placement.X,
+                y = placement.Y,
+                rotated = placement.Rotated
+            });
+        }
+        return result;
     }
 
     private static List<SavedItem> SaveItems(IEnumerable<LootItemInstance> items)
@@ -297,6 +345,9 @@ public static class M5SaveService
     {
         public string item_id;
         public string instance_id;
+        public int x;
+        public int y;
+        public bool rotated;
     }
 
     [Serializable]

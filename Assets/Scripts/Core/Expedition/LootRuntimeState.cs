@@ -220,7 +220,7 @@ public static class LootRuntimeState
     }
 
     public static void RestorePersistentState(
-        IEnumerable<LootItemInstance> restoredRunBag,
+        IEnumerable<LootGridRestoreItem> restoredRunBag,
         IEnumerable<LootItemInstance> restoredStash,
         IEnumerable<LootItemInstance> restoredEquipment,
         IEnumerable<LootItemType> restoredUnequippedBasicSlots,
@@ -253,9 +253,13 @@ public static class LootRuntimeState
         if (restoredRunBag != null)
         {
             int moved = 0;
-            foreach (var item in restoredRunBag)
+            foreach (var restored in restoredRunBag)
             {
-                if (item != null && runBagGrid.TryAutoPlace(item, out _)) runBag.Add(item);
+                LootItemInstance item = restored?.Item;
+                bool placed = item != null && (restored.HasPlacement
+                    ? runBagGrid.TryPlace(item, restored.X, restored.Y, restored.Rotated)
+                    : runBagGrid.TryAutoPlace(item, out _));
+                if (placed) runBag.Add(item);
                 else if (item != null)
                 {
                     stash.Add(item);
@@ -305,5 +309,23 @@ public static class LootRuntimeState
     {
         LastFailureReason = reason;
         return false;
+    }
+}
+
+public sealed class LootGridRestoreItem
+{
+    public LootItemInstance Item { get; }
+    public int X { get; }
+    public int Y { get; }
+    public bool Rotated { get; }
+    public bool HasPlacement { get; }
+
+    public LootGridRestoreItem(LootItemInstance item, int x, int y, bool rotated, bool hasPlacement)
+    {
+        Item = item;
+        X = x;
+        Y = y;
+        Rotated = rotated;
+        HasPlacement = hasPlacement;
     }
 }
