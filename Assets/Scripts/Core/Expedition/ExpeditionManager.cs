@@ -14,6 +14,7 @@ public sealed class ExpeditionManager : MonoBehaviour
     private DungeonClock dungeonClock;
     private bool transitionRequested;
     private bool miaResolutionPending;
+    private bool deathResolutionPending;
     private PlayerTurnActor exitProcedurePlayer;
 
     public float FloorChangeTickCost => floorChangeTickCost;
@@ -78,9 +79,27 @@ public sealed class ExpeditionManager : MonoBehaviour
     public void CompleteDeath()
     {
         if (!ExpeditionSession.IsActive) return;
+        deathResolutionPending = false;
         transitionRequested = true;
+        Debug.Log($"[DeathFlow] Dead 결과 확정 — {ExpeditionSession.CurrentFloor}층, {ElapsedTicks:0} Tick");
         ExpeditionSession.Complete(ExpeditionResult.Dead);
         SceneManager.LoadScene("BaseCamp");
+    }
+
+    public void RequestDeathResolution()
+    {
+        if (!ExpeditionSession.IsActive || deathResolutionPending) return;
+        deathResolutionPending = true;
+        StartCoroutine(ResolveDeathNextFrame());
+    }
+
+    private IEnumerator ResolveDeathNextFrame()
+    {
+        yield return null;
+        if (!ExpeditionSession.IsActive) yield break;
+        var player = PlayerTurnActor.Instance;
+        if (player != null && player.IsDead) CompleteDeath();
+        else deathResolutionPending = false;
     }
 
     private IEnumerator ResolveExitAfterTick()

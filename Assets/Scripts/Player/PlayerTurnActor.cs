@@ -625,6 +625,8 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         {
             isDead = true;
             InventoryPanel.CloseForResult();
+            Debug.Log($"[DeathFlow] Player HP 0 — 사망 결과 처리 예약, 가방 {LootRuntimeState.RunBag.Count}/{LootRuntimeState.BagCapacity}");
+            ExpeditionManager.Instance?.RequestDeathResolution();
         }
     }
 
