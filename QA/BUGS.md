@@ -1015,7 +1015,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 항목 | 내용 |
 |---|---|
 | 상태 | Closed — 사용자 Play 확인 (2026-11-11) |
-| Jira | 미등록 |
+| Jira | DUN-52 |
 | 심각도 | Critical |
 | 우선순위 | P0 |
 | 발견 단계 | M5 가방 통합 Play |
@@ -1034,7 +1034,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 항목 | 내용 |
 |---|---|
 | 상태 | Closed — 사용자 Play 확인 (2026-11-11, TC-M5-88~90) |
-| Jira | 미등록 |
+| Jira | DUN-54 |
 | 심각도 | Major |
 | 우선순위 | P1 |
 | 발견 단계 | M5 통합 Play 준비 |
@@ -1051,7 +1051,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 항목 | 내용 |
 |---|---|
 | 상태 | Closed — 사용자 Play 확인 (2026-11-11, TC-M5-87) |
-| Jira | 미등록 |
+| Jira | DUN-53 |
 | 심각도 | Major (사용자 판단: 장비 확인이 핵심 정보라 중요) |
 | 우선순위 | P1 |
 | 발견 단계 | M5 통합 Play (체크리스트 2-1) |
