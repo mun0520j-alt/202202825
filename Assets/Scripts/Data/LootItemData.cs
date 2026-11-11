@@ -30,6 +30,10 @@ public sealed class LootItemData
     public string IconKey;
     public int DropWeight;
     public int SellPrice;
+    public int GridWidth;
+    public int GridHeight;
+    public int BagGridWidth;
+    public int BagGridHeight;
 }
 
 [Serializable]
