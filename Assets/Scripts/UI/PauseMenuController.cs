@@ -70,6 +70,11 @@ public sealed class PauseMenuController : MonoBehaviour
             escapeConsumedFrame = Time.frameCount;
             return; // 해당 UI가 같은 프레임에 자신을 닫는다.
         }
+        if (PlayerTurnActor.Instance?.TryCancelAutomationForEscape() == true)
+        {
+            escapeConsumedFrame = Time.frameCount;
+            return;
+        }
         Open(View.Menu);
     }
 
@@ -138,7 +143,6 @@ public sealed class PauseMenuController : MonoBehaviour
 
     private void Open(View target)
     {
-        PlayerTurnActor.Instance?.CancelAutomationForPause();
         view = target;
         Time.timeScale = 0f;
         suspendedEventSystem = EventSystem.current;

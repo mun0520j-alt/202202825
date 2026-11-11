@@ -720,11 +720,16 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         if (mouseSelectionMarker != null && !selectedMouseCell.HasValue) mouseSelectionMarker.SetActive(false);
     }
 
-    public void CancelAutomationForPause()
+    public bool TryCancelAutomationForEscape()
     {
+        bool wasAutomated = HasQueuedAutoPath() || autoRestActive || spaceHoldActivated || queuedWaitInput;
+        if (!wasAutomated) return false;
+
+        queuedWaitInput = false;
         CancelAutoRest(true);
         ClearMouseSelection();
         ClearQueuedAutoPath();
+        return true;
     }
 
     private bool HasQueuedAutoPath()
