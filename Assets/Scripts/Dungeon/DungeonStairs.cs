@@ -102,6 +102,7 @@ public sealed class DungeonStairs : MonoBehaviour
 
     private void Update()
     {
+        if (PauseMenuController.BlocksWorldInput) return;
         var player = PlayerTurnActor.Instance;
         if (InventoryPanel.IsOpen || GroundLoot.IsSelectionOpen) return;
         if (requestSent || player == null) return;

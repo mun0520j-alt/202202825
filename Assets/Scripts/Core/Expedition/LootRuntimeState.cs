@@ -16,7 +16,9 @@ public static class LootRuntimeState
     public static IReadOnlyDictionary<LootItemType, LootItemInstance> EquippedLoot => equippedLoot;
     public static int EquippedBagCapacityBonus { get; private set; }
     public static bool HasBasicLoadout { get; private set; }
+    public static int Gold { get; private set; }
     public static int BagCapacity => BaseBagCapacity + Mathf.Max(0, EquippedBagCapacityBonus);
+    public static string LastFailureReason { get; private set; }
     public static event Action Changed;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -28,6 +30,8 @@ public static class LootRuntimeState
         unequippedBasicSlots.Clear();
         EquippedBagCapacityBonus = 0;
         HasBasicLoadout = false;
+        Gold = 0;
+        LastFailureReason = null;
         Changed = null;
     }
 
@@ -68,11 +72,19 @@ public static class LootRuntimeState
     public static bool TryEquipFromBag(string instanceId)
     {
         var item = runBag.Find(candidate => candidate.InstanceId == instanceId);
-        if (item == null || item.Definition == null || item.Definition.Type == LootItemType.Bag) return false;
+        if (item?.Definition == null) return Fail("장착할 아이템을 찾을 수 없습니다.");
+        int resultingCount = runBag.Count - 1;
+        if (equippedLoot.TryGetValue(item.Definition.Type, out var previous) && previous != null) resultingCount++;
+        int resultingCapacity = item.Definition.Type == LootItemType.Bag
+            ? BaseBagCapacity + Mathf.Max(0, item.Definition.CapacityBonus)
+            : BagCapacity;
+        if (resultingCount > resultingCapacity)
+            return Fail($"가방에 아이템이 {resultingCount}개라 교체할 수 없음");
         runBag.Remove(item);
-        if (equippedLoot.TryGetValue(item.Definition.Type, out var previous) && previous != null) runBag.Add(previous);
+        if (previous != null) runBag.Add(previous);
         equippedLoot[item.Definition.Type] = item;
-        EquippedBagCapacityBonus = equippedLoot.TryGetValue(LootItemType.Bag, out var bag) ? bag.Definition.CapacityBonus : 0;
+        RefreshBagCapacity();
+        LastFailureReason = null;
         Changed?.Invoke();
         return true;
     }
@@ -98,18 +110,87 @@ public static class LootRuntimeState
 
     public static bool TryUnequipToBag(LootItemType type)
     {
-        if (!equippedLoot.TryGetValue(type, out var item) || item == null || runBag.Count >= BagCapacity) return false;
+        if (!equippedLoot.TryGetValue(type, out var item) || item == null) return Fail("해제할 장비가 없습니다.");
+        int resultingCapacity = type == LootItemType.Bag ? BaseBagCapacity : BagCapacity;
+        if (runBag.Count + 1 > resultingCapacity)
+            return Fail($"가방에 아이템이 {runBag.Count}개라 해제할 수 없음");
         equippedLoot.Remove(type);
         runBag.Add(item);
+        RefreshBagCapacity();
+        LastFailureReason = null;
         Changed?.Invoke();
         return true;
     }
 
     public static bool TryUnequipToStash(LootItemType type)
     {
-        if (!equippedLoot.TryGetValue(type, out var item) || item == null) return false;
+        if (!equippedLoot.TryGetValue(type, out var item) || item == null) return Fail("해제할 장비가 없습니다.");
+        if (type == LootItemType.Bag && runBag.Count > BaseBagCapacity)
+            return Fail($"가방에 아이템이 {runBag.Count}개라 해제할 수 없음");
         equippedLoot.Remove(type);
         stash.Add(item);
+        RefreshBagCapacity();
+        LastFailureReason = null;
+        Changed?.Invoke();
+        return true;
+    }
+
+    public static bool MoveStashItemToBag(string instanceId)
+    {
+        var item = stash.Find(candidate => candidate.InstanceId == instanceId);
+        if (item == null || runBag.Count >= BagCapacity) return false;
+        stash.Remove(item);
+        runBag.Add(item);
+        Changed?.Invoke();
+        return true;
+    }
+
+    public static bool TryEquipFromStash(string instanceId)
+    {
+        var item = stash.Find(candidate => candidate.InstanceId == instanceId);
+        if (item?.Definition == null) return Fail("장착할 아이템을 찾을 수 없습니다.");
+        int resultingCapacity = item.Definition.Type == LootItemType.Bag
+            ? BaseBagCapacity + Mathf.Max(0, item.Definition.CapacityBonus)
+            : BagCapacity;
+        if (runBag.Count > resultingCapacity)
+            return Fail($"가방에 아이템이 {runBag.Count}개라 교체할 수 없음");
+        stash.Remove(item);
+        if (equippedLoot.TryGetValue(item.Definition.Type, out var previous) && previous != null) stash.Add(previous);
+        equippedLoot[item.Definition.Type] = item;
+        unequippedBasicSlots.Remove(item.Definition.Type);
+        RefreshBagCapacity();
+        LastFailureReason = null;
+        Changed?.Invoke();
+        return true;
+    }
+
+    public static bool TryEquipFromBaseCampBag(string instanceId)
+    {
+        var item = runBag.Find(candidate => candidate.InstanceId == instanceId);
+        if (item?.Definition == null) return Fail("장착할 아이템을 찾을 수 없습니다.");
+        int resultingCount = runBag.Count - 1;
+        int resultingCapacity = item.Definition.Type == LootItemType.Bag
+            ? BaseBagCapacity + Mathf.Max(0, item.Definition.CapacityBonus)
+            : BagCapacity;
+        if (resultingCount > resultingCapacity)
+            return Fail($"가방에 아이템이 {resultingCount}개라 교체할 수 없음");
+        runBag.Remove(item);
+        if (equippedLoot.TryGetValue(item.Definition.Type, out var previous) && previous != null) stash.Add(previous);
+        equippedLoot[item.Definition.Type] = item;
+        unequippedBasicSlots.Remove(item.Definition.Type);
+        RefreshBagCapacity();
+        LastFailureReason = null;
+        Changed?.Invoke();
+        return true;
+    }
+
+    public static bool TrySell(string instanceId)
+    {
+        var item = stash.Find(candidate => candidate.InstanceId == instanceId)
+            ?? runBag.Find(candidate => candidate.InstanceId == instanceId);
+        if (item?.Definition == null || item.Definition.Id.StartsWith("basic_", StringComparison.Ordinal)) return false;
+        if (!stash.Remove(item)) runBag.Remove(item);
+        Gold += Mathf.Max(0, item.Definition.SellPrice);
         Changed?.Invoke();
         return true;
     }
@@ -123,5 +204,63 @@ public static class LootRuntimeState
         EquippedBagCapacityBonus = 0;
         HasBasicLoadout = false;
         Changed?.Invoke();
+    }
+
+    public static void RestorePersistentState(
+        IEnumerable<LootItemInstance> restoredRunBag,
+        IEnumerable<LootItemInstance> restoredStash,
+        IEnumerable<LootItemInstance> restoredEquipment,
+        IEnumerable<LootItemType> restoredUnequippedBasicSlots,
+        bool hasBasicLoadout,
+        int gold = 0)
+    {
+        runBag.Clear();
+        stash.Clear();
+        equippedLoot.Clear();
+        unequippedBasicSlots.Clear();
+
+        if (restoredRunBag != null) runBag.AddRange(restoredRunBag);
+        if (restoredStash != null) stash.AddRange(restoredStash);
+        if (restoredEquipment != null)
+        {
+            foreach (var item in restoredEquipment)
+            {
+                if (item?.Definition == null) continue;
+                equippedLoot[item.Definition.Type] = item;
+            }
+        }
+        if (restoredUnequippedBasicSlots != null)
+        {
+            foreach (var type in restoredUnequippedBasicSlots) unequippedBasicSlots.Add(type);
+        }
+
+        HasBasicLoadout = hasBasicLoadout;
+        Gold = Mathf.Max(0, gold);
+        RefreshBagCapacity();
+        if (runBag.Count > BagCapacity)
+        {
+            int moved = 0;
+            while (runBag.Count > BagCapacity)
+            {
+                int last = runBag.Count - 1;
+                stash.Add(runBag[last]);
+                runBag.RemoveAt(last);
+                moved++;
+            }
+            Debug.LogWarning($"[Loadout] 변경된 가방 용량을 초과한 기존 세이브의 아이템 {moved}개를 Stash로 이동했습니다.");
+        }
+        Changed?.Invoke();
+    }
+
+    private static void RefreshBagCapacity()
+    {
+        EquippedBagCapacityBonus = equippedLoot.TryGetValue(LootItemType.Bag, out var bag) && bag?.Definition != null
+            ? Mathf.Max(0, bag.Definition.CapacityBonus) : 0;
+    }
+
+    private static bool Fail(string reason)
+    {
+        LastFailureReason = reason;
+        return false;
     }
 }

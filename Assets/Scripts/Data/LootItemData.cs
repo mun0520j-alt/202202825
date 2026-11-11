@@ -29,6 +29,7 @@ public sealed class LootItemData
     public int CapacityBonus;
     public string IconKey;
     public int DropWeight;
+    public int SellPrice;
 }
 
 [Serializable]
@@ -40,6 +41,12 @@ public sealed class LootItemInstance
     public LootItemInstance(LootItemData definition)
     {
         InstanceId = Guid.NewGuid().ToString("N");
+        Definition = definition;
+    }
+
+    public LootItemInstance(LootItemData definition, string instanceId)
+    {
+        InstanceId = string.IsNullOrWhiteSpace(instanceId) ? Guid.NewGuid().ToString("N") : instanceId;
         Definition = definition;
     }
 }

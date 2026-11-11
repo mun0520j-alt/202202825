@@ -70,6 +70,7 @@ public sealed class DungeonChest : MonoBehaviour
 
     private void Update()
     {
+        if (PauseMenuController.BlocksWorldInput) return;
         var player = PlayerTurnActor.Instance;
         if (InventoryPanel.IsOpen || GroundLoot.IsSelectionOpen) return;
         if (opened || opening || player == null || !Input.GetKeyDown(KeyCode.E)) return;

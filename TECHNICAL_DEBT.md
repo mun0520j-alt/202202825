@@ -3,7 +3,7 @@
 | ID | 항목 | 이유 | 우선순위 | 상태 | 목표 버전 |
 |---|---|---|---|---|---|
 | TD-001 | M2 가방·Stash의 즉시 모드 UI를 정식 Canvas UI로 교체 | 핵심 루팅·손실 흐름을 먼저 검증하기 위한 프로토타입 UI이며, 해상도·게임패드·시각 디자인 대응이 부족함 | Medium | Open | M2.1 |
-| TD-002 | Stash 영구 저장 도입 | 현재 Stash는 실행 중 여러 원정에는 유지되지만 게임 종료 후에는 초기화되는 런타임 저장소임. 기존 목표 시점인 `M3 이전`을 넘겨 일정 재결정이 필요함 | Medium | Open — 일정 재검토 | M3 결정 필요 |
+| TD-002 | Stash 영구 저장 도입 | Stash·장비·영지 대기 가방의 파일 저장, 백업 복구, 원정 중 종료 MIA 처리가 필요함 | Medium | In Progress — v1 구현, Play 검증 대기 | M5 |
 | TD-003 | Unity 6 폐기 예정 탐색 API 교체 | 컴파일은 성공하지만 `FindObjectOfType`, `FindObjectsOfType`, `GetInstanceID` 경고가 누적되어 향후 Unity 버전 호환성과 탐색 비용에 위험이 있음 | Low | Open | M3.1 |
 | TD-004 | Confluence 테스트 결과 수동 동기화 | 리포의 TC가 Pass로 갱신돼도 Confluence 초기 업로드본이 미실행 상태로 남을 수 있음 | Medium | Open | M3.1 |
 | TD-005 | 디버그 원정 제외 로그에 조작 원인 표시 | F4·F5·Tick·HP 조작이 모두 같은 제외 문구를 사용해 측정 데이터 감사 시 원인을 구분하기 어려움 | Low | Open | M4 |

@@ -42,6 +42,7 @@ public sealed class DungeonDoor : MonoBehaviour
 
     private void Update()
     {
+        if (PauseMenuController.BlocksWorldInput) return;
         if (!Input.GetKeyDown(KeyCode.E) || InventoryPanel.IsOpen || GroundLoot.IsSelectionOpen) return;
         var player = PlayerTurnActor.Instance;
         if (player == null || player.FloorTilemap != floor || !player.IsReadyForInput

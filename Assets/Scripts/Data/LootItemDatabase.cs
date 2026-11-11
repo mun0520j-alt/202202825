@@ -22,7 +22,7 @@ public static class LootItemDatabase
     {
         EnsureLoaded();
         LootRarity rarity = RollRarity(floor, rng);
-        var candidates = items.Where(item => item.Rarity == rarity && item.DropWeight > 0 && item.Type != LootItemType.Bag).ToList();
+        var candidates = items.Where(item => item.Rarity == rarity && item.DropWeight > 0).ToList();
         if (candidates.Count == 0) candidates = items.Where(item => item.Rarity == LootRarity.Normal && item.DropWeight > 0).ToList();
         if (candidates.Count == 0) return null;
 
@@ -36,10 +36,17 @@ public static class LootItemDatabase
         return candidates[candidates.Count - 1];
     }
 
+    public static LootItemData FindById(string itemId)
+    {
+        if (string.IsNullOrWhiteSpace(itemId)) return null;
+        EnsureLoaded();
+        return items.FirstOrDefault(item => string.Equals(item.Id, itemId, StringComparison.Ordinal));
+    }
+
     public static LootItemData Roll(LootRarity rarity, System.Random rng)
     {
         EnsureLoaded();
-        var candidates = items.Where(item => item.Rarity == rarity && item.DropWeight > 0 && item.Type != LootItemType.Bag).ToList();
+        var candidates = items.Where(item => item.Rarity == rarity && item.DropWeight > 0).ToList();
         if (candidates.Count == 0) return null;
         int totalWeight = candidates.Sum(item => Mathf.Max(1, item.DropWeight));
         int roll = rng.Next(totalWeight);
@@ -102,7 +109,8 @@ public static class LootItemDatabase
                 DefenseBonus = ParseInt(fields[5]),
                 CapacityBonus = ParseInt(fields[6]),
                 IconKey = fields[7].Trim(),
-                DropWeight = ParseInt(fields[8])
+                DropWeight = ParseInt(fields[8]),
+                SellPrice = fields.Length > 9 ? ParseInt(fields[9]) : DefaultSellPrice(rarity)
             });
         }
         Debug.Log($"[LootItemDatabase] CSV 아이템 {items.Count}개 로드 완료.");
@@ -111,5 +119,16 @@ public static class LootItemDatabase
     private static int ParseInt(string value)
     {
         return int.TryParse(value.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int result) ? result : 0;
+    }
+
+    private static int DefaultSellPrice(LootRarity rarity)
+    {
+        switch (rarity)
+        {
+            case LootRarity.Rare: return 30;
+            case LootRarity.Epic: return 80;
+            case LootRarity.Unique: return 200;
+            default: return 10;
+        }
     }
 }

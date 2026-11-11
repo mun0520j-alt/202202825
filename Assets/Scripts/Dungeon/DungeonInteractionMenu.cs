@@ -17,6 +17,7 @@ public sealed class DungeonInteractionMenu : MonoBehaviour
 
     private void Update()
     {
+        if (PauseMenuController.IsOpen) return;
         if (InventoryPanel.IsOpen) return;
         if (IsOpen)
         {

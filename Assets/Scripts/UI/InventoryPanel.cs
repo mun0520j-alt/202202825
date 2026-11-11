@@ -71,6 +71,7 @@ public class InventoryPanel : MonoBehaviour
         (EquipmentSlotType.MainWeapon2, "무기 2"),
         (EquipmentSlotType.OffHandShield, "방패"),
         (EquipmentSlotType.Armor, "방어구"),
+        (EquipmentSlotType.Bag, "가방"),
         // [2026-09-04 신규] 반지2/목걸이1 — 사용자 요청("장신구 칸 어딨어 반지 2개 목걸이
         // 한 개 슬롯")으로 슬롯만 미리 추가. VERTICAL_SLICE_SCOPE.md에서 반지/목걸이는
         // "추가 업데이트로 연기"로 명시 확정된 범위 밖 항목이라, 지금은 무기2와 마찬가지로
@@ -82,6 +83,11 @@ public class InventoryPanel : MonoBehaviour
     };
 
     private GameObject panelRoot;
+    // BUG-035 장비 슬롯 가독성: 장착 슬롯은 흰색, 빈 슬롯(반지·목걸이 등)은 회색으로 구분한다.
+    private static readonly Color FilledSlotLabelColor = Color.white;
+    private static readonly Color EmptySlotLabelColor = new Color(0.62f, 0.60f, 0.58f, 1f);
+    private const int UnequipButtonReservedWidth = 56;
+
     private PlayerEquipment subscribedEquipment;
     private readonly Dictionary<EquipmentSlotType, Image> equipmentSlotIcons = new Dictionary<EquipmentSlotType, Image>();
     private readonly Dictionary<EquipmentSlotType, Text> equipmentSlotLabels = new Dictionary<EquipmentSlotType, Text>();
@@ -100,6 +106,14 @@ public class InventoryPanel : MonoBehaviour
     {
         if (activeInstance != null && activeInstance.panelRoot != null) activeInstance.panelRoot.SetActive(false);
         IsOpen = false;
+    }
+
+    public static bool CloseForEscape()
+    {
+        if (!IsOpen || activeInstance == null || activeInstance.panelRoot == null) return false;
+        activeInstance.panelRoot.SetActive(false);
+        IsOpen = false;
+        return true;
     }
 
     // [2026-09-04 신규] 에디터 메뉴(BuildHudInScene)가 "컴포넌트는 이미 붙어있는데(Awake가 다시
@@ -142,6 +156,8 @@ public class InventoryPanel : MonoBehaviour
     private void Update()
     {
         if (!Application.isPlaying) return; // 에디터에서는 토글 입력 처리 안 함([ExecuteAlways] 대비).
+
+        if (PauseMenuController.BlocksWorldInput) return;
 
         if (Input.GetKeyDown(toggleKey))
         {
@@ -199,7 +215,11 @@ public class InventoryPanel : MonoBehaviour
             }
             if (equipmentSlotLabels.TryGetValue(kvp.Key, out var label))
             {
-                label.text = item != null ? item.itemName : GetSlotLabel(kvp.Key);
+                // 가방은 이름과 용량을 두 줄로 나눠 긴 이름에서도 용량이 잘리지 않게 한다 (BUG-035).
+                label.text = kvp.Key == EquipmentSlotType.Bag
+                    ? $"{(item != null ? item.itemName : "가방 없음")}\n{LootRuntimeState.RunBag.Count}/{LootRuntimeState.BagCapacity}"
+                    : item != null ? item.itemName : GetSlotLabel(kvp.Key);
+                label.color = item != null ? FilledSlotLabelColor : EmptySlotLabelColor;
             }
             if (equipmentUnequipButtons.TryGetValue(kvp.Key, out var button))
                 button.gameObject.SetActive(item != null && IsUnequippableSlot(kvp.Key));
@@ -215,7 +235,8 @@ public class InventoryPanel : MonoBehaviour
     private static bool IsUnequippableSlot(EquipmentSlotType slot)
     {
         return slot == EquipmentSlotType.MainWeapon1 || slot == EquipmentSlotType.MainWeapon2
-            || slot == EquipmentSlotType.OffHandShield || slot == EquipmentSlotType.Armor;
+            || slot == EquipmentSlotType.OffHandShield || slot == EquipmentSlotType.Armor
+            || slot == EquipmentSlotType.Bag;
     }
 
     private Button EnsureUnequipButton(Transform row, EquipmentSlotType slot)
@@ -249,11 +270,12 @@ public class InventoryPanel : MonoBehaviour
         return button;
     }
 
-    private static void UnequipSlot(EquipmentSlotType slot)
+    private void UnequipSlot(EquipmentSlotType slot)
     {
         var player = PlayerTurnActor.Instance;
         if (player == null || player.Equipment == null) return;
-        player.TryPerformTimedAction(TickCost.SwapWeaponInCombat, "Unequip", () => player.Equipment.TryUnequip(slot));
+        bool spent = player.TryPerformTimedAction(TickCost.SwapWeaponInCombat, "Unequip", () => player.Equipment.TryUnequip(slot));
+        SetBagNotice(spent ? null : LootRuntimeState.LastFailureReason);
     }
 
     private void EnsureBagBindings()
@@ -344,7 +366,7 @@ public class InventoryPanel : MonoBehaviour
             button.gameObject.SetActive(occupied);
             button.onClick.RemoveAllListeners();
             var equipButton = bagEquipButtons[i];
-            bool canEquip = occupied && LootRuntimeState.RunBag[i].Definition.Type != LootItemType.Bag;
+            bool canEquip = occupied;
             equipButton.gameObject.SetActive(canEquip);
             equipButton.onClick.RemoveAllListeners();
             if (!occupied) continue;
@@ -368,11 +390,25 @@ public class InventoryPanel : MonoBehaviour
         });
     }
 
-    private static void EquipBagItem(string instanceId)
+    private void EquipBagItem(string instanceId)
     {
         var player = PlayerTurnActor.Instance;
         if (player == null) return;
-        player.TryPerformTimedAction(TickCost.SwapWeaponInCombat, "Equip", () => LootRuntimeState.TryEquipFromBag(instanceId));
+        bool spent = player.TryPerformTimedAction(TickCost.SwapWeaponInCombat, "Equip", () =>
+        {
+            bool success = LootRuntimeState.TryEquipFromBag(instanceId);
+            if (!success) SetBagNotice(LootRuntimeState.LastFailureReason);
+            return success;
+        });
+        if (spent) SetBagNotice(null);
+    }
+
+    private void SetBagNotice(string message)
+    {
+        if (panelRoot == null) return;
+        var title = panelRoot.transform.Find("Title")?.GetComponent<Text>();
+        if (title != null) title.text = string.IsNullOrEmpty(message) ? "인벤토리" : $"인벤토리 — {message}";
+        if (!string.IsNullOrEmpty(message)) Debug.LogWarning($"[Inventory] {message}");
     }
 
     private void Build()
@@ -386,6 +422,7 @@ public class InventoryPanel : MonoBehaviour
         if (existing != null)
         {
             panelRoot = existing.gameObject;
+            EnsureBagEquipmentRow(existing);
             BindExisting(existing);
             return;
         }
@@ -509,6 +546,23 @@ public class InventoryPanel : MonoBehaviour
         }
     }
 
+    private void EnsureBagEquipmentRow(Transform panelRootTransform)
+    {
+        var column = panelRootTransform.Find("Content/EquipmentColumn");
+        if (column == null || column.Find($"EquipSlot_{EquipmentSlotType.Bag}") != null) return;
+
+        BuildEquipmentSlotRow(column, EquipmentSlotType.Bag, "가방");
+        var bagRow = column.Find($"EquipSlot_{EquipmentSlotType.Bag}");
+        var armorRow = column.Find($"EquipSlot_{EquipmentSlotType.Armor}");
+        if (bagRow != null && armorRow != null) bagRow.SetSiblingIndex(armorRow.GetSiblingIndex() + 1);
+
+        var root = panelRootTransform as RectTransform;
+        if (root == null) return;
+        foreach (var layout in root.GetComponentsInChildren<LayoutGroup>(true)) layout.enabled = true;
+        foreach (var fitter in root.GetComponentsInChildren<ContentSizeFitter>(true)) fitter.enabled = true;
+        BakeAndFreezeLayout(root);
+    }
+
     // 왼쪽 "장비 칸" — 슬롯 하나당 한 줄(아이콘 + 라벨). VerticalLayoutGroup이 EquipmentSlotOrder
     // 항목 수만큼 자동으로 세로 길이를 늘려주므로, 반지/목걸이가 추가돼도 이 함수는 그대로다.
     private void BuildEquipmentColumn(Transform parent)
@@ -540,14 +594,15 @@ public class InventoryPanel : MonoBehaviour
     private void BuildEquipmentSlotRow(Transform parent, EquipmentSlotType slot, string label)
     {
         const float iconSize = 48f;
-        const float labelWidth = 64f;
+        float labelWidth = slot == EquipmentSlotType.Bag ? 150f : 64f;
 
         var rowGo = new GameObject($"EquipSlot_{slot}");
         rowGo.transform.SetParent(parent, false);
         rowGo.AddComponent<RectTransform>();
 
         var rowLayout = rowGo.AddComponent<HorizontalLayoutGroup>();
-        rowLayout.padding = new RectOffset(4, 4, 4, 4);
+        // 오른쪽 여백 = 해제 버튼(44) + 버튼 오프셋(4) + 간격(8). 라벨이 버튼 밑으로 들어가지 않게 한다 (BUG-035).
+        rowLayout.padding = new RectOffset(4, UnequipButtonReservedWidth, 4, 4);
         rowLayout.spacing = 8f;
         rowLayout.childAlignment = TextAnchor.MiddleLeft;
         rowLayout.childForceExpandWidth = false;
@@ -565,7 +620,14 @@ public class InventoryPanel : MonoBehaviour
         backgroundRect.offsetMin = Vector2.zero;
         backgroundRect.offsetMax = Vector2.zero;
         var backgroundImage = backgroundGo.AddComponent<Image>();
-        ApplyFrame(backgroundImage, GeneratedUiSprites.FrameThinSmall, new Color(1f, 1f, 1f, 0.05f));
+        // BUG-035: 주황 프레임 아트가 글자 뒤를 가로질러 가독성이 떨어졌다. 글자 뒤는 어두운 단색으로 깔고
+        // 테두리만 옅은 주황 외곽선으로 남긴다. 새 아트 없이 색만 조정.
+        backgroundImage.sprite = ProceduralSprite.GetWhiteSpriteCenterPivot();
+        backgroundImage.type = Image.Type.Simple;
+        backgroundImage.color = new Color(0.09f, 0.07f, 0.06f, 0.92f);
+        var backgroundBorder = backgroundGo.AddComponent<Outline>();
+        backgroundBorder.effectColor = new Color(0.85f, 0.45f, 0.15f, 0.55f);
+        backgroundBorder.effectDistance = new Vector2(1f, -1f);
         var backgroundLayoutElement = backgroundGo.AddComponent<LayoutElement>();
         backgroundLayoutElement.ignoreLayout = true;
 
@@ -581,7 +643,14 @@ public class InventoryPanel : MonoBehaviour
 
         var labelText = CreateLabel(rowGo.transform, "Label", label, 13, TextAnchor.MiddleLeft);
         equipmentSlotLabels[slot] = labelText;
-        labelText.color = new Color(1f, 1f, 1f, 0.75f);
+        labelText.color = EmptySlotLabelColor;
+        // 긴 이름(예: 왕실 원정 가방)은 두 줄로 줄바꿈하고, 넘치면 잘라낸다. 버튼 밑으로 넘어가지 않는다.
+        labelText.horizontalOverflow = HorizontalWrapMode.Wrap;
+        labelText.verticalOverflow = VerticalWrapMode.Truncate;
+        labelText.lineSpacing = 0.9f;
+        var labelShadow = labelText.gameObject.AddComponent<Shadow>();
+        labelShadow.effectColor = new Color(0f, 0f, 0f, 0.85f);
+        labelShadow.effectDistance = new Vector2(1f, -1f);
         var labelLayoutElement = labelText.gameObject.AddComponent<LayoutElement>();
         labelLayoutElement.preferredWidth = labelWidth;
         labelLayoutElement.preferredHeight = iconSize;
