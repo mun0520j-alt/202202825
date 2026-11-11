@@ -16,10 +16,14 @@ public static class M5SaveService
 
     private static bool isRestoring;
     private static string recoveryNotice;
+    private static SaveSettings currentSettings = SaveSettings.Default();
 
     public static string SaveDirectory => Path.Combine(Application.persistentDataPath, SaveFolderName);
     public static string SavePath => Path.Combine(SaveDirectory, SaveFileName);
     public static string BackupPath => Path.Combine(SaveDirectory, BackupFileName);
+    public static bool Fullscreen => currentSettings.fullscreen;
+    public static int ResolutionWidth => currentSettings.resolution_width;
+    public static int ResolutionHeight => currentSettings.resolution_height;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     private static void Initialize()
@@ -38,6 +42,39 @@ public static class M5SaveService
     public static void CompleteExpedition()
     {
         Write(Capture(expeditionInProgress: false, includeExpeditionItems: true));
+    }
+
+    public static void SaveNow()
+    {
+        Write(Capture(expeditionInProgress: ExpeditionSession.IsActive, includeExpeditionItems: !ExpeditionSession.IsActive));
+    }
+
+    public static void ApplySavedDisplaySettings()
+    {
+        if (currentSettings.resolution_width <= 0 || currentSettings.resolution_height <= 0)
+            currentSettings = SaveSettings.Default();
+        var available = Screen.resolutions;
+        if (available.Length > 0 && !available.Any(value =>
+                value.width == currentSettings.resolution_width && value.height == currentSettings.resolution_height))
+        {
+            Debug.LogWarning($"[Settings] 저장된 해상도 {currentSettings.resolution_width}x{currentSettings.resolution_height}를 사용할 수 없어 현재 화면으로 복귀합니다.");
+            currentSettings.resolution_width = Mathf.Max(640, Screen.width);
+            currentSettings.resolution_height = Mathf.Max(360, Screen.height);
+        }
+        Screen.SetResolution(currentSettings.resolution_width, currentSettings.resolution_height, currentSettings.fullscreen);
+    }
+
+    public static void UpdateDisplaySettings(int width, int height, bool fullscreen)
+    {
+        currentSettings.fullscreen = fullscreen;
+        currentSettings.resolution_width = Mathf.Max(640, width);
+        currentSettings.resolution_height = Mathf.Max(360, height);
+        Screen.SetResolution(currentSettings.resolution_width, currentSettings.resolution_height, fullscreen);
+
+        SaveData data = TryRead(SavePath) ?? TryRead(BackupPath)
+            ?? Capture(expeditionInProgress: ExpeditionSession.IsActive, includeExpeditionItems: !ExpeditionSession.IsActive);
+        data.settings = currentSettings.Clone();
+        Write(data);
     }
 
     public static string ConsumeRecoveryNotice()
@@ -114,6 +151,7 @@ public static class M5SaveService
                 RestoreBasicSlots(data.unequipped_basic_slots),
                 data.has_basic_loadout,
                 data.gold);
+            currentSettings = data.settings != null ? data.settings.Normalized() : SaveSettings.Default();
         }
         finally
         {
@@ -184,7 +222,7 @@ public static class M5SaveService
                 ? Enum.GetValues(typeof(LootItemType)).Cast<LootItemType>()
                     .Where(LootRuntimeState.IsBasicSlotUnequipped).Select(type => type.ToString()).ToList()
                 : new List<string>(),
-            settings = new SaveSettings(),
+            settings = currentSettings.Clone(),
             expedition_in_progress = expeditionInProgress
             ,gold = LootRuntimeState.Gold
         };
@@ -260,5 +298,36 @@ public static class M5SaveService
     }
 
     [Serializable]
-    private sealed class SaveSettings { }
+    private sealed class SaveSettings
+    {
+        public bool fullscreen;
+        public int resolution_width;
+        public int resolution_height;
+
+        public static SaveSettings Default()
+        {
+            return new SaveSettings
+            {
+                fullscreen = Screen.fullScreen,
+                resolution_width = Mathf.Max(640, Screen.width),
+                resolution_height = Mathf.Max(360, Screen.height)
+            };
+        }
+
+        public SaveSettings Normalized()
+        {
+            if (resolution_width <= 0 || resolution_height <= 0) return Default();
+            return Clone();
+        }
+
+        public SaveSettings Clone()
+        {
+            return new SaveSettings
+            {
+                fullscreen = fullscreen,
+                resolution_width = resolution_width,
+                resolution_height = resolution_height
+            };
+        }
+    }
 }

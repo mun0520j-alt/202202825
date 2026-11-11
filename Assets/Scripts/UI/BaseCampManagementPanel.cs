@@ -49,9 +49,11 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
         DrawEquipment(LootItemType.Weapon, "무기");
         DrawEquipment(LootItemType.Shield, "방패");
         DrawEquipment(LootItemType.Armor, "갑옷");
+        DrawEquipment(LootItemType.Bag, "가방");
 
         GUILayout.Space(6);
-        GUILayout.Label($"출격 가방 {LootRuntimeState.RunBag.Count}/{LootRuntimeState.BagCapacity}");
+        GUILayout.Label($"출격 가방 {LootRuntimeState.RunBag.Count}/{LootRuntimeState.BagCapacity} " +
+                        $"(기본 {LootRuntimeState.BaseBagCapacity} + 장비 {LootRuntimeState.EquippedBagCapacityBonus})");
         foreach (var item in LootRuntimeState.RunBag.ToArray()) DrawStorageItem(item, false);
 
         GUILayout.Space(6);
@@ -73,9 +75,13 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
     {
         var item = LootRuntimeState.GetEquipped(type);
         GUILayout.BeginHorizontal();
-        GUILayout.Label($"{label}: {(item?.Definition?.Name ?? "비어 있음")}", GUILayout.Width(300));
+        GUILayout.Label($"{label}: {(item?.Definition?.Name ?? "비어 있음")}", GUILayout.Width(240));
         GUI.enabled = item != null;
-        if (GUILayout.Button("해제 → Stash")) LootRuntimeState.TryUnequipToStash(type);
+        if (GUILayout.Button("해제 → Stash"))
+        {
+            if (!LootRuntimeState.TryUnequipToStash(type)) notice = LootRuntimeState.LastFailureReason;
+            else notice = null;
+        }
         GUI.enabled = true;
         GUILayout.EndHorizontal();
     }
@@ -90,10 +96,12 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
             bool ok = inStash ? LootRuntimeState.MoveStashItemToBag(item.InstanceId) : LootRuntimeState.MoveBagItemToStash(item.InstanceId);
             notice = ok ? null : "출격 가방이 가득 찼습니다.";
         }
-        if (item.Definition.Type != LootItemType.Bag && GUILayout.Button("장착", GUILayout.Width(55)))
+        if (GUILayout.Button("장착", GUILayout.Width(55)))
         {
-            if (inStash) LootRuntimeState.TryEquipFromStash(item.InstanceId);
-            else LootRuntimeState.TryEquipFromBaseCampBag(item.InstanceId);
+            bool equipped = inStash
+                ? LootRuntimeState.TryEquipFromStash(item.InstanceId)
+                : LootRuntimeState.TryEquipFromBaseCampBag(item.InstanceId);
+            notice = equipped ? null : LootRuntimeState.LastFailureReason;
         }
         GUILayout.EndHorizontal();
     }
@@ -144,6 +152,7 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
         if (!typeFilter.HasValue) typeFilter = LootItemType.Weapon;
         else if (typeFilter == LootItemType.Weapon) typeFilter = LootItemType.Shield;
         else if (typeFilter == LootItemType.Shield) typeFilter = LootItemType.Armor;
+        else if (typeFilter == LootItemType.Armor) typeFilter = LootItemType.Bag;
         else typeFilter = null;
     }
 

@@ -89,6 +89,7 @@ public class InventoryPanel : MonoBehaviour
     private readonly List<Text> bagSlotLabels = new List<Text>();
     private readonly List<Button> bagDropButtons = new List<Button>();
     private readonly List<Button> bagEquipButtons = new List<Button>();
+    private string bagNotice;
 
     private void Awake()
     {
@@ -100,6 +101,14 @@ public class InventoryPanel : MonoBehaviour
     {
         if (activeInstance != null && activeInstance.panelRoot != null) activeInstance.panelRoot.SetActive(false);
         IsOpen = false;
+    }
+
+    public static bool CloseForEscape()
+    {
+        if (!IsOpen || activeInstance == null || activeInstance.panelRoot == null) return false;
+        activeInstance.panelRoot.SetActive(false);
+        IsOpen = false;
+        return true;
     }
 
     // [2026-09-04 신규] 에디터 메뉴(BuildHudInScene)가 "컴포넌트는 이미 붙어있는데(Awake가 다시
@@ -143,6 +152,8 @@ public class InventoryPanel : MonoBehaviour
     {
         if (!Application.isPlaying) return; // 에디터에서는 토글 입력 처리 안 함([ExecuteAlways] 대비).
 
+        if (PauseMenuController.BlocksWorldInput) return;
+
         if (Input.GetKeyDown(toggleKey))
         {
             // 주변 아이템 목록과 인벤토리는 같은 UI 입력 레이어를 쓰는 상호 배타 모달이다.
@@ -160,6 +171,20 @@ public class InventoryPanel : MonoBehaviour
             }
             if (panelRoot.activeSelf) RefreshBagSlots();
         }
+    }
+
+    private void OnGUI()
+    {
+        if (!Application.isPlaying || !IsOpen) return;
+        var equippedBag = LootRuntimeState.GetEquipped(LootItemType.Bag);
+        GUILayout.BeginArea(new Rect(Screen.width * 0.5f + 145f, Screen.height * 0.5f - 245f, 250f, 90f), GUI.skin.box);
+        GUILayout.Label($"장착 가방: {(equippedBag?.Definition?.Name ?? "없음")}");
+        GUILayout.Label($"용량 {LootRuntimeState.RunBag.Count}/{LootRuntimeState.BagCapacity}");
+        GUI.enabled = equippedBag != null;
+        if (GUILayout.Button("가방 해제 (2 Tick)")) UnequipEquippedBag();
+        GUI.enabled = true;
+        if (!string.IsNullOrEmpty(bagNotice)) GUILayout.Label(bagNotice);
+        GUILayout.EndArea();
     }
 
     private void TrySubscribeToEquipment()
@@ -344,7 +369,7 @@ public class InventoryPanel : MonoBehaviour
             button.gameObject.SetActive(occupied);
             button.onClick.RemoveAllListeners();
             var equipButton = bagEquipButtons[i];
-            bool canEquip = occupied && LootRuntimeState.RunBag[i].Definition.Type != LootItemType.Bag;
+            bool canEquip = occupied;
             equipButton.gameObject.SetActive(canEquip);
             equipButton.onClick.RemoveAllListeners();
             if (!occupied) continue;
@@ -368,11 +393,30 @@ public class InventoryPanel : MonoBehaviour
         });
     }
 
-    private static void EquipBagItem(string instanceId)
+    private void EquipBagItem(string instanceId)
     {
         var player = PlayerTurnActor.Instance;
         if (player == null) return;
-        player.TryPerformTimedAction(TickCost.SwapWeaponInCombat, "Equip", () => LootRuntimeState.TryEquipFromBag(instanceId));
+        bool spent = player.TryPerformTimedAction(TickCost.SwapWeaponInCombat, "Equip", () =>
+        {
+            bool success = LootRuntimeState.TryEquipFromBag(instanceId);
+            if (!success) bagNotice = LootRuntimeState.LastFailureReason;
+            return success;
+        });
+        if (spent) bagNotice = null;
+    }
+
+    private void UnequipEquippedBag()
+    {
+        var player = PlayerTurnActor.Instance;
+        if (player == null) return;
+        bool spent = player.TryPerformTimedAction(TickCost.SwapWeaponInCombat, "UnequipBag", () =>
+        {
+            bool success = LootRuntimeState.TryUnequipToBag(LootItemType.Bag);
+            if (!success) bagNotice = LootRuntimeState.LastFailureReason;
+            return success;
+        });
+        if (spent) bagNotice = null;
     }
 
     private void Build()

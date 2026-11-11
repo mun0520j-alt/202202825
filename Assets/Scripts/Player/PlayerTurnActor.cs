@@ -301,6 +301,8 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
             return;
         }
 
+        if (PauseMenuController.BlocksWorldInput) return;
+
         bool worldInputBlocked = InventoryPanel.IsOpen || GroundLoot.IsSelectionOpen || Input.GetKeyDown(KeyCode.I);
         HandleSpaceInput(worldInputBlocked);
         if (worldInputBlocked)

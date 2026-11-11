@@ -11,4 +11,7 @@ armor_epic,기사 판금갑옷,Armor,Epic,0,9,0,,100,80
 weapon_unique,붉은 보석검,Weapon,Unique,80,0,0,weapon_red_gem_sword,100,200
 shield_unique,왕실 방패,Shield,Unique,0,10,0,,100,200
 armor_unique,왕실 판금갑옷,Armor,Unique,0,10,0,,100,200
-bag_basic,여행용 가방,Bag,Normal,0,0,4,,0,10
+bag_basic,여행용 가방,Bag,Normal,0,0,2,,50,10
+bag_rare,용병의 가방,Bag,Rare,0,0,3,,50,30
+bag_epic,기사의 가방,Bag,Epic,0,0,4,,50,80
+bag_unique,왕실 원정 가방,Bag,Unique,0,0,6,,50,200

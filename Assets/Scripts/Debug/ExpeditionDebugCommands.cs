@@ -16,6 +16,7 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
 
     private void Update()
     {
+        if (PauseMenuController.BlocksWorldInput) return;
         if (seedInput == null) seedInput = M3MeasurementAutomation.ConfiguredSeed.ToString();
         if (Input.GetKeyDown(KeyCode.F3)) showTileGrid = !showTileGrid;
         if (Input.GetKeyDown(KeyCode.F4)) BuildM1DebugMap();

@@ -22,7 +22,7 @@ public static class LootItemDatabase
     {
         EnsureLoaded();
         LootRarity rarity = RollRarity(floor, rng);
-        var candidates = items.Where(item => item.Rarity == rarity && item.DropWeight > 0 && item.Type != LootItemType.Bag).ToList();
+        var candidates = items.Where(item => item.Rarity == rarity && item.DropWeight > 0).ToList();
         if (candidates.Count == 0) candidates = items.Where(item => item.Rarity == LootRarity.Normal && item.DropWeight > 0).ToList();
         if (candidates.Count == 0) return null;
 
@@ -46,7 +46,7 @@ public static class LootItemDatabase
     public static LootItemData Roll(LootRarity rarity, System.Random rng)
     {
         EnsureLoaded();
-        var candidates = items.Where(item => item.Rarity == rarity && item.DropWeight > 0 && item.Type != LootItemType.Bag).ToList();
+        var candidates = items.Where(item => item.Rarity == rarity && item.DropWeight > 0).ToList();
         if (candidates.Count == 0) return null;
         int totalWeight = candidates.Sum(item => Mathf.Max(1, item.DropWeight));
         int roll = rng.Next(totalWeight);

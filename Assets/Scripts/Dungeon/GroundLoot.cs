@@ -42,6 +42,7 @@ public sealed class GroundLoot : MonoBehaviour
 
     private void Update()
     {
+        if (PauseMenuController.IsOpen) return;
         var player = PlayerTurnActor.Instance;
         if (item == null || player == null || activeLoot.Count == 0 || activeLoot[0] != this) return;
         if (InventoryPanel.IsOpen) return;
