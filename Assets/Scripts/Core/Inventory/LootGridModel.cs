@@ -46,6 +46,12 @@ public sealed class LootGridModel
         return true;
     }
 
+    public bool CanMove(string instanceId, int x, int y, bool rotated)
+    {
+        LootGridPlacement existing = Find(instanceId);
+        return existing != null && CanPlace(existing.Item, x, y, rotated, instanceId);
+    }
+
     public bool Remove(string instanceId, out LootItemInstance item)
     {
         LootGridPlacement existing = Find(instanceId);

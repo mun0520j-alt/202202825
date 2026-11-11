@@ -204,7 +204,9 @@ public static class M5SaveService
         {
             Id = id, Name = name, Type = type, Rarity = LootRarity.Normal,
             AttackBonus = attack, DefenseBonus = defense, CapacityBonus = 0,
-            IconKey = string.Empty, DropWeight = 0
+            IconKey = string.Empty, DropWeight = 0,
+            GridWidth = type == LootItemType.Weapon ? 1 : 2,
+            GridHeight = type == LootItemType.Shield ? 2 : 3
         };
     }
 

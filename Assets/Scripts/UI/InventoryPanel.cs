@@ -95,6 +95,7 @@ public class InventoryPanel : MonoBehaviour
     private readonly List<Text> bagSlotLabels = new List<Text>();
     private readonly List<Button> bagDropButtons = new List<Button>();
     private readonly List<Button> bagEquipButtons = new List<Button>();
+    private LootGridView bagGridView;
 
     private void Awake()
     {
@@ -217,7 +218,7 @@ public class InventoryPanel : MonoBehaviour
             {
                 // 가방은 이름과 용량을 두 줄로 나눠 긴 이름에서도 용량이 잘리지 않게 한다 (BUG-035).
                 label.text = kvp.Key == EquipmentSlotType.Bag
-                    ? $"{(item != null ? item.itemName : "가방 없음")}\n{LootRuntimeState.RunBag.Count}/{LootRuntimeState.BagCapacity}"
+                    ? $"{(item != null ? item.itemName : "가방 없음")}\n{LootRuntimeState.RunBagGrid.Width}×{LootRuntimeState.RunBagGrid.Height}"
                     : item != null ? item.itemName : GetSlotLabel(kvp.Key);
                 label.color = item != null ? FilledSlotLabelColor : EmptySlotLabelColor;
             }
@@ -280,100 +281,20 @@ public class InventoryPanel : MonoBehaviour
 
     private void EnsureBagBindings()
     {
-        bagSlotLabels.Clear();
-        bagDropButtons.Clear();
-        bagEquipButtons.Clear();
         var grid = panelRoot != null ? panelRoot.transform.Find("Content/BagGrid") : null;
         if (grid == null) return;
-        for (int childIndex = 0; childIndex < grid.childCount; childIndex++)
-        {
-            var child = grid.GetChild(childIndex);
-            if (!child.name.StartsWith("Slot_")) continue;
-            if (int.TryParse(child.name.Substring("Slot_".Length), out int slotIndex))
-                child.gameObject.SetActive(slotIndex < LootRuntimeState.BagCapacity);
-        }
-        for (int i = 0; i < LootRuntimeState.BagCapacity; i++)
-        {
-            var slot = grid.Find($"Slot_{i}");
-            if (slot == null) continue;
-            var labelTransform = slot.Find("ItemLabel");
-            Text label;
-            if (labelTransform == null)
-            {
-                label = CreateLabel(slot, "ItemLabel", string.Empty, 11, TextAnchor.UpperCenter);
-                var rect = label.rectTransform;
-                rect.anchorMin = new Vector2(0.05f, 0.35f);
-                rect.anchorMax = new Vector2(0.95f, 0.95f);
-                rect.offsetMin = rect.offsetMax = Vector2.zero;
-            }
-            else label = labelTransform.GetComponent<Text>();
-
-            var buttonTransform = slot.Find("DropButton");
-            Button button;
-            if (buttonTransform == null)
-            {
-                var go = new GameObject("DropButton");
-                go.transform.SetParent(slot, false);
-                var rect = go.AddComponent<RectTransform>();
-                rect.anchorMin = new Vector2(0.52f, 0.05f);
-                rect.anchorMax = new Vector2(0.95f, 0.3f);
-                rect.offsetMin = rect.offsetMax = Vector2.zero;
-                var image = go.AddComponent<Image>();
-                image.color = new Color(0.45f, 0.18f, 0.12f, 0.9f);
-                button = go.AddComponent<Button>();
-                var text = CreateLabel(go.transform, "Label", "버리기", 10, TextAnchor.MiddleCenter);
-                text.rectTransform.anchorMin = Vector2.zero;
-                text.rectTransform.anchorMax = Vector2.one;
-                text.rectTransform.offsetMin = text.rectTransform.offsetMax = Vector2.zero;
-            }
-            else button = buttonTransform.GetComponent<Button>();
-            bagSlotLabels.Add(label);
-            bagDropButtons.Add(button);
-
-            var equipTransform = slot.Find("EquipButton");
-            Button equipButton;
-            if (equipTransform == null)
-            {
-                var go = new GameObject("EquipButton");
-                go.transform.SetParent(slot, false);
-                var rect = go.AddComponent<RectTransform>();
-                rect.anchorMin = new Vector2(0.05f, 0.05f);
-                rect.anchorMax = new Vector2(0.48f, 0.3f);
-                rect.offsetMin = rect.offsetMax = Vector2.zero;
-                var image = go.AddComponent<Image>();
-                image.color = new Color(0.12f, 0.35f, 0.48f, 0.9f);
-                equipButton = go.AddComponent<Button>();
-                var text = CreateLabel(go.transform, "Label", "장착", 10, TextAnchor.MiddleCenter);
-                text.rectTransform.anchorMin = Vector2.zero;
-                text.rectTransform.anchorMax = Vector2.one;
-                text.rectTransform.offsetMin = text.rectTransform.offsetMax = Vector2.zero;
-            }
-            else equipButton = equipTransform.GetComponent<Button>();
-            bagEquipButtons.Add(equipButton);
-        }
+        var oldLayout = grid.GetComponent<GridLayoutGroup>();
+        if (oldLayout != null) oldLayout.enabled = false;
+        bagGridView = grid.GetComponent<LootGridView>() ?? grid.gameObject.AddComponent<LootGridView>();
+        bagGridView.Bind(LootRuntimeState.RunBagGrid, LootRuntimeState.MoveRunBagItem);
     }
 
     private void RefreshBagSlots()
     {
-        if (bagSlotLabels.Count != LootRuntimeState.BagCapacity) EnsureBagBindings();
-        for (int i = 0; i < bagSlotLabels.Count; i++)
-        {
-            bool occupied = i < LootRuntimeState.RunBag.Count;
-            bagSlotLabels[i].text = occupied
-                ? $"{LootRuntimeState.RunBag[i].Definition.Name}\n[{LootRuntimeState.RunBag[i].Definition.Rarity}]"
-                : "비어 있음";
-            var button = bagDropButtons[i];
-            button.gameObject.SetActive(occupied);
-            button.onClick.RemoveAllListeners();
-            var equipButton = bagEquipButtons[i];
-            bool canEquip = occupied;
-            equipButton.gameObject.SetActive(canEquip);
-            equipButton.onClick.RemoveAllListeners();
-            if (!occupied) continue;
-            string instanceId = LootRuntimeState.RunBag[i].InstanceId;
-            button.onClick.AddListener(() => DropBagItem(instanceId));
-            if (canEquip) equipButton.onClick.AddListener(() => EquipBagItem(instanceId));
-        }
+        if (bagGridView == null || bagGridView.GetComponent<RectTransform>().sizeDelta.x
+            != LootRuntimeState.RunBagGrid.Width * LootGridView.MinimumCellSize) EnsureBagBindings();
+        else bagGridView.Refresh();
+        RefreshEquipmentSlots();
     }
 
     private static void DropBagItem(string instanceId)
@@ -422,18 +343,18 @@ public class InventoryPanel : MonoBehaviour
         if (existing != null)
         {
             panelRoot = existing.gameObject;
+            PositionPanelOnRight(existing as RectTransform);
             EnsureBagEquipmentRow(existing);
             BindExisting(existing);
+            var oldStash = existing.Find("StashSection");
+            if (oldStash != null) oldStash.gameObject.SetActive(false);
             return;
         }
 
         panelRoot = new GameObject("InventoryPanel");
         panelRoot.transform.SetParent(hudRoot, false);
         var panelRect = panelRoot.AddComponent<RectTransform>();
-        panelRect.anchorMin = new Vector2(0.5f, 0.5f);
-        panelRect.anchorMax = new Vector2(0.5f, 0.5f);
-        panelRect.pivot = new Vector2(0.5f, 0.5f);
-        panelRect.anchoredPosition = Vector2.zero;
+        PositionPanelOnRight(panelRect);
 
         var backgroundImage = panelRoot.AddComponent<Image>();
         ApplyFrame(backgroundImage, GeneratedUiSprites.PanelDarkMedium, new Color(0.05f, 0.05f, 0.08f, 0.9f));
@@ -466,7 +387,7 @@ public class InventoryPanel : MonoBehaviour
         contentGo.transform.SetParent(panelRect, false);
         var contentRect = contentGo.AddComponent<RectTransform>();
 
-        var contentLayout = contentGo.AddComponent<HorizontalLayoutGroup>();
+        var contentLayout = contentGo.AddComponent<VerticalLayoutGroup>();
         contentLayout.spacing = 14f;
         contentLayout.childAlignment = TextAnchor.UpperLeft;
         contentLayout.childForceExpandWidth = false;
@@ -482,7 +403,7 @@ public class InventoryPanel : MonoBehaviour
         BuildBagGrid(contentRect);
 
         // 인벤토리(장비 칸 + 가방) 바로 아래, 완전히 별도 섹션으로 빤스칸(보관함)을 붙인다.
-        BuildStashSection(panelRect);
+        // M6 출격 가방은 장비 슬롯 아래에 둔다. 기존 임시 보관함은 M8 Stash 격자까지 숨긴다.
 
         // [2026-09-04 사용자 요청] "그룹으로 묶어놓아서 못 건드리는거구나... 해제 해줘 이거
         // 바인딩 되면 내가 못 건드려" — LayoutGroup/ContentSizeFitter가 붙어있는 동안은 Scene
@@ -544,6 +465,7 @@ public class InventoryPanel : MonoBehaviour
             if (labelTransform != null) equipmentSlotLabels[slot] = labelTransform.GetComponent<Text>();
             EnsureUnequipButton(iconTransform.parent, slot);
         }
+        EnsureBagBindings();
     }
 
     private void EnsureBagEquipmentRow(Transform panelRootTransform)
@@ -665,24 +587,20 @@ public class InventoryPanel : MonoBehaviour
         gridGo.transform.SetParent(parent, false);
         gridGo.AddComponent<RectTransform>();
 
-        var gridLayout = gridGo.AddComponent<GridLayoutGroup>();
-        gridLayout.cellSize = new Vector2(slotSize, slotSize);
-        gridLayout.spacing = new Vector2(slotSpacing, slotSpacing);
-        gridLayout.childAlignment = TextAnchor.UpperLeft;
-        gridLayout.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-        gridLayout.constraintCount = columns;
-
-        // GridLayoutGroup은 스스로 자기 크기를 계산해주지 않아서(자식 배치만 함), 부모
-        // HorizontalLayoutGroup에게 "내가 이 정도 크기를 원한다"고 알려주는 역할로 필요하다.
         var gridLayoutElement = gridGo.AddComponent<LayoutElement>();
-        gridLayoutElement.preferredWidth = columns * slotSize + (columns - 1) * slotSpacing;
-        gridLayoutElement.preferredHeight = rows * slotSize + (rows - 1) * slotSpacing;
+        gridLayoutElement.preferredWidth = LootRuntimeState.RunBagGrid.Width * LootGridView.MinimumCellSize;
+        gridLayoutElement.preferredHeight = LootRuntimeState.RunBagGrid.Height * LootGridView.MinimumCellSize;
+        bagGridView = gridGo.AddComponent<LootGridView>();
+        bagGridView.Bind(LootRuntimeState.RunBagGrid, LootRuntimeState.MoveRunBagItem);
+    }
 
-        int totalSlots = columns * rows;
-        for (int i = 0; i < totalSlots; i++)
-        {
-            CreateEmptySlot(gridGo.transform, i, GeneratedUiSprites.FrameThinSmall, new Color(1f, 1f, 1f, 0.12f));
-        }
+    private static void PositionPanelOnRight(RectTransform panelRect)
+    {
+        if (panelRect == null) return;
+        panelRect.anchorMin = new Vector2(1f, 0.5f);
+        panelRect.anchorMax = new Vector2(1f, 0.5f);
+        panelRect.pivot = new Vector2(1f, 0.5f);
+        panelRect.anchoredPosition = new Vector2(-24f, 0f);
     }
 
     // [2026-09-04 신규] "빤스칸"(보관함) 섹션 — 인벤토리(장비 칸+가방) 바로 아래, 완전히 별도의

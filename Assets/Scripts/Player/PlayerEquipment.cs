@@ -129,18 +129,9 @@ public class PlayerEquipment : MonoBehaviour
         if (!TryGetLootType(slot, out var type) || !equippedItems.TryGetValue(slot, out var current) || current == null) return false;
         if (LootRuntimeState.GetEquipped(type) != null) return LootRuntimeState.TryUnequipToBag(type);
 
-        var definition = new LootItemData
-        {
-            Id = $"basic_{type.ToString().ToLowerInvariant()}",
-            Name = current.itemName,
-            Type = type,
-            Rarity = LootRarity.Normal,
-            AttackBonus = current.attackPowerBonus,
-            DefenseBonus = current.defensePowerBonus,
-            CapacityBonus = 0,
-            IconKey = string.Empty,
-            DropWeight = 0
-        };
+        string itemId = $"basic_{type.ToString().ToLowerInvariant()}";
+        var definition = LootItemDatabase.FindById(itemId);
+        if (definition == null) return false;
         return LootRuntimeState.TryStoreUnequippedBasic(type, new LootItemInstance(definition));
     }
 

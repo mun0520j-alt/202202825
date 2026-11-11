@@ -106,10 +106,10 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
         }
 
         M3MeasurementAutomation.MarkDebugRun();
-        while (LootRuntimeState.RunBag.Count < LootRuntimeState.BagCapacity)
-            LootRuntimeState.TryAddToRunBag(new LootItemInstance(definition));
+        while (LootRuntimeState.TryAddToRunBag(new LootItemInstance(definition))) { }
 
-        Debug.Log($"[QA] M2 가방을 {LootRuntimeState.RunBag.Count}/{LootRuntimeState.BagCapacity}로 채웠습니다.");
+        Debug.Log($"[QA] M6 격자 가방을 채웠습니다. 아이템 {LootRuntimeState.RunBag.Count}개, "
+            + $"격자 {LootRuntimeState.RunBagGrid.Width}x{LootRuntimeState.RunBagGrid.Height}.");
     }
 
     [ContextMenu("QA/Set Player HP")]
