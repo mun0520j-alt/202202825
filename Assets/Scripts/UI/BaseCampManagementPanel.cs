@@ -17,7 +17,7 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
 
     private void OnGUI()
     {
-        const float sideWidth = 360f;
+        float sideWidth = Mathf.Clamp(Screen.width * 0.27f, 400f, 520f);
         DrawMerchantPanel(new Rect(20, 20, sideWidth, Screen.height - 40));
         DrawStashPanel(new Rect(Screen.width - sideWidth - 20, 20, sideWidth, Screen.height - 40));
     }
