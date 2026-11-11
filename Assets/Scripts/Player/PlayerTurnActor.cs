@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
+using UnityEngine.UI;
 
 // Dungeon Tools 9) 실제 플레이어의 턴 참여 + 이동 담당. TickManager 큐에서 자기 차례
 // (OnTurnStart)가 오면 입력을 기다렸다가, 유효한 이동이 들어오면 그만큼 tick을 소비한다.
@@ -157,6 +158,8 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     private Vector3Int? selectedMouseCell;
     private GameObject mouseSelectionMarker;
     private LineRenderer mousePathPreview;
+    private SpriteRenderer mouseSelectionRenderer;
+    private Text autoMoveHint;
     private readonly HashSet<EnemyTurnActor> visibleEnemiesAtAutoPathStart = new HashSet<EnemyTurnActor>();
 
     // 마우스 클릭으로 예약된 자동 이동 경로. 비어있으면 자동 이동 없음.
@@ -467,6 +470,7 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         if (path == null || path.Count == 0) return false;
         queuedAutoPath = new Queue<Vector3Int>(path);
         CaptureVisibleEnemies();
+        ShowQueuedAutoPath();
         StepAlongAutoPath();
         return true;
     }
@@ -501,10 +505,10 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         if (mouseSelectionMarker == null)
         {
             mouseSelectionMarker = new GameObject("MouseSelectionMarker");
-            var renderer = mouseSelectionMarker.AddComponent<SpriteRenderer>();
-            renderer.sprite = ProceduralSprite.GetWhiteSpriteCenterPivot();
-            renderer.color = new Color(0.25f, 0.8f, 1f, 0.35f);
-            renderer.sortingOrder = 50;
+            mouseSelectionRenderer = mouseSelectionMarker.AddComponent<SpriteRenderer>();
+            mouseSelectionRenderer.sprite = ProceduralSprite.GetWhiteSpriteCenterPivot();
+            mouseSelectionRenderer.color = new Color(0.25f, 0.8f, 1f, 0.35f);
+            mouseSelectionRenderer.sortingOrder = 50;
             mouseSelectionMarker.transform.localScale = new Vector3(0.85f, 0.85f, 1f);
             mousePathPreview = mouseSelectionMarker.AddComponent<LineRenderer>();
             mousePathPreview.material = new Material(Shader.Find("Sprites/Default"));
@@ -515,6 +519,7 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         }
         mouseSelectionMarker.transform.position = floorTilemap.GetCellCenterWorld(cell);
         mouseSelectionMarker.SetActive(true);
+        if (mouseSelectionRenderer != null) mouseSelectionRenderer.enabled = true;
         bool stopAdjacent = DungeonChest.IsCellBlocked(cell)
             || TickManager.Instance.GetActorAt(cell, this) is EnemyTurnActor;
         var path = FindMousePath(cell, stopAdjacent);
@@ -533,7 +538,8 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
     private void ClearMouseSelection()
     {
         selectedMouseCell = null;
-        if (mouseSelectionMarker != null) mouseSelectionMarker.SetActive(false);
+        if (mouseSelectionRenderer != null) mouseSelectionRenderer.enabled = false;
+        if (mouseSelectionMarker != null && !HasQueuedAutoPath()) mouseSelectionMarker.SetActive(false);
     }
 
     // [2026-09-03 신규] 인접한 Enemy를 공격한다 — 이동 없이 즉시 데미지를 주고 턴을 소비한다.
@@ -651,6 +657,14 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
             // 없어야 하지만, 혹시 경로 계산 이후 맵이 바뀌는 등의 예외 상황을 대비해 방어.
             ClearQueuedAutoPath();
         }
+        else if (HasQueuedAutoPath())
+        {
+            ShowQueuedAutoPath();
+        }
+        else
+        {
+            ClearQueuedAutoPath();
+        }
     }
 
     // 몹 시야 감지 시스템이 아직 없어서 항상 false를 반환하는 스텁이다. 나중에 Enemy
@@ -701,6 +715,60 @@ public class PlayerTurnActor : MonoBehaviour, ITurnActor
         queuedAutoPath?.Clear();
         queuedAutoPath = null;
         visibleEnemiesAtAutoPathStart.Clear();
+        if (mousePathPreview != null) mousePathPreview.positionCount = 0;
+        if (autoMoveHint != null) autoMoveHint.gameObject.SetActive(false);
+        if (mouseSelectionMarker != null && !selectedMouseCell.HasValue) mouseSelectionMarker.SetActive(false);
+    }
+
+    public void CancelAutomationForPause()
+    {
+        CancelAutoRest(true);
+        ClearMouseSelection();
+        ClearQueuedAutoPath();
+    }
+
+    private bool HasQueuedAutoPath()
+    {
+        return queuedAutoPath != null && queuedAutoPath.Count > 0;
+    }
+
+    private void ShowQueuedAutoPath()
+    {
+        if (!HasQueuedAutoPath()) return;
+        if (mouseSelectionMarker == null) SelectMouseCell(queuedAutoPath.ToArray()[queuedAutoPath.Count - 1]);
+        selectedMouseCell = null;
+        if (mouseSelectionRenderer != null) mouseSelectionRenderer.enabled = false;
+        mouseSelectionMarker.SetActive(true);
+
+        var remaining = queuedAutoPath.ToArray();
+        mousePathPreview.positionCount = remaining.Length + 1;
+        mousePathPreview.SetPosition(0, floorTilemap.GetCellCenterWorld(currentCell));
+        for (int i = 0; i < remaining.Length; i++)
+        {
+            mousePathPreview.SetPosition(i + 1, floorTilemap.GetCellCenterWorld(remaining[i]));
+        }
+
+        EnsureAutoMoveHint();
+        autoMoveHint.gameObject.SetActive(true);
+    }
+
+    private void EnsureAutoMoveHint()
+    {
+        if (autoMoveHint != null) return;
+        var hintGo = new GameObject("AutoMoveCancelHint");
+        hintGo.transform.SetParent(ScreenSpaceCanvasProvider.GetOrCreateHudRoot(), false);
+        var rect = hintGo.AddComponent<RectTransform>();
+        rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0f);
+        rect.pivot = new Vector2(0.5f, 0f);
+        rect.anchoredPosition = new Vector2(0f, 28f);
+        rect.sizeDelta = new Vector2(620f, 42f);
+        autoMoveHint = hintGo.AddComponent<Text>();
+        autoMoveHint.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        autoMoveHint.fontSize = 24;
+        autoMoveHint.alignment = TextAnchor.MiddleCenter;
+        autoMoveHint.color = Color.white;
+        autoMoveHint.text = "자동 이동 중 · 우클릭/Esc 취소";
+        autoMoveHint.raycastTarget = false;
     }
 
     // 셀의 목표 월드 좌표를 계산한다. X는 칸 중앙(정수 + 0.5), Y는 칸의 바닥 경계(정수)로

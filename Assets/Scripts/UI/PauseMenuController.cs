@@ -138,6 +138,7 @@ public sealed class PauseMenuController : MonoBehaviour
 
     private void Open(View target)
     {
+        PlayerTurnActor.Instance?.CancelAutomationForPause();
         view = target;
         Time.timeScale = 0f;
         suspendedEventSystem = EventSystem.current;
