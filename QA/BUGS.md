@@ -1196,7 +1196,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 항목 | 내용 |
 |---|---|
 | 상태 | Closed — 사용자 에디터·빌드 Play 확인 (2026-11-12) |
-| Jira | 미등록 |
+| Jira | DUN-65 |
 | 심각도 | Blocker |
 | 우선순위 | P0 |
 | 발견 단계 | BETA 0.1 빌드 확인 (TC-B01 A판), 업로드 전 |
