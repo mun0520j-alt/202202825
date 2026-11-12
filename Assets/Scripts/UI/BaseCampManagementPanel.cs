@@ -7,7 +7,9 @@ using UnityEngine;
 public sealed class BaseCampManagementPanel : MonoBehaviour
 {
     private enum SortMode { Acquired, RarityHigh, RarityLow, Type }
+    private enum MerchantMode { Sell, Buy }
     private SortMode sortMode;
+    private MerchantMode merchantMode;
     private LootItemType? typeFilter;
     private LootRarity? rarityFilter;
     private Vector2 merchantScroll;
@@ -27,14 +29,24 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
     {
         GUILayout.BeginArea(area, GUI.skin.box);
         GUILayout.Label($"상인   Gold {LootRuntimeState.Gold}");
-        GUILayout.Label("판매할 아이템");
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Toggle(merchantMode == MerchantMode.Sell, "판매", GUI.skin.button)) merchantMode = MerchantMode.Sell;
+        if (GUILayout.Toggle(merchantMode == MerchantMode.Buy, "구매", GUI.skin.button)) merchantMode = MerchantMode.Buy;
+        GUILayout.EndHorizontal();
 
         merchantScroll = GUILayout.BeginScrollView(merchantScroll);
-        GUILayout.Label("Stash");
-        foreach (var item in LootRuntimeState.Stash.ToArray()) DrawSaleItem(item, "Stash");
-        GUILayout.Space(6);
-        GUILayout.Label("출격 가방");
-        foreach (var item in LootRuntimeState.RunBag.ToArray()) DrawSaleItem(item, "가방");
+        if (merchantMode == MerchantMode.Sell)
+        {
+            GUILayout.Label("Stash");
+            foreach (var item in LootRuntimeState.Stash.ToArray()) DrawSaleItem(item, "Stash");
+            GUILayout.Space(6);
+            GUILayout.Label("출격 가방");
+            foreach (var item in LootRuntimeState.RunBag.ToArray()) DrawSaleItem(item, "가방");
+        }
+        else
+        {
+            foreach (LootItemData item in LootItemDatabase.Items.Where(LootRuntimeState.IsMerchantPurchaseItem)) DrawPurchaseItem(item);
+        }
         GUILayout.EndScrollView();
 
         DrawUniqueSaleConfirmation();
@@ -92,6 +104,7 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
             bool ok = inStash ? LootRuntimeState.MoveStashItemToBag(item.InstanceId) : LootRuntimeState.MoveBagItemToStash(item.InstanceId);
             notice = ok ? null : "출격 가방이 가득 찼습니다.";
         }
+        GUI.enabled = item.Definition.Type != LootItemType.Junk;
         if (GUILayout.Button("장착", GUILayout.Width(55)))
         {
             bool equipped = inStash
@@ -99,6 +112,22 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
                 : LootRuntimeState.TryEquipFromBaseCampBag(item.InstanceId);
             notice = equipped ? null : LootRuntimeState.LastFailureReason;
         }
+        GUI.enabled = true;
+        GUILayout.EndHorizontal();
+    }
+
+    private void DrawPurchaseItem(LootItemData item)
+    {
+        int price = item.SellPrice * M7EconomyConfig.PurchasePriceMultiplier;
+        GUILayout.BeginHorizontal();
+        GUILayout.Label($"[{item.Rarity}] {item.Name}");
+        GUI.enabled = LootRuntimeState.Gold >= price;
+        if (GUILayout.Button($"{price}G", GUILayout.Width(70)))
+        {
+            bool purchased = LootRuntimeState.TryBuy(item.Id);
+            notice = purchased ? $"{item.Name} 구매 완료 — Stash로 이동" : LootRuntimeState.LastFailureReason;
+        }
+        GUI.enabled = true;
         GUILayout.EndHorizontal();
     }
 
@@ -149,6 +178,7 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
         else if (typeFilter == LootItemType.Weapon) typeFilter = LootItemType.Shield;
         else if (typeFilter == LootItemType.Shield) typeFilter = LootItemType.Armor;
         else if (typeFilter == LootItemType.Armor) typeFilter = LootItemType.Bag;
+        else if (typeFilter == LootItemType.Bag) typeFilter = LootItemType.Junk;
         else typeFilter = null;
     }
 

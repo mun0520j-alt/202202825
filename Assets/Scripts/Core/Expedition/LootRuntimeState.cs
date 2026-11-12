@@ -277,6 +277,31 @@ public static class LootRuntimeState
         return true;
     }
 
+    public static bool TryBuy(string itemId)
+    {
+        LootItemData definition = LootItemDatabase.FindById(itemId);
+        if (definition == null) return Fail("구매할 아이템을 찾을 수 없습니다.");
+        if (!IsMerchantPurchaseItem(definition)) return Fail("상인이 판매하지 않는 아이템입니다.");
+
+        int price = Mathf.Max(0, definition.SellPrice * M7EconomyConfig.PurchasePriceMultiplier);
+        if (Gold < price) return Fail("Gold가 부족합니다.");
+
+        Gold -= price;
+        stash.Add(new LootItemInstance(definition));
+        LastFailureReason = null;
+        Changed?.Invoke();
+        return true;
+    }
+
+    public static bool IsMerchantPurchaseItem(LootItemData definition)
+    {
+        if (definition == null || definition.Id.StartsWith("basic_", StringComparison.Ordinal)) return false;
+        if (definition.Type == LootItemType.Bag)
+            return definition.Rarity == LootRarity.Normal || definition.Rarity == LootRarity.Rare;
+        return definition.Rarity == LootRarity.Normal
+            && (definition.Type == LootItemType.Weapon || definition.Type == LootItemType.Shield || definition.Type == LootItemType.Armor);
+    }
+
     public static void ResolveRun(ExpeditionResult result)
     {
         if (result == ExpeditionResult.Escaped) return;
