@@ -26,9 +26,10 @@ public static class M6GridInventoryValidation
         ValidateDefaultBag(failures);
         ValidateRareBag(failures);
         ValidateNormalBag(failures);
+        ValidateFullGroundPile(failures);
 
         string summary = failures.Count == 0
-            ? "[M6 Grid Validation] PASS — CSV/경계/겹침/이동/회전/가방 형상 실패 0"
+            ? "[M6 Grid Validation] PASS — CSV/경계/겹침/이동/회전/가방 형상/5x5 더미 실패 0"
             : $"[M6 Grid Validation] FAIL {failures.Count}\n- {string.Join("\n- ", failures)}";
         if (failures.Count > 0) throw new InvalidOperationException(summary);
         Debug.Log(summary);
@@ -110,6 +111,21 @@ public static class M6GridInventoryValidation
             failures.Add("Normal 4x2: 갑옷 회전 배치 실패");
         if (grid.TryAutoPlace(Item("weapon_normal_test", 1, 3), out _))
             failures.Add("Normal 4x2: 갑옷 뒤 무기 수납을 잘못 허용함");
+    }
+
+    private static void ValidateFullGroundPile(List<string> failures)
+    {
+        var grid = new LootGridModel(5, 5);
+        for (int index = 0; index < 25; index++)
+        {
+            if (!grid.TryAutoPlace(Item($"pile_{index}", 1, 1), out _))
+            {
+                failures.Add($"5x5 더미: {index + 1}번째 1x1 아이템 배치 실패");
+                return;
+            }
+        }
+        if (grid.TryAutoPlace(Item("pile_overflow", 1, 1), out _))
+            failures.Add("5x5 더미: 가득 찬 뒤 26번째 아이템을 허용함");
     }
 
     private static LootItemInstance Item(string id, int width, int height)

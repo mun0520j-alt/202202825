@@ -12,6 +12,7 @@ public static class M5SaveService
     private const string SaveFolderName = "Save";
     private const string SaveFileName = "save.json";
     private const string BackupFileName = "save.bak";
+    private const string LegacyV2BackupFileName = "save_v2.bak";
     private const string TempFileName = "save.tmp";
 
     private static bool isRestoring;
@@ -21,6 +22,7 @@ public static class M5SaveService
     public static string SaveDirectory => Path.Combine(Application.persistentDataPath, SaveFolderName);
     public static string SavePath => Path.Combine(SaveDirectory, SaveFileName);
     public static string BackupPath => Path.Combine(SaveDirectory, BackupFileName);
+    public static string LegacyV2BackupPath => Path.Combine(SaveDirectory, LegacyV2BackupFileName);
     public static bool Fullscreen => currentSettings.fullscreen;
     public static int ResolutionWidth => currentSettings.resolution_width;
     public static int ResolutionHeight => currentSettings.resolution_height;
@@ -93,10 +95,12 @@ public static class M5SaveService
     private static void Load()
     {
         SaveData data = TryRead(SavePath);
+        string loadedPath = SavePath;
         bool recoveredFromBackup = false;
         if (data == null)
         {
             data = TryRead(BackupPath);
+            loadedPath = BackupPath;
             recoveredFromBackup = data != null;
         }
 
@@ -109,6 +113,11 @@ public static class M5SaveService
 
         if (recoveredFromBackup) Debug.LogWarning("[Save] save.json이 손상되어 save.bak으로 복구했습니다.");
         bool migrated = data.save_version < CurrentSaveVersion;
+        if (data.save_version == 2 && !TryPreserveLegacyV2Save(loadedPath))
+        {
+            Debug.LogError("[Save] v2 원본 백업에 실패해 v3 마이그레이션을 중단했습니다. 기존 파일은 변경하지 않습니다.");
+            return;
+        }
         Restore(data);
         if (!data.expedition_in_progress)
         {
@@ -126,6 +135,23 @@ public static class M5SaveService
         data.saved_at = DateTime.UtcNow.ToString("O");
         Write(data);
         Debug.LogWarning("[Save] 종료되지 않은 원정을 MIA로 처리했습니다.");
+    }
+
+    private static bool TryPreserveLegacyV2Save(string sourcePath)
+    {
+        try
+        {
+            Directory.CreateDirectory(SaveDirectory);
+            if (File.Exists(LegacyV2BackupPath)) return true;
+            File.Copy(sourcePath, LegacyV2BackupPath, false);
+            Debug.Log($"[Save] v2 원본을 별도 백업으로 보존했습니다: {LegacyV2BackupPath}");
+            return true;
+        }
+        catch (Exception exception)
+        {
+            Debug.LogError($"[Save] v2 원본 백업 실패: {LegacyV2BackupPath}\n{exception.Message}");
+            return false;
+        }
     }
 
     private static SaveData TryRead(string path)

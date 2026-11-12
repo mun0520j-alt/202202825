@@ -23,6 +23,7 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.F5)) FillM2Bag();
         if (Input.GetKeyDown(KeyCode.F6)) showM3Panel = !showM3Panel;
         if (Input.GetKeyDown(KeyCode.F7)) JumpToFloorFive();
+        if (Input.GetKeyDown(KeyCode.F8)) FillGroundLootPile();
     }
 
     private void OnGUI()
@@ -135,6 +136,39 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
         SceneManager.LoadScene("InDungeon");
     }
 
+    [ContextMenu("QA/Fill Ground Loot Pile (F8)")]
+    public void FillGroundLootPile()
+    {
+        PlayerTurnActor player = PlayerTurnActor.Instance;
+        if (player == null || player.FloorTilemap == null)
+        {
+            Debug.LogWarning("[QA] 플레이어 또는 Floor Tilemap을 찾지 못해 바닥 더미를 채울 수 없습니다.");
+            return;
+        }
+
+        M3MeasurementAutomation.MarkDebugRun();
+        var definition = new LootItemData
+        {
+            Id = "qa_ground_pile_filler",
+            Name = "QA 더미 채움",
+            Type = LootItemType.Armor,
+            Rarity = LootRarity.Normal,
+            GridWidth = 1,
+            GridHeight = 1
+        };
+
+        GroundLootPile pile = null;
+        int added = 0;
+        while (added < 25 && GroundLootPile.TryAddOrCreate(
+            player.FloorTilemap, player.CurrentCell, new LootItemInstance(definition), out pile, "QA 가득 찬 바닥 더미"))
+        {
+            added++;
+        }
+
+        Debug.Log($"[QA] F8 — 플레이어 칸 바닥 더미 {pile?.Grid.Placements.Count ?? 0}/25. "
+            + "인벤토리 아이템 버리기로 공간 부족·0Tick·아이템 유지를 확인하세요.");
+    }
+
     public static bool SetElapsedTicks(float elapsedTicks)
     {
         var tickManager = TickManager.Instance;
@@ -235,7 +269,7 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
         }
 
         GUI.Box(new Rect(12f, 12f, 460f, 108f),
-            "F3: Grid 끄기 / F4: 빠른 검증 배치 / F7: 5층 보스 직행\n초록=Floor / 빨강=Wall / 노랑=Player / 보라=Actor\n" +
+            "F3: Grid 끄기 / F4: 빠른 검증 배치 / F7: 5층 / F8: 5x5 더미 채움\n초록=Floor / 빨강=Wall / 노랑=Player / 보라=Actor\n" +
             "주황=D:CLOSED / 하늘=D:OPEN / 갈색=CHEST / 파랑=STAIRS·EXIT\n" +
             "R번호=Room ID / 주황 테두리=Player 인접 검색 칸\nF4: 왼쪽 상자 / 위 Enemy / 오른쪽 탈출구");
     }
