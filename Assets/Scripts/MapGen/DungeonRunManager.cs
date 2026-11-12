@@ -42,6 +42,7 @@ public class DungeonRunManager : MonoBehaviour
     [SerializeField] private GameObject playerPrefab;
 
     [Header("Enemy (M1 Runtime)")]
+    [SerializeField] private Sprite enemySprite;
     [SerializeField, Min(1)] private int enemiesPerFloor = 3;
     [SerializeField, Min(0.01f)] private float enemyMoveDuration = 0.1f;
     [SerializeField, Min(0f)] private float enemyHopHeight = 0.4f;
@@ -51,6 +52,9 @@ public class DungeonRunManager : MonoBehaviour
     [SerializeField, Min(1)] private int bossMaxHP = 320;
     [SerializeField, Min(1)] private int bossAttackPower = 43;
     [SerializeField, Min(0)] private int bossDefensePower = 10;
+
+    [Header("M7 Return Ritual Visual")]
+    [SerializeField] private Sprite returnRitualSprite;
 
     [Header("Camera")]
     [SerializeField] private Camera targetCamera;
@@ -78,6 +82,7 @@ public class DungeonRunManager : MonoBehaviour
         GenerateAllFloors();
         int activeFloorIndex = ExpeditionSession.CurrentFloor - 1;
         SpawnPlayerAtFloor(activeFloorIndex);
+        SpawnReturnRitualAtFloor(activeFloorIndex);
         SpawnEnemiesAtFloor(activeFloorIndex);
         SpawnChestsAtFloor(activeFloorIndex);
         CreateFogForFloor(activeFloorIndex);
@@ -445,8 +450,8 @@ public class DungeonRunManager : MonoBehaviour
         enemy.transform.SetParent(floorTilemap.transform.parent, false);
 
         var renderer = enemy.AddComponent<SpriteRenderer>();
-        renderer.sprite = ProceduralSprite.GetWhiteSpriteCenterPivot();
-        renderer.color = new Color(0.35f, 0.85f, 0.3f, 1f);
+        renderer.sprite = enemySprite != null ? enemySprite : ProceduralSprite.GetWhiteSpriteCenterPivot();
+        renderer.color = enemySprite != null ? Color.white : new Color(0.35f, 0.85f, 0.3f, 1f);
         renderer.sortingOrder = 2;
         enemy.transform.localScale = new Vector3(0.75f, 0.75f, 1f);
 
@@ -461,6 +466,18 @@ public class DungeonRunManager : MonoBehaviour
         actor.ConfigureRuntime(wallTilemap, floorTilemap, EnemyBehaviorType.Wander, enemyMoveDuration, enemyHopHeight);
         enemy.SetActive(true);
         return enemy;
+    }
+
+    private void SpawnReturnRitualAtFloor(int floorIndex)
+    {
+        if (floorIndex < 0 || floorIndex >= floors.Count || player == null) return;
+        Tilemap floor = floorTileTilemaps[floorIndex];
+        var actor = player.GetComponent<PlayerTurnActor>();
+        if (actor == null) return;
+
+        var ritual = new GameObject($"ReturnRitual_F{floorIndex + 1}");
+        ritual.transform.SetParent(floor.transform.parent, false);
+        ritual.AddComponent<ReturnRitualAnchor>().Initialize(floor, actor.CurrentCell, returnRitualSprite);
     }
 
     private void SpawnChestsAtFloor(int floorIndex)
