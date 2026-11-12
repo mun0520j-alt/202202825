@@ -736,29 +736,22 @@ public class InventoryPanel : MonoBehaviour
         RectTransform rect = actionRoot.GetComponent<RectTransform>() ?? actionRoot.AddComponent<RectTransform>();
         rect.anchorMin = new Vector2(0.5f, 0f);
         rect.anchorMax = new Vector2(0.5f, 0f);
-        rect.pivot = new Vector2(0.5f, 0f);
-        rect.anchoredPosition = new Vector2(0f, 12f);
-        rect.sizeDelta = new Vector2(310f, 44f);
+        rect.pivot = new Vector2(0.5f, 1f);
+        rect.anchoredPosition = new Vector2(0f, -6f);
+        rect.sizeDelta = new Vector2(280f, 42f);
 
         HorizontalLayoutGroup layout = actionRoot.GetComponent<HorizontalLayoutGroup>()
             ?? actionRoot.AddComponent<HorizontalLayoutGroup>();
-        layout.spacing = 6f;
-        layout.padding = new RectOffset(6, 6, 4, 4);
-        layout.childAlignment = TextAnchor.MiddleCenter;
-        layout.childControlWidth = true;
-        layout.childControlHeight = true;
-        layout.childForceExpandWidth = false;
-        layout.childForceExpandHeight = true;
+        // 기존 씬의 레이아웃이 이미 Bake된 상태에서도 두 버튼이 겹치지 않도록
+        // 자동 레이아웃을 사용하지 않고 아래에서 좌우 절반을 직접 배치한다.
+        layout.enabled = false;
 
         LayoutElement rootElement = actionRoot.GetComponent<LayoutElement>() ?? actionRoot.AddComponent<LayoutElement>();
-        rootElement.preferredWidth = 310f;
-        rootElement.preferredHeight = 44f;
+        rootElement.ignoreLayout = true;
 
         if (actionLabel != null)
         {
-            LayoutElement labelElement = actionLabel.GetComponent<LayoutElement>()
-                ?? actionLabel.gameObject.AddComponent<LayoutElement>();
-            labelElement.preferredWidth = 150f;
+            actionLabel.gameObject.SetActive(false);
         }
     }
 
@@ -779,7 +772,22 @@ public class InventoryPanel : MonoBehaviour
         button.onClick.AddListener(action);
         Text text = existing.Find("Label")?.GetComponent<Text>();
         if (text != null) text.text = label;
+        PositionActionButton(existing.GetComponent<RectTransform>(), name == "Equip");
+        existing.gameObject.SetActive(true);
         return button;
+    }
+
+    private static void PositionActionButton(RectTransform rect, bool leftHalf)
+    {
+        if (rect == null) return;
+        rect.anchorMin = new Vector2(leftHalf ? 0f : 0.5f, 0f);
+        rect.anchorMax = new Vector2(leftHalf ? 0.5f : 1f, 1f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.offsetMin = new Vector2(leftHalf ? 0f : 3f, 0f);
+        rect.offsetMax = new Vector2(leftHalf ? -3f : 0f, 0f);
+
+        LayoutElement element = rect.GetComponent<LayoutElement>();
+        if (element != null) element.ignoreLayout = true;
     }
 
     private void CreateActionButton(string name, string label, UnityEngine.Events.UnityAction action)
