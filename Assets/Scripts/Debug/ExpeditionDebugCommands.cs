@@ -10,7 +10,9 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
     [Min(1)] public int targetPlayerHP = 1;
     [SerializeField] private bool showTileGrid;
     [SerializeField] private bool showM3Panel;
+    [SerializeField] private bool showM6ItemPanel;
     private string seedInput;
+    private Vector2 itemPanelScroll;
 
     private GUIStyle gridLabelStyle;
 
@@ -24,12 +26,48 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.F6)) showM3Panel = !showM3Panel;
         if (Input.GetKeyDown(KeyCode.F7)) JumpToFloorFive();
         if (Input.GetKeyDown(KeyCode.F8)) FillGroundLootPile();
+        if (Input.GetKeyDown(KeyCode.F9)) showM6ItemPanel = !showM6ItemPanel;
     }
 
     private void OnGUI()
     {
         if (showTileGrid) DrawTileGridOverlay();
         if (showM3Panel) DrawM3Panel();
+        if (showM6ItemPanel) DrawM6ItemPanel();
+    }
+
+    private void DrawM6ItemPanel()
+    {
+        float height = Mathf.Min(620f, Screen.height - 32f);
+        GUILayout.BeginArea(new Rect(Screen.width * 0.5f - 210f, 16f, 420f, height),
+            "M6 아이템 지급 (F9)", GUI.skin.window);
+        GUILayout.Label("버튼 클릭: 현재 출격 가방에 즉시 지급 · 측정 원정 제외");
+        GUILayout.Label($"가방: {LootRuntimeState.RunBagGrid.Width}×{LootRuntimeState.RunBagGrid.Height} / 아이템 {LootRuntimeState.RunBag.Count}개");
+        itemPanelScroll = GUILayout.BeginScrollView(itemPanelScroll);
+        foreach (LootItemData item in LootItemDatabase.Items)
+        {
+            if (item == null) continue;
+            string size = item.Type == LootItemType.Bag
+                ? $"아이템 {item.GridWidth}×{item.GridHeight} → 가방 {item.BagGridWidth}×{item.BagGridHeight}"
+                : $"{item.GridWidth}×{item.GridHeight}";
+            if (GUILayout.Button($"[{item.Rarity}] {item.Name} ({item.Id}) · {size}", GUILayout.Height(30f)))
+                GiveDebugItem(item);
+        }
+        GUILayout.EndScrollView();
+        if (GUILayout.Button("닫기 (F9)", GUILayout.Height(32f))) showM6ItemPanel = false;
+        GUILayout.EndArea();
+    }
+
+    private static void GiveDebugItem(LootItemData definition)
+    {
+        if (definition == null) return;
+        M3MeasurementAutomation.MarkDebugRun();
+        if (!LootRuntimeState.TryAddToRunBag(new LootItemInstance(definition)))
+        {
+            Debug.LogWarning($"[QA] {definition.Name} 지급 실패 — {LootRuntimeState.LastFailureReason ?? "가방 공간 부족"}");
+            return;
+        }
+        Debug.Log($"[QA] {definition.Name} 지급 완료 — 출격 가방 {LootRuntimeState.RunBag.Count}개");
     }
 
     private void DrawM3Panel()
@@ -269,7 +307,7 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
         }
 
         GUI.Box(new Rect(12f, 12f, 460f, 108f),
-            "F3: Grid 끄기 / F4: 빠른 검증 배치 / F7: 5층 / F8: 5x5 더미 채움\n초록=Floor / 빨강=Wall / 노랑=Player / 보라=Actor\n" +
+            "F3: Grid / F4: 빠른 배치 / F7: 5층 / F8: 더미 / F9: 아이템\n초록=Floor / 빨강=Wall / 노랑=Player / 보라=Actor\n" +
             "주황=D:CLOSED / 하늘=D:OPEN / 갈색=CHEST / 파랑=STAIRS·EXIT\n" +
             "R번호=Room ID / 주황 테두리=Player 인접 검색 칸\nF4: 왼쪽 상자 / 위 Enemy / 오른쪽 탈출구");
     }
