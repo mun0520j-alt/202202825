@@ -8,6 +8,7 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
 {
     [Min(0f)] public float targetElapsedTicks = 1439f;
     [Min(1)] public int targetPlayerHP = 1;
+    [Min(1f)] public float insuranceAdvanceTicks = 1500f;
     [SerializeField] private bool showTileGrid;
     [SerializeField] private bool showM3Panel;
     [SerializeField] private bool showM6ItemPanel;
@@ -43,6 +44,13 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
             "M6 아이템 지급 (F9)", GUI.skin.window);
         GUILayout.Label("버튼 클릭: 현재 출격 가방에 즉시 지급 · 측정 원정 제외");
         GUILayout.Label($"가방: {LootRuntimeState.RunBagGrid.Width}×{LootRuntimeState.RunBagGrid.Height} / 아이템 {LootRuntimeState.RunBag.Count}개");
+        if (GUILayout.Button($"보험 대기 {insuranceAdvanceTicks:0} Tick 진행", GUILayout.Height(30f)))
+        {
+            M3MeasurementAutomation.MarkDebugRun();
+            LootRuntimeState.AdvanceInsuranceTicks(insuranceAdvanceTicks);
+            M5SaveService.SaveNow();
+            Debug.Log($"[QA] 보험 대기 시간을 {insuranceAdvanceTicks:0} Tick 진행했습니다.");
+        }
         itemPanelScroll = GUILayout.BeginScrollView(itemPanelScroll);
         foreach (LootItemData item in LootItemDatabase.Items)
         {
@@ -157,6 +165,14 @@ public sealed class ExpeditionDebugCommands : MonoBehaviour
         if (PlayerTurnActor.Instance == null) return;
         M3MeasurementAutomation.MarkDebugRun();
         PlayerTurnActor.Instance.DebugSetCurrentHP(targetPlayerHP);
+    }
+
+    [ContextMenu("QA/Advance Insurance Ticks")]
+    public void AdvanceInsuranceTicks()
+    {
+        M3MeasurementAutomation.MarkDebugRun();
+        LootRuntimeState.AdvanceInsuranceTicks(insuranceAdvanceTicks);
+        M5SaveService.SaveNow();
     }
 
     [ContextMenu("QA/Jump To Floor 5 (F7)")]

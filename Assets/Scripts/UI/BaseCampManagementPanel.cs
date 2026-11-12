@@ -63,6 +63,7 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
         DrawEquipment(LootItemType.Shield, "방패");
         DrawEquipment(LootItemType.Armor, "갑옷");
         DrawEquipment(LootItemType.Bag, "가방");
+        DrawInsurancePanel();
 
         GUILayout.Space(6);
         GUILayout.BeginHorizontal();
@@ -92,6 +93,45 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
         }
         GUI.enabled = true;
         GUILayout.EndHorizontal();
+    }
+
+    private void DrawInsurancePanel()
+    {
+        GUILayout.Space(8);
+        GUILayout.Label("보험");
+        foreach (var pair in LootRuntimeState.EquippedLoot.ToArray())
+        {
+            LootItemInstance item = pair.Value;
+            if (item?.Definition == null || item.Definition.Id.StartsWith("basic_", StringComparison.Ordinal)) continue;
+            bool selected = LootRuntimeState.IsInsuranceSelected(item.InstanceId);
+            bool insured = LootRuntimeState.IsInsuredThisRun(item.InstanceId);
+            bool next = GUILayout.Toggle(selected || insured, $"{item.Definition.Name} ({Mathf.CeilToInt(item.Definition.SellPrice * M7EconomyConfig.InsurancePremiumRate)}G)");
+            if (!insured && next != selected) LootRuntimeState.ToggleInsuranceSelection(item.InstanceId);
+        }
+        if (LootRuntimeState.HasConfirmedInsurance) GUILayout.Label("보험 확정 완료 — 장비 변경 잠금");
+        else if (GUILayout.Button($"보험 확정 ({LootRuntimeState.SelectedInsurancePremium}G)"))
+        {
+            notice = LootRuntimeState.TryConfirmInsurance() ? "보험 가입 완료" : LootRuntimeState.LastFailureReason;
+        }
+
+        foreach (var entry in LootRuntimeState.InsuranceReturns.ToArray())
+        {
+            if (!entry.Revealed)
+            {
+                GUILayout.Label($"반환 확인 대기 — {Mathf.CeilToInt(entry.WaitTicksRemaining)} Tick");
+                continue;
+            }
+            if (!entry.Returned)
+            {
+                GUILayout.Label("보험 회수 실패");
+                continue;
+            }
+            GUILayout.BeginHorizontal();
+            GUILayout.Label($"{LootItemDatabase.FindById(entry.ItemId)?.Name ?? entry.ItemId} — 수령 {Mathf.CeilToInt(entry.ClaimTicksRemaining)} Tick");
+            if (GUILayout.Button("수령", GUILayout.Width(55)))
+                notice = LootRuntimeState.TryClaimInsurance(entry.ReturnId) ? "보험품 수령 완료" : LootRuntimeState.LastFailureReason;
+            GUILayout.EndHorizontal();
+        }
     }
 
     private void DrawStorageItem(LootItemInstance item, bool inStash)

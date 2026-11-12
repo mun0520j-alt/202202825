@@ -12,6 +12,10 @@ public static class M7EconomyConfig
     public static float EscapeScrollUseTicks => Mathf.Max(1f, Get("escape_scroll_use_ticks", 1f));
     public static float EscapeScrollStayTicks => Mathf.Max(1f, Get("escape_scroll_stay_ticks", 20f));
     public static float EscapeScrollLifetimeTicks => Mathf.Max(EscapeScrollStayTicks, Get("escape_scroll_lifetime_ticks", 50f));
+    public static float InsurancePremiumRate => Mathf.Clamp01(Get("insurance_premium_rate", 0.5f));
+    public static float InsuranceReturnRate => Mathf.Clamp01(Get("insurance_return_rate", 0.3f));
+    public static float InsuranceWaitTicks => Mathf.Max(0f, Get("insurance_wait_ticks", 1500f));
+    public static float InsuranceClaimTicks => Mathf.Max(0f, Get("insurance_claim_ticks", 3000f));
 
     private static float Get(string key, float fallback)
     {
