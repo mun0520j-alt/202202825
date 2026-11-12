@@ -144,7 +144,11 @@ public sealed class LootGridView : MonoBehaviour
         rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
         rect.pivot = new Vector2(0f, 1f);
         rect.sizeDelta = new Vector2(230f, 86f);
-        go.GetComponent<Image>().color = new Color(0.02f, 0.02f, 0.025f, 0.97f);
+        Image tooltipBackground = go.GetComponent<Image>();
+        tooltipBackground.color = new Color(0.02f, 0.02f, 0.025f, 0.97f);
+        // 툴팁이 커서 아래에 나타나도 원래 아이템의 PointerEnter/Exit 판정을 가로채지 않는다.
+        // Raycast를 받으면 아이템 이탈 → 툴팁 숨김 → 재진입이 매 프레임 반복돼 깜빡인다.
+        tooltipBackground.raycastTarget = false;
         var textObject = new GameObject("Text", typeof(RectTransform), typeof(Text));
         textObject.transform.SetParent(go.transform, false);
         RectTransform textRect = textObject.GetComponent<RectTransform>();
