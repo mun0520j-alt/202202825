@@ -98,38 +98,40 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
     private void DrawInsurancePanel()
     {
         GUILayout.Space(8);
-        GUILayout.Label("보험");
-        foreach (var pair in LootRuntimeState.EquippedLoot.ToArray())
+        GUILayout.Label("보험 (장비에 거는 보험 — 잃을 때까지 유지)");
+        foreach (var item in LootRuntimeState.InsurableCandidates.ToArray())
         {
-            LootItemInstance item = pair.Value;
-            if (item?.Definition == null || item.Definition.Id.StartsWith("basic_", StringComparison.Ordinal)) continue;
             bool selected = LootRuntimeState.IsInsuranceSelected(item.InstanceId);
-            bool insured = LootRuntimeState.IsInsuredThisRun(item.InstanceId);
-            bool next = GUILayout.Toggle(selected || insured, $"{item.Definition.Name} ({Mathf.CeilToInt(item.Definition.SellPrice * M7EconomyConfig.InsurancePremiumRate)}G)");
-            if (!insured && next != selected) LootRuntimeState.ToggleInsuranceSelection(item.InstanceId);
+            bool next = GUILayout.Toggle(selected, $"{item.Definition.Name} ({Mathf.CeilToInt(item.Definition.SellPrice * M7EconomyConfig.InsurancePremiumRate)}G)");
+            if (next != selected) LootRuntimeState.ToggleInsuranceSelection(item.InstanceId);
         }
-        if (LootRuntimeState.HasConfirmedInsurance) GUILayout.Label("보험 확정 완료 — 장비 변경 잠금");
-        else if (GUILayout.Button($"보험 확정 ({LootRuntimeState.SelectedInsurancePremium}G)"))
+        if (LootRuntimeState.SelectedInsurancePremium > 0
+            && GUILayout.Button($"보험 가입 ({LootRuntimeState.SelectedInsurancePremium}G)"))
         {
-            notice = LootRuntimeState.TryConfirmInsurance() ? "보험 가입 완료" : LootRuntimeState.LastFailureReason;
+            notice = LootRuntimeState.TryConfirmInsurance() ? "보험됨" : LootRuntimeState.LastFailureReason;
         }
 
         foreach (var entry in LootRuntimeState.InsuranceReturns.ToArray())
         {
+            string itemName = LootItemDatabase.FindById(entry.ItemId)?.Name ?? entry.ItemId;
             if (!entry.Revealed)
             {
-                GUILayout.Label($"반환 확인 대기 — {Mathf.CeilToInt(entry.WaitTicksRemaining)} Tick");
-                continue;
-            }
-            if (!entry.Returned)
-            {
-                GUILayout.Label("보험 회수 실패");
+                GUILayout.Label($"{itemName} — 반환 확인 대기 {Mathf.CeilToInt(entry.WaitTicksRemaining)} Tick");
                 continue;
             }
             GUILayout.BeginHorizontal();
-            GUILayout.Label($"{LootItemDatabase.FindById(entry.ItemId)?.Name ?? entry.ItemId} — 수령 {Mathf.CeilToInt(entry.ClaimTicksRemaining)} Tick");
-            if (GUILayout.Button("수령", GUILayout.Width(55)))
-                notice = LootRuntimeState.TryClaimInsurance(entry.ReturnId) ? "보험품 수령 완료" : LootRuntimeState.LastFailureReason;
+            if (!entry.Returned)
+            {
+                GUILayout.Label($"{itemName} — 보험 회수 실패");
+                if (GUILayout.Button("확인", GUILayout.Width(55)))
+                    notice = LootRuntimeState.TryDismissInsuranceResult(entry.ReturnId) ? null : LootRuntimeState.LastFailureReason;
+            }
+            else
+            {
+                GUILayout.Label($"{itemName} — 수령 {Mathf.CeilToInt(entry.ClaimTicksRemaining)} Tick");
+                if (GUILayout.Button("수령", GUILayout.Width(55)))
+                    notice = LootRuntimeState.TryClaimInsurance(entry.ReturnId) ? "보험품 수령 완료" : LootRuntimeState.LastFailureReason;
+            }
             GUILayout.EndHorizontal();
         }
     }
@@ -138,7 +140,7 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
     {
         if (item?.Definition == null) return;
         GUILayout.BeginHorizontal();
-        GUILayout.Label($"[{item.Definition.Rarity}] {item.Definition.Name}", GUILayout.Width(170));
+        GUILayout.Label($"[{item.Definition.Rarity}] {(LootRuntimeState.IsInsured(item.InstanceId) ? "[보험] " : "")}{item.Definition.Name}", GUILayout.Width(170));
         if (GUILayout.Button(inStash ? "가방" : "Stash", GUILayout.Width(60)))
         {
             bool ok = inStash ? LootRuntimeState.MoveStashItemToBag(item.InstanceId) : LootRuntimeState.MoveBagItemToStash(item.InstanceId);
@@ -175,7 +177,7 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
     {
         if (item?.Definition == null) return;
         GUILayout.BeginHorizontal();
-        GUILayout.Label($"[{source}] [{item.Definition.Rarity}] {item.Definition.Name}");
+        GUILayout.Label($"[{source}] [{item.Definition.Rarity}] {(LootRuntimeState.IsInsured(item.InstanceId) ? "[보험] " : "")}{item.Definition.Name}");
         if (GUILayout.Button($"{item.Definition.SellPrice}G", GUILayout.Width(70)))
         {
             if (item.Definition.Rarity >= LootRarity.Unique) pendingUniqueSale = item.InstanceId;

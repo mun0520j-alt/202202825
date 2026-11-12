@@ -266,11 +266,28 @@ public class InventoryPanel : MonoBehaviour
                 label.text = kvp.Key == EquipmentSlotType.Bag
                     ? $"{(item != null ? item.itemName : "가방 없음")}\n{LootRuntimeState.RunBagGrid.Width}×{LootRuntimeState.RunBagGrid.Height}"
                     : item != null ? item.itemName : GetSlotLabel(kvp.Key);
-                label.color = item != null ? FilledSlotLabelColor : EmptySlotLabelColor;
+                bool insuredSlot = IsInsuredSlot(kvp.Key);
+                if (insuredSlot) label.text = "[보험] " + label.text;
+                label.color = item == null ? EmptySlotLabelColor : insuredSlot ? LootGridView.InsuredColor : FilledSlotLabelColor;
             }
             if (equipmentUnequipButtons.TryGetValue(kvp.Key, out var button))
                 button.gameObject.SetActive(item != null && IsUnequippableSlot(kvp.Key));
         }
+    }
+
+    private static bool IsInsuredSlot(EquipmentSlotType slot)
+    {
+        LootItemType type;
+        switch (slot)
+        {
+            case EquipmentSlotType.MainWeapon1: type = LootItemType.Weapon; break;
+            case EquipmentSlotType.OffHandShield: type = LootItemType.Shield; break;
+            case EquipmentSlotType.Armor: type = LootItemType.Armor; break;
+            case EquipmentSlotType.Bag: type = LootItemType.Bag; break;
+            default: return false;
+        }
+        return LootRuntimeState.EquippedLoot.TryGetValue(type, out LootItemInstance equipped)
+            && equipped != null && LootRuntimeState.IsInsured(equipped.InstanceId);
     }
 
     private static string GetSlotLabel(EquipmentSlotType slot)
@@ -796,7 +813,7 @@ public class InventoryPanel : MonoBehaviour
         if (selectedBagItem?.Definition == null) return;
         if (selectedBagItem.Definition.Type == LootItemType.Consumable)
         {
-            if (!ReturnRitualAnchor.TryUseEscapeScroll(selectedBagItem.InstanceId, out string failure))
+            if (!EscapeScrollZone.TryUseEscapeScroll(selectedBagItem.InstanceId, out string failure))
             {
                 SetBagNotice(failure);
                 return;

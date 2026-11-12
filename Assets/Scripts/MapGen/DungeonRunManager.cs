@@ -54,8 +54,9 @@ public class DungeonRunManager : MonoBehaviour
     [SerializeField, Min(1)] private int bossAttackPower = 43;
     [SerializeField, Min(0)] private int bossDefensePower = 10;
 
-    [Header("M7 Return Ritual Visual")]
-    [SerializeField] private Sprite returnRitualSprite;
+    [Header("M7 Escape Scroll Zone Visual")]
+    [UnityEngine.Serialization.FormerlySerializedAs("escapeScrollSprite")]
+    [SerializeField] private Sprite escapeScrollSprite;
 
     [Header("Camera")]
     [SerializeField] private Camera targetCamera;
@@ -83,7 +84,7 @@ public class DungeonRunManager : MonoBehaviour
         GenerateAllFloors();
         int activeFloorIndex = ExpeditionSession.CurrentFloor - 1;
         SpawnPlayerAtFloor(activeFloorIndex);
-        SpawnReturnRitualAtFloor(activeFloorIndex);
+        SpawnEscapeScrollZoneAtFloor(activeFloorIndex);
         SpawnEnemiesAtFloor(activeFloorIndex);
         SpawnChestsAtFloor(activeFloorIndex);
         CreateFogForFloor(activeFloorIndex);
@@ -482,16 +483,16 @@ public class DungeonRunManager : MonoBehaviour
         return enemy;
     }
 
-    private void SpawnReturnRitualAtFloor(int floorIndex)
+    private void SpawnEscapeScrollZoneAtFloor(int floorIndex)
     {
         if (floorIndex < 0 || floorIndex >= floors.Count || player == null) return;
         Tilemap floor = floorTileTilemaps[floorIndex];
         var actor = player.GetComponent<PlayerTurnActor>();
         if (actor == null) return;
 
-        var ritual = new GameObject($"ReturnRitual_F{floorIndex + 1}");
-        ritual.transform.SetParent(floor.transform.parent, false);
-        ritual.AddComponent<ReturnRitualAnchor>().Initialize(floor, actor.CurrentCell, returnRitualSprite);
+        var zone = new GameObject($"EscapeScrollZone_F{floorIndex + 1}");
+        zone.transform.SetParent(floor.transform.parent, false);
+        zone.AddComponent<EscapeScrollZone>().Initialize(floor, actor.CurrentCell, escapeScrollSprite);
     }
 
     private void SpawnChestsAtFloor(int floorIndex)

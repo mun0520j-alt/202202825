@@ -222,7 +222,6 @@ public static class LootRuntimeState
 
     public static bool TryUnequipToStash(LootItemType type)
     {
-        if (insuredThisRun.Count > 0) return Fail("보험 확정 후에는 장비를 변경할 수 없습니다.");
         if (!equippedLoot.TryGetValue(type, out var item) || item == null) return Fail("해제할 장비가 없습니다.");
         if (type == LootItemType.Bag) MoveAllRunBagItemsToStash();
         equippedLoot.Remove(type);
@@ -246,7 +245,6 @@ public static class LootRuntimeState
 
     public static bool TryEquipFromStash(string instanceId)
     {
-        if (insuredThisRun.Count > 0) return Fail("보험 확정 후에는 장비를 변경할 수 없습니다.");
         var item = stash.Find(candidate => candidate.InstanceId == instanceId);
         if (item?.Definition == null) return Fail("장착할 아이템을 찾을 수 없습니다.");
         if (item.Definition.Type == LootItemType.Junk || item.Definition.Type == LootItemType.Consumable) return Fail("이 아이템은 장착할 수 없습니다.");
@@ -264,7 +262,6 @@ public static class LootRuntimeState
 
     public static bool TryEquipFromBaseCampBag(string instanceId)
     {
-        if (insuredThisRun.Count > 0) return Fail("보험 확정 후에는 장비를 변경할 수 없습니다.");
         var item = runBag.Find(candidate => candidate.InstanceId == instanceId);
         if (item?.Definition == null) return Fail("장착할 아이템을 찾을 수 없습니다.");
         if (item.Definition.Type == LootItemType.Junk || item.Definition.Type == LootItemType.Consumable) return Fail("이 아이템은 장착할 수 없습니다.");
@@ -292,6 +289,8 @@ public static class LootRuntimeState
             runBag.Remove(item);
         }
         Gold += Mathf.Max(0, item.Definition.SellPrice);
+        insuredThisRun.Remove(item.InstanceId);
+        insuredItemIds.Remove(item.InstanceId);
         Changed?.Invoke();
         return true;
     }
@@ -348,26 +347,38 @@ public static class LootRuntimeState
         Changed?.Invoke();
     }
 
+    // 보험은 원정이 아니라 장비 인스턴스에 건다 (사용자 결정 2026-11-12).
+    // insuredThisRun은 이름과 달리 "보험에 든 장비" 영구 목록이다. 세이브 호환을 위해 필드 이름은 유지한다.
+    // 가입하면 그 장비를 잃을 때(사망·버림 생환·MIA)까지 유지되고, 보험료는 가입할 때 한 번만 낸다.
     public static bool IsInsuranceSelected(string instanceId) => insuranceSelection.Contains(instanceId);
-    public static bool IsInsuredThisRun(string instanceId) => insuredThisRun.Contains(instanceId);
+    public static bool IsInsured(string instanceId) => !string.IsNullOrEmpty(instanceId) && insuredThisRun.Contains(instanceId);
+    public static bool IsInsuredThisRun(string instanceId) => IsInsured(instanceId);
     public static bool HasConfirmedInsurance => insuredThisRun.Count > 0;
-    public static int SelectedInsurancePremium => equippedLoot.Values.Where(item => item?.Definition != null
-        && insuranceSelection.Contains(item.InstanceId))
+
+    public static bool IsInsurable(LootItemInstance item)
+    {
+        if (item?.Definition == null || item.Definition.Id.StartsWith("basic_", StringComparison.Ordinal)) return false;
+        LootItemType type = item.Definition.Type;
+        return type == LootItemType.Weapon || type == LootItemType.Shield || type == LootItemType.Armor || type == LootItemType.Bag;
+    }
+
+    public static IEnumerable<LootItemInstance> InsurableCandidates =>
+        equippedLoot.Values.Concat(runBag).Where(item => IsInsurable(item) && !IsInsured(item.InstanceId));
+
+    public static int SelectedInsurancePremium => InsurableCandidates
+        .Where(item => insuranceSelection.Contains(item.InstanceId))
         .Sum(item => Mathf.CeilToInt(item.Definition.SellPrice * M7EconomyConfig.InsurancePremiumRate));
 
     public static void ToggleInsuranceSelection(string instanceId)
     {
-        if (insuredThisRun.Count > 0 || string.IsNullOrEmpty(instanceId)) return;
+        if (string.IsNullOrEmpty(instanceId) || IsInsured(instanceId)) return;
         if (!insuranceSelection.Add(instanceId)) insuranceSelection.Remove(instanceId);
         Changed?.Invoke();
     }
 
     public static bool TryConfirmInsurance()
     {
-        if (insuredThisRun.Count > 0) return Fail("이미 보험을 확정했습니다.");
-        var eligible = equippedLoot.Values.Where(item => item?.Definition != null
-            && !item.Definition.Id.StartsWith("basic_", StringComparison.Ordinal)
-            && insuranceSelection.Contains(item.InstanceId)).ToArray();
+        var eligible = InsurableCandidates.Where(item => insuranceSelection.Contains(item.InstanceId)).ToArray();
         if (eligible.Length == 0) return Fail("보험에 가입할 장비를 선택하세요.");
         int premium = eligible.Sum(item => Mathf.CeilToInt(item.Definition.SellPrice * M7EconomyConfig.InsurancePremiumRate));
         if (Gold < premium) return Fail("보험료를 낼 Gold가 부족합니다.");
@@ -378,6 +389,16 @@ public static class LootRuntimeState
             insuredItemIds[item.InstanceId] = item.Definition.Id;
         }
         insuranceSelection.Clear();
+        LastFailureReason = null;
+        Changed?.Invoke();
+        return true;
+    }
+
+    public static bool TryDismissInsuranceResult(string returnId)
+    {
+        InsuranceReturn entry = insuranceReturns.Find(value => value.ReturnId == returnId);
+        if (entry == null || !entry.Revealed || entry.Returned) return Fail("확인할 보험 결과가 없습니다.");
+        insuranceReturns.Remove(entry);
         LastFailureReason = null;
         Changed?.Invoke();
         return true;
@@ -417,24 +438,32 @@ public static class LootRuntimeState
         Changed?.Invoke();
     }
 
+    // 원정 종료 시 보험 판정. 생환: 버린 보험 장비만 판정. 사망: 가지고 들어간 보험 장비(장착·가방)와 버린 것 판정.
+    // MIA·8층 이상: 잃은 보험 장비는 반환 없이 보험만 종료. 판정을 받은 장비의 보험은 끝난다(반환품은 보험 없음).
     private static void ResolveCurrentInsurance(ExpeditionResult result, int reachedFloor)
     {
+        var carried = new HashSet<string>(equippedLoot.Values.Where(item => item != null).Select(item => item.InstanceId)
+            .Concat(runBag.Where(item => item != null).Select(item => item.InstanceId)));
         bool eligibleResult = result != ExpeditionResult.MIA && reachedFloor < 8;
-        foreach (string instanceId in insuredThisRun)
+        foreach (string instanceId in insuredThisRun.ToArray())
         {
-            bool lost = result == ExpeditionResult.Dead || droppedInsuredThisRun.Contains(instanceId);
-            if (!eligibleResult || !lost || !insuredItemIds.TryGetValue(instanceId, out string itemId)) continue;
-            bool returned = new System.Random(Guid.NewGuid().GetHashCode()).NextDouble() < M7EconomyConfig.InsuranceReturnRate;
-            insuranceReturns.Add(new InsuranceReturn
+            bool dropped = droppedInsuredThisRun.Contains(instanceId);
+            bool lostWithPlayer = result != ExpeditionResult.Escaped && carried.Contains(instanceId);
+            if (!dropped && !lostWithPlayer) continue;
+            if (eligibleResult && insuredItemIds.TryGetValue(instanceId, out string itemId))
             {
-                ReturnId = Guid.NewGuid().ToString("N"), ItemId = itemId, InstanceId = instanceId,
-                Returned = returned, Revealed = false,
-                WaitTicksRemaining = M7EconomyConfig.InsuranceWaitTicks,
-                ClaimTicksRemaining = M7EconomyConfig.InsuranceClaimTicks
-            });
+                bool returned = new System.Random(Guid.NewGuid().GetHashCode()).NextDouble() < M7EconomyConfig.InsuranceReturnRate;
+                insuranceReturns.Add(new InsuranceReturn
+                {
+                    ReturnId = Guid.NewGuid().ToString("N"), ItemId = itemId, InstanceId = instanceId,
+                    Returned = returned, Revealed = false,
+                    WaitTicksRemaining = M7EconomyConfig.InsuranceWaitTicks,
+                    ClaimTicksRemaining = M7EconomyConfig.InsuranceClaimTicks
+                });
+            }
+            insuredThisRun.Remove(instanceId);
+            insuredItemIds.Remove(instanceId);
         }
-        insuredThisRun.Clear();
-        insuredItemIds.Clear();
         droppedInsuredThisRun.Clear();
         insuranceSelection.Clear();
     }
@@ -458,10 +487,17 @@ public static class LootRuntimeState
         }
     }
 
+    // 다음 실행 MIA 처리 등으로 사라진 장비의 보험을 반환 없이 정리한다. 남아 있는 보험 장비는 유지한다.
     public static void ClearConfirmedInsuranceWithoutReturn()
     {
-        insuredThisRun.Clear();
-        insuredItemIds.Clear();
+        var existing = new HashSet<string>(equippedLoot.Values.Concat(runBag).Concat(stash)
+            .Where(item => item != null).Select(item => item.InstanceId));
+        foreach (string instanceId in insuredThisRun.ToArray())
+        {
+            if (existing.Contains(instanceId)) continue;
+            insuredThisRun.Remove(instanceId);
+            insuredItemIds.Remove(instanceId);
+        }
         droppedInsuredThisRun.Clear();
         insuranceSelection.Clear();
         Changed?.Invoke();

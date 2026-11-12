@@ -141,7 +141,12 @@ public static class M5SaveService
         data.save_version = CurrentSaveVersion;
         data.expedition_in_progress = false;
         data.saved_at = DateTime.UtcNow.ToString("O");
-        data.insured_this_run = new List<LootRuntimeState.InsurancePolicy>();
+        // 보험은 장비에 걸린다. MIA로 사라진 장비의 보험만 정리하고 남은 장비의 보험은 유지한다.
+        data.insured_this_run = LootRuntimeState.InsuredThisRunIds.Select(instanceId => new LootRuntimeState.InsurancePolicy
+        {
+            InstanceId = instanceId,
+            ItemId = LootRuntimeState.GetInsuredItemId(instanceId)
+        }).ToList();
         Write(data);
         Debug.LogWarning("[Save] 종료되지 않은 원정을 MIA로 처리했습니다.");
     }
