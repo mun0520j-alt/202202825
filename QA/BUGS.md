@@ -1069,7 +1069,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 항목 | 내용 |
 |---|---|
 | 상태 | Closed — 사용자 Play 확인 (2026-11-12) |
-| Jira | 미등록 |
+| Jira | DUN-58 |
 | 심각도 | Major |
 | 우선순위 | P1 |
 | 발견 단계 | M6 통합 Play 시작 |
@@ -1087,7 +1087,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 항목 | 내용 |
 |---|---|
 | 상태 | Closed — 사용자 Play 확인 (2026-11-12) |
-| Jira | 미등록 |
+| Jira | DUN-59 |
 | 심각도 | Major |
 | 우선순위 | P1 |
 | 발견 단계 | M6 통합 Play 루팅 |
@@ -1105,7 +1105,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 항목 | 내용 |
 |---|---|
 | 상태 | Closed — 사용자 Play 확인 (2026-11-12) |
-| Jira | 미등록 |
+| Jira | DUN-60 |
 | 심각도 | Minor |
 | 우선순위 | P1 |
 | 발견 단계 | M6 통합 Play 루팅 |
@@ -1123,7 +1123,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 항목 | 내용 |
 |---|---|
 | 상태 | Closed — 사용자 Play 확인 (2026-11-12) |
-| Jira | 미등록 |
+| Jira | DUN-61 |
 | 심각도 | Major |
 | 우선순위 | P1 |
 | 발견 단계 | M6 통합 Play 장비 교체 |
@@ -1141,7 +1141,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 항목 | 내용 |
 |---|---|
 | 상태 | Closed — 사용자 Play 확인 (2026-11-12) |
-| Jira | 미등록 |
+| Jira | DUN-62 |
 | 심각도 | Minor |
 | 우선순위 | P1 |
 | 발견 단계 | M6 통합 Play 격자 UI |
@@ -1159,7 +1159,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 항목 | 내용 |
 |---|---|
 | 상태 | Closed — 사용자 Play 확인 (2026-11-12, TC-M6-08·08A Pass) |
-| Jira | 미등록 |
+| Jira | DUN-63 |
 | 심각도 | Minor |
 | 우선순위 | P1 |
 | 발견 단계 | M6 통합 Play 루팅 |
@@ -1177,7 +1177,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 | 항목 | 내용 |
 |---|---|
 | 상태 | Closed — 사용자 Play 확인 (2026-11-12) |
-| Jira | 미등록 |
+| Jira | DUN-64 |
 | 심각도 | Minor |
 | 우선순위 | P1 |
 | 발견 단계 | M6 통합 Play 가방 교체 |
