@@ -1176,7 +1176,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Fixed — Play 회귀 대기 (2026-11-12) |
+| 상태 | Closed — 사용자 Play 확인 (2026-11-12) |
 | Jira | 미등록 |
 | 심각도 | Minor |
 | 우선순위 | P1 |
