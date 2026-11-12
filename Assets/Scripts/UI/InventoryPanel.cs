@@ -676,7 +676,7 @@ public class InventoryPanel : MonoBehaviour
         if (actionEquipButton != null)
         {
             actionEquipButton.gameObject.SetActive(true);
-            actionEquipButton.interactable = item.Definition.Type != LootItemType.Bag;
+            actionEquipButton.interactable = true;
         }
         actionRoot.SetActive(true);
     }
