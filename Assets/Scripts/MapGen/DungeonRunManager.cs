@@ -449,17 +449,25 @@ public class DungeonRunManager : MonoBehaviour
         enemy.SetActive(false);
         enemy.transform.SetParent(floorTilemap.transform.parent, false);
 
-        var renderer = enemy.AddComponent<SpriteRenderer>();
+        var visual = new GameObject("Visual");
+        visual.transform.SetParent(enemy.transform, false);
+        var renderer = visual.AddComponent<SpriteRenderer>();
         renderer.sprite = enemySprite != null ? enemySprite : ProceduralSprite.GetWhiteSpriteCenterPivot();
         renderer.color = enemySprite != null ? Color.white : new Color(0.35f, 0.85f, 0.3f, 1f);
         renderer.sortingOrder = 2;
-        enemy.transform.localScale = new Vector3(0.75f, 0.75f, 1f);
+        if (renderer.sprite != null)
+        {
+            Vector2 spriteSize = renderer.sprite.bounds.size;
+            float scaleX = spriteSize.x > 0f ? floorTilemap.cellSize.x * 0.9f / spriteSize.x : 1f;
+            float scaleY = spriteSize.y > 0f ? floorTilemap.cellSize.y * 0.9f / spriteSize.y : 1f;
+            float visualScale = Mathf.Min(scaleX, scaleY);
+            visual.transform.localScale = new Vector3(visualScale, visualScale, 1f);
+        }
 
         var collider = enemy.AddComponent<BoxCollider2D>();
-        collider.size = Vector2.one;
+        collider.size = new Vector2(floorTilemap.cellSize.x * 0.8f, floorTilemap.cellSize.y * 0.8f);
 
-        Vector3 cellOrigin = floorTilemap.CellToWorld(cell);
-        enemy.transform.position = cellOrigin + new Vector3(floorTilemap.cellSize.x * 0.5f, 0.375f, 0f);
+        enemy.transform.position = floorTilemap.GetCellCenterWorld(cell);
 
         var actor = enemy.AddComponent<EnemyTurnActor>();
         actor.ConfigureCombatStats(enemyMaxHP, enemyAttackPower, enemyDefensePower);

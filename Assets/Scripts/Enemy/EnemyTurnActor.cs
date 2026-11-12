@@ -552,7 +552,9 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
         float footOffsetY = 0f;
         if (spriteRenderer != null && spriteRenderer.sprite != null)
         {
-            footOffsetY = spriteRenderer.sprite.bounds.extents.y * Mathf.Abs(transform.lossyScale.y);
+            // 시각 자식만 타일 크기에 맞춰 확대할 수 있으므로 Actor 루트가 아니라
+            // 실제 SpriteRenderer Transform의 월드 배율을 사용한다.
+            footOffsetY = spriteRenderer.sprite.bounds.extents.y * Mathf.Abs(spriteRenderer.transform.lossyScale.y);
         }
 
         return cellOrigin + new Vector3(cellSize.x * 0.5f, footOffsetY, 0f);
