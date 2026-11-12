@@ -17,6 +17,9 @@ public sealed class LootGridView : MonoBehaviour
     private Text tooltip;
     private LootGridItemView dragged;
     private bool dragRotated;
+    private string selectedInstanceId;
+    private readonly System.Collections.Generic.Dictionary<string, Outline> selectionOutlines
+        = new System.Collections.Generic.Dictionary<string, Outline>();
 
     public void Bind(LootGridModel source, Func<string, int, int, bool, bool> onMove)
     {
@@ -46,9 +49,12 @@ public sealed class LootGridView : MonoBehaviour
     private void Build()
     {
         if (model == null) return;
+        if (!string.IsNullOrEmpty(selectedInstanceId) && model.Find(selectedInstanceId) == null)
+            selectedInstanceId = null;
         RectTransform ownRect = GetComponent<RectTransform>() ?? gameObject.AddComponent<RectTransform>();
         ownRect.sizeDelta = new Vector2(model.Width * MinimumCellSize, model.Height * MinimumCellSize);
 
+        selectionOutlines.Clear();
         for (int i = transform.childCount - 1; i >= 0; i--) DestroyImmediateSafe(transform.GetChild(i).gameObject);
 
         var background = gameObject.GetComponent<Image>() ?? gameObject.AddComponent<Image>();
@@ -90,6 +96,12 @@ public sealed class LootGridView : MonoBehaviour
         SetItemRect(rect, placement.X, placement.Y, placement.Width, placement.Height);
         Image image = itemObject.GetComponent<Image>();
         image.color = RarityColor(placement.Item.Definition.Rarity);
+        Outline selectionOutline = itemObject.AddComponent<Outline>();
+        selectionOutline.effectColor = new Color(1f, 0.82f, 0.18f, 1f);
+        selectionOutline.effectDistance = new Vector2(3f, -3f);
+        selectionOutline.useGraphicAlpha = false;
+        selectionOutline.enabled = placement.Item.InstanceId == selectedInstanceId;
+        selectionOutlines[placement.Item.InstanceId] = selectionOutline;
 
         var labelObject = new GameObject("ShortLabel", typeof(RectTransform), typeof(Text));
         labelObject.transform.SetParent(itemObject.transform, false);
@@ -193,7 +205,22 @@ public sealed class LootGridView : MonoBehaviour
 
     internal void ClickItem(LootItemInstance item)
     {
-        if (dragged == null) itemClickHandler?.Invoke(item);
+        if (dragged != null || item == null) return;
+        selectedInstanceId = item.InstanceId;
+        RefreshSelectionHighlight();
+        itemClickHandler?.Invoke(item);
+    }
+
+    public void ClearSelection()
+    {
+        selectedInstanceId = null;
+        RefreshSelectionHighlight();
+    }
+
+    private void RefreshSelectionHighlight()
+    {
+        foreach (var pair in selectionOutlines)
+            if (pair.Value != null) pair.Value.enabled = pair.Key == selectedInstanceId;
     }
 
     private void UpdateDragPreview(Vector2 screenPosition)

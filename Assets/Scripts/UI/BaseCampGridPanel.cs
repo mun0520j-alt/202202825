@@ -55,6 +55,7 @@ public sealed class BaseCampGridPanel : MonoBehaviour
         gridView.SetItemClickHandler(Select);
         title.text = $"출격 가방 {LootRuntimeState.RunBagGrid.Width}×{LootRuntimeState.RunBagGrid.Height}";
         if (selected != null && LootRuntimeState.RunBagGrid.Find(selected.InstanceId) == null) selected = null;
+        if (selected == null) gridView.ClearSelection();
         notice.text = selected?.Definition != null ? selected.Definition.Name : "아이템을 선택하세요";
     }
 
@@ -69,7 +70,11 @@ public sealed class BaseCampGridPanel : MonoBehaviour
         if (selected == null) return;
         bool ok = LootRuntimeState.MoveBagItemToStash(selected.InstanceId);
         notice.text = ok ? "Stash로 이동했습니다." : (LootRuntimeState.LastFailureReason ?? "이동 실패");
-        if (ok) selected = null;
+        if (ok)
+        {
+            selected = null;
+            gridView.ClearSelection();
+        }
     }
 
     private void Equip()
@@ -77,7 +82,11 @@ public sealed class BaseCampGridPanel : MonoBehaviour
         if (selected == null) return;
         bool ok = LootRuntimeState.TryEquipFromBaseCampBag(selected.InstanceId);
         notice.text = ok ? "장착했습니다." : LootRuntimeState.LastFailureReason;
-        if (ok) selected = null;
+        if (ok)
+        {
+            selected = null;
+            gridView.ClearSelection();
+        }
     }
 
     private static Text CreateText(Transform parent, string name, string value, int size, Vector2 min, Vector2 max)
