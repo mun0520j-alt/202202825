@@ -53,6 +53,7 @@ public sealed class BaseCampGridPanel : MonoBehaviour
         if (gridView == null) return;
         gridView.Bind(LootRuntimeState.RunBagGrid, LootRuntimeState.MoveRunBagItem);
         gridView.SetItemClickHandler(Select);
+        gridView.SetItemDoubleClickHandler(MoveToStash);
         title.text = $"출격 가방 {LootRuntimeState.RunBagGrid.Width}×{LootRuntimeState.RunBagGrid.Height}";
         if (selected != null && LootRuntimeState.RunBagGrid.Find(selected.InstanceId) == null) selected = null;
         if (selected == null) gridView.ClearSelection();
@@ -67,8 +68,14 @@ public sealed class BaseCampGridPanel : MonoBehaviour
 
     private void MoveToStash()
     {
-        if (selected == null) return;
-        bool ok = LootRuntimeState.MoveBagItemToStash(selected.InstanceId);
+        MoveToStash(selected);
+    }
+
+    private void MoveToStash(LootItemInstance item)
+    {
+        if (item == null) return;
+        selected = item;
+        bool ok = LootRuntimeState.MoveBagItemToStash(item.InstanceId);
         notice.text = ok ? "Stash로 이동했습니다." : (LootRuntimeState.LastFailureReason ?? "이동 실패");
         if (ok)
         {

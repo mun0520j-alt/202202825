@@ -12,6 +12,7 @@ public sealed class LootGridView : MonoBehaviour
     private LootGridModel model;
     private Func<string, int, int, bool, bool> moveHandler;
     private Action<LootItemInstance> itemClickHandler;
+    private Action<LootItemInstance> itemDoubleClickHandler;
     private RectTransform gridRoot;
     private RectTransform preview;
     private Text tooltip;
@@ -37,6 +38,11 @@ public sealed class LootGridView : MonoBehaviour
     public void SetItemClickHandler(Action<LootItemInstance> handler)
     {
         itemClickHandler = handler;
+    }
+
+    public void SetItemDoubleClickHandler(Action<LootItemInstance> handler)
+    {
+        itemDoubleClickHandler = handler;
     }
 
     private void Update()
@@ -211,6 +217,15 @@ public sealed class LootGridView : MonoBehaviour
         itemClickHandler?.Invoke(item);
     }
 
+    internal void DoubleClickItem(LootItemInstance item)
+    {
+        if (dragged != null || item == null) return;
+        selectedInstanceId = item.InstanceId;
+        RefreshSelectionHighlight();
+        if (itemDoubleClickHandler != null) itemDoubleClickHandler(item);
+        else itemClickHandler?.Invoke(item);
+    }
+
     public void ClearSelection()
     {
         selectedInstanceId = null;
@@ -312,6 +327,8 @@ public sealed class LootGridItemView : MonoBehaviour, IBeginDragHandler, IDragHa
     public void OnPointerMove(PointerEventData eventData) => owner.MoveTooltip(eventData.position);
     public void OnPointerClick(PointerEventData eventData)
     {
-        if (eventData.button == PointerEventData.InputButton.Left) owner.ClickItem(Item);
+        if (eventData.button != PointerEventData.InputButton.Left) return;
+        if (eventData.clickCount >= 2) owner.DoubleClickItem(Item);
+        else owner.ClickItem(Item);
     }
 }
