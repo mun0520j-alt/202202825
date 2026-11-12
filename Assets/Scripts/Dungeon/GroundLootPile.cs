@@ -14,6 +14,7 @@ public sealed class GroundLootPile : MonoBehaviour, ILootContainer
     private Tilemap floor;
     private Vector3Int cell;
     private string displayName = "바닥 더미";
+    private SpriteRenderer pileRenderer;
 
     public static bool IsSelectionOpen => selectionOpen || LootingPanel.IsOpen;
     public string DisplayName => displayName;
@@ -57,10 +58,10 @@ public sealed class GroundLootPile : MonoBehaviour, ILootContainer
         displayName = name;
         transform.position = floor.GetCellCenterWorld(cell);
         active.Add(this);
-        var renderer = gameObject.AddComponent<SpriteRenderer>();
-        renderer.sprite = ProceduralSprite.GetWhiteSpriteCenterPivot();
-        renderer.color = new Color(0.9f, 0.65f, 0.18f);
-        renderer.sortingOrder = 6;
+        pileRenderer = gameObject.AddComponent<SpriteRenderer>();
+        pileRenderer.sprite = ProceduralSprite.GetWhiteSpriteCenterPivot();
+        pileRenderer.color = new Color(0.42f, 0.45f, 0.48f, 0.96f);
+        pileRenderer.sortingOrder = 6;
         transform.localScale = new Vector3(0.42f, 0.42f, 1f);
     }
 
@@ -173,8 +174,38 @@ public sealed class GroundLootPile : MonoBehaviour, ILootContainer
             GUI.Box(new Rect(Screen.width * 0.5f - 190f, Screen.height - 135f, 380f, 36f), "E: 주변 루팅 보관함 열기");
     }
 
-    public bool TryAdd(LootItemInstance item) => item != null && lootGrid.TryAutoPlace(item, out _);
-    public bool TryRemove(string instanceId, out LootItemInstance item) => lootGrid.Remove(instanceId, out item);
+    public bool TryAdd(LootItemInstance item)
+    {
+        bool added = item != null && lootGrid.TryAutoPlace(item, out _);
+        if (added) RefreshPileColor();
+        return added;
+    }
+
+    public bool TryRemove(string instanceId, out LootItemInstance item)
+    {
+        bool removed = lootGrid.Remove(instanceId, out item);
+        if (removed) RefreshPileColor();
+        return removed;
+    }
+
+    private void RefreshPileColor()
+    {
+        if (pileRenderer == null) return;
+        LootRarity highest = LootRarity.Normal;
+        foreach (LootGridPlacement placement in lootGrid.Placements)
+        {
+            if (placement?.Item?.Definition != null && placement.Item.Definition.Rarity > highest)
+                highest = placement.Item.Definition.Rarity;
+        }
+        switch (highest)
+        {
+            case LootRarity.Rare: pileRenderer.color = new Color(0.18f, 0.45f, 0.85f, 0.96f); break;
+            case LootRarity.Epic: pileRenderer.color = new Color(0.58f, 0.2f, 0.82f, 0.96f); break;
+            case LootRarity.Unique: pileRenderer.color = new Color(0.92f, 0.48f, 0.08f, 0.96f); break;
+            case LootRarity.Legendary: pileRenderer.color = new Color(0.9f, 0.12f, 0.1f, 0.96f); break;
+            default: pileRenderer.color = new Color(0.42f, 0.45f, 0.48f, 0.96f); break;
+        }
+    }
 
     public void HandleContentsChanged()
     {

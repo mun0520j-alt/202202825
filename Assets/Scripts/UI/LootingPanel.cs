@@ -45,6 +45,7 @@ public sealed class LootingPanel : MonoBehaviour
         instance.container = null;
         instance.player = null;
         InventoryPanel.ClearLootTransferHandler();
+        InventoryPanel.CloseForEscape();
         return true;
     }
 
