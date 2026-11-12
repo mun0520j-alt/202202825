@@ -205,7 +205,8 @@ public sealed class LootGridView : MonoBehaviour
 
     internal void MoveTooltip(Vector2 screenPosition)
     {
-        if (tooltip != null && tooltip.transform.parent.gameObject.activeSelf) PositionTooltip(screenPosition);
+        // 툴팁은 PointerEnter 시 정한 위치에 고정한다. 커서를 매 프레임 따라다니면
+        // 아이템과 포인터를 계속 가려 읽기 어렵고 마우스에 붙어 있는 것처럼 보인다.
     }
 
     internal void HideTooltip()
@@ -272,7 +273,11 @@ public sealed class LootGridView : MonoBehaviour
         RectTransform own = transform as RectTransform;
         RectTransform tip = tooltip.transform.parent as RectTransform;
         if (RectTransformUtility.ScreenPointToLocalPointInRectangle(own, screenPosition, null, out Vector2 local))
-            tip.anchoredPosition = local + new Vector2(18f, -18f);
+        {
+            bool placeOnLeft = screenPosition.x > Screen.width * 0.6f;
+            float horizontal = placeOnLeft ? -tip.rect.width - 28f : 28f;
+            tip.anchoredPosition = local + new Vector2(horizontal, -28f);
+        }
         tip.SetAsLastSibling();
     }
 
