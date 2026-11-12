@@ -137,7 +137,7 @@ public class InventoryPanel : MonoBehaviour
         IsOpen = true;
         activeInstance.EnsureBagBindings();
         activeInstance.lootTransferHandler = transferToLoot;
-        activeInstance.bagGridView?.SetItemClickHandler(null);
+        activeInstance.bagGridView?.SetItemClickHandler(activeInstance.SelectBagItem);
         activeInstance.bagGridView?.SetItemDoubleClickHandler(transferToLoot);
         activeInstance.HideItemActions();
         activeInstance.RefreshBagSlots();
@@ -329,18 +329,52 @@ public class InventoryPanel : MonoBehaviour
     {
         var grid = panelRoot != null ? panelRoot.transform.Find("Content/BagGrid") : null;
         if (grid == null) return;
+        var gridRect = grid.GetComponent<RectTransform>() ?? grid.gameObject.AddComponent<RectTransform>();
+        var targetSize = new Vector2(
+            LootRuntimeState.RunBagGrid.Width * LootGridView.MinimumCellSize,
+            LootRuntimeState.RunBagGrid.Height * LootGridView.MinimumCellSize);
+        bool dimensionsChanged = gridRect.sizeDelta != targetSize;
+        var gridElement = grid.GetComponent<LayoutElement>() ?? grid.gameObject.AddComponent<LayoutElement>();
+        gridElement.preferredWidth = targetSize.x;
+        gridElement.preferredHeight = targetSize.y;
         var oldLayout = grid.GetComponent<GridLayoutGroup>();
         if (oldLayout != null) oldLayout.enabled = false;
         bagGridView = grid.GetComponent<LootGridView>() ?? grid.gameObject.AddComponent<LootGridView>();
         bagGridView.Bind(LootRuntimeState.RunBagGrid, LootRuntimeState.MoveRunBagItem);
-        bagGridView.SetItemClickHandler(lootTransferHandler == null ? SelectBagItem : null);
+        bagGridView.SetItemClickHandler(SelectBagItem);
         bagGridView.SetItemDoubleClickHandler(lootTransferHandler);
+        if (dimensionsChanged) ReflowPanelForBagGrid();
+    }
+
+    private void ReflowPanelForBagGrid()
+    {
+        RectTransform root = panelRoot != null ? panelRoot.GetComponent<RectTransform>() : null;
+        if (root == null) return;
+
+        foreach (LayoutGroup layout in root.GetComponentsInChildren<LayoutGroup>(true))
+        {
+            if (actionRoot != null && (layout.gameObject == actionRoot || layout.transform.IsChildOf(actionRoot.transform)))
+                continue;
+            layout.enabled = true;
+        }
+        foreach (ContentSizeFitter fitter in root.GetComponentsInChildren<ContentSizeFitter>(true))
+        {
+            if (actionRoot != null && (fitter.gameObject == actionRoot || fitter.transform.IsChildOf(actionRoot.transform)))
+                continue;
+            fitter.enabled = true;
+        }
+
+        BakeAndFreezeLayout(root);
+        PositionPanelOnRight(root);
+        if (actionRoot != null) ConfigureActionRootLayout();
     }
 
     private void RefreshBagSlots()
     {
-        if (bagGridView == null || bagGridView.GetComponent<RectTransform>().sizeDelta.x
-            != LootRuntimeState.RunBagGrid.Width * LootGridView.MinimumCellSize) EnsureBagBindings();
+        if (bagGridView == null
+            || bagGridView.GetComponent<RectTransform>().sizeDelta.x != LootRuntimeState.RunBagGrid.Width * LootGridView.MinimumCellSize
+            || bagGridView.GetComponent<RectTransform>().sizeDelta.y != LootRuntimeState.RunBagGrid.Height * LootGridView.MinimumCellSize)
+            EnsureBagBindings();
         else bagGridView.Refresh();
         if (selectedBagItem != null && LootRuntimeState.RunBagGrid.Find(selectedBagItem.InstanceId) == null) HideItemActions();
         RefreshEquipmentSlots();

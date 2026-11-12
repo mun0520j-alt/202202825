@@ -1122,7 +1122,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Fixed — Play 회귀 대기 (2026-11-12) |
+| 상태 | Closed — 사용자 Play 확인 (2026-11-12) |
 | Jira | 미등록 |
 | 심각도 | Major |
 | 우선순위 | P1 |
@@ -1140,7 +1140,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Fixed — Play 회귀 대기 (2026-11-12) |
+| 상태 | Closed — 사용자 Play 확인 (2026-11-12) |
 | Jira | 미등록 |
 | 심각도 | Minor |
 | 우선순위 | P1 |
@@ -1153,4 +1153,40 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 - **원인:** 커서 근처에 생성된 툴팁 배경 `Image`가 Raycast를 받아 원래 아이템의 PointerExit를 유발했다.
 - **수정:** 툴팁 배경과 텍스트를 입력 비대상으로 유지하고, PointerEnter 위치의 화면 안쪽에 고정해 커서를 따라다니지 않게 한다.
 - **회귀 범위:** TC-M6-07, 툴팁 표시·이동·숨김, 드래그 시작.
+
+## BUG-042 — 루팅 UI에서 가방 장비를 바로 장착할 수 없음
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Fixed — Play 회귀 대기 (2026-11-12) |
+| Jira | 미등록 |
+| 심각도 | Minor |
+| 우선순위 | P1 |
+| 발견 단계 | M6 통합 Play 루팅 |
+| 관련 코드 | `InventoryPanel`, `LootingPanel` |
+
+- **재현:** 상자·바닥 더미를 열고 오른쪽 가방에 있는 장비를 클릭한다.
+- **기대:** 첫 클릭으로 장비를 선택하고 바로 장착할 수 있으며, 더블클릭은 기존처럼 보관함으로 이동한다.
+- **실제:** 루팅 중에는 가방 아이템 선택 콜백이 제거돼 장착 버튼이 나타나지 않는다. 장착하려면 루팅 UI를 닫고 아이템을 버리는 우회가 필요하다.
+- **원인:** `OpenForLoot`와 `EnsureBagBindings`가 더블클릭 전송을 연결하면서 단일 클릭 선택을 `null`로 덮어썼다.
+- **수정:** 루팅 중에도 단일 클릭은 선택·장착에 연결하고 더블클릭만 보관함 전송에 유지한다.
+- **회귀 범위:** TC-M6-08·08A·08B, 장착 2Tick, 보관함 이동 1Tick.
+
+## BUG-043 — 큰 가방 장착 시 격자가 인벤토리 프레임을 침범함
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Fixed — Play 회귀 대기 (2026-11-12) |
+| Jira | 미등록 |
+| 심각도 | Minor |
+| 우선순위 | P1 |
+| 발견 단계 | M6 통합 Play 가방 교체 |
+| 관련 코드 | `InventoryPanel` |
+
+- **재현:** 기본 3×2 가방에서 Epic 5×3 또는 Unique 4×5 가방으로 교체한다.
+- **기대:** 48px 셀 크기를 유지하면서 인벤토리 프레임이 새 격자를 포함하도록 확장된다.
+- **실제:** 격자만 커지고 최초 크기로 고정된 패널은 그대로라 장비 목록·버튼·프레임 밖을 침범한다.
+- **원인:** `LootGridView`는 새 모델 크기로 갱신되지만 Bake된 `LayoutElement`와 패널 레이아웃은 다시 계산하지 않았다. 높이만 바뀌는 경우 갱신 검사도 누락됐다.
+- **수정:** 가방 가로·세로 변경을 모두 감지하고 격자 선호 크기와 패널 레이아웃을 다시 계산한다.
+- **회귀 범위:** TC-M6-14·18, Normal/Rare/Epic/Unique 가방, 루팅 UI 동시 표시.
 
