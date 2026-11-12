@@ -7,7 +7,9 @@ using UnityEngine;
 public sealed class BaseCampManagementPanel : MonoBehaviour
 {
     private enum SortMode { Acquired, RarityHigh, RarityLow, Type }
+    private enum MerchantMode { Sell, Buy }
     private SortMode sortMode;
+    private MerchantMode merchantMode;
     private LootItemType? typeFilter;
     private LootRarity? rarityFilter;
     private Vector2 merchantScroll;
@@ -27,14 +29,24 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
     {
         GUILayout.BeginArea(area, GUI.skin.box);
         GUILayout.Label($"상인   Gold {LootRuntimeState.Gold}");
-        GUILayout.Label("판매할 아이템");
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Toggle(merchantMode == MerchantMode.Sell, "판매", GUI.skin.button)) merchantMode = MerchantMode.Sell;
+        if (GUILayout.Toggle(merchantMode == MerchantMode.Buy, "구매", GUI.skin.button)) merchantMode = MerchantMode.Buy;
+        GUILayout.EndHorizontal();
 
         merchantScroll = GUILayout.BeginScrollView(merchantScroll);
-        GUILayout.Label("Stash");
-        foreach (var item in LootRuntimeState.Stash.ToArray()) DrawSaleItem(item, "Stash");
-        GUILayout.Space(6);
-        GUILayout.Label("출격 가방");
-        foreach (var item in LootRuntimeState.RunBag.ToArray()) DrawSaleItem(item, "가방");
+        if (merchantMode == MerchantMode.Sell)
+        {
+            GUILayout.Label("Stash");
+            foreach (var item in LootRuntimeState.Stash.ToArray()) DrawSaleItem(item, "Stash");
+            GUILayout.Space(6);
+            GUILayout.Label("출격 가방");
+            foreach (var item in LootRuntimeState.RunBag.ToArray()) DrawSaleItem(item, "가방");
+        }
+        else
+        {
+            foreach (LootItemData item in LootItemDatabase.Items.Where(LootRuntimeState.IsMerchantPurchaseItem)) DrawPurchaseItem(item);
+        }
         GUILayout.EndScrollView();
 
         DrawUniqueSaleConfirmation();
@@ -45,12 +57,8 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
     private void DrawStashPanel(Rect area)
     {
         GUILayout.BeginArea(area, GUI.skin.box);
-        GUILayout.Label("장비 · 가방 · Stash");
-        GUILayout.Label("장착 장비");
-        DrawEquipment(LootItemType.Weapon, "무기");
-        DrawEquipment(LootItemType.Shield, "방패");
-        DrawEquipment(LootItemType.Armor, "갑옷");
-        DrawEquipment(LootItemType.Bag, "가방");
+        GUILayout.Label("보험 · Stash  (장착 장비는 오른쪽 패널)");
+        DrawInsurancePanel();
 
         GUILayout.Space(6);
         GUILayout.BeginHorizontal();
@@ -67,31 +75,58 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
         GUILayout.EndArea();
     }
 
-    private void DrawEquipment(LootItemType type, string label)
+    private void DrawInsurancePanel()
     {
-        var item = LootRuntimeState.GetEquipped(type);
-        GUILayout.BeginHorizontal();
-        GUILayout.Label($"{label}: {(item?.Definition?.Name ?? "비어 있음")}", GUILayout.Width(240));
-        GUI.enabled = item != null;
-        if (GUILayout.Button("해제 → Stash"))
+        GUILayout.Space(8);
+        GUILayout.Label("보험 (장비에 거는 보험 — 잃을 때까지 유지)");
+        foreach (var item in LootRuntimeState.InsurableCandidates.ToArray())
         {
-            if (!LootRuntimeState.TryUnequipToStash(type)) notice = LootRuntimeState.LastFailureReason;
-            else notice = null;
+            bool selected = LootRuntimeState.IsInsuranceSelected(item.InstanceId);
+            bool next = GUILayout.Toggle(selected, $"{item.Definition.Name} ({Mathf.CeilToInt(item.Definition.SellPrice * M7EconomyConfig.InsurancePremiumRate)}G)");
+            if (next != selected) LootRuntimeState.ToggleInsuranceSelection(item.InstanceId);
         }
-        GUI.enabled = true;
-        GUILayout.EndHorizontal();
+        if (LootRuntimeState.SelectedInsurancePremium > 0
+            && GUILayout.Button($"보험 가입 ({LootRuntimeState.SelectedInsurancePremium}G)"))
+        {
+            notice = LootRuntimeState.TryConfirmInsurance() ? "보험됨" : LootRuntimeState.LastFailureReason;
+        }
+
+        foreach (var entry in LootRuntimeState.InsuranceReturns.ToArray())
+        {
+            string itemName = LootItemDatabase.FindById(entry.ItemId)?.Name ?? entry.ItemId;
+            if (!entry.Revealed)
+            {
+                GUILayout.Label($"{itemName} — 반환 확인 대기 {Mathf.CeilToInt(entry.WaitTicksRemaining)} Tick");
+                continue;
+            }
+            GUILayout.BeginHorizontal();
+            if (!entry.Returned)
+            {
+                GUILayout.Label($"{itemName} — 보험 회수 실패");
+                if (GUILayout.Button("확인", GUILayout.Width(55)))
+                    notice = LootRuntimeState.TryDismissInsuranceResult(entry.ReturnId) ? null : LootRuntimeState.LastFailureReason;
+            }
+            else
+            {
+                GUILayout.Label($"{itemName} — 수령 {Mathf.CeilToInt(entry.ClaimTicksRemaining)} Tick");
+                if (GUILayout.Button("수령", GUILayout.Width(55)))
+                    notice = LootRuntimeState.TryClaimInsurance(entry.ReturnId) ? "보험품 수령 완료" : LootRuntimeState.LastFailureReason;
+            }
+            GUILayout.EndHorizontal();
+        }
     }
 
     private void DrawStorageItem(LootItemInstance item, bool inStash)
     {
         if (item?.Definition == null) return;
         GUILayout.BeginHorizontal();
-        GUILayout.Label($"[{item.Definition.Rarity}] {item.Definition.Name}", GUILayout.Width(170));
+        GUILayout.Label($"[{item.Definition.Rarity}] {(LootRuntimeState.IsInsured(item.InstanceId) ? "[보험] " : "")}{item.Definition.Name}", GUILayout.Width(170));
         if (GUILayout.Button(inStash ? "가방" : "Stash", GUILayout.Width(60)))
         {
             bool ok = inStash ? LootRuntimeState.MoveStashItemToBag(item.InstanceId) : LootRuntimeState.MoveBagItemToStash(item.InstanceId);
             notice = ok ? null : "출격 가방이 가득 찼습니다.";
         }
+        GUI.enabled = item.Definition.Type != LootItemType.Junk && item.Definition.Type != LootItemType.Consumable;
         if (GUILayout.Button("장착", GUILayout.Width(55)))
         {
             bool equipped = inStash
@@ -99,6 +134,22 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
                 : LootRuntimeState.TryEquipFromBaseCampBag(item.InstanceId);
             notice = equipped ? null : LootRuntimeState.LastFailureReason;
         }
+        GUI.enabled = true;
+        GUILayout.EndHorizontal();
+    }
+
+    private void DrawPurchaseItem(LootItemData item)
+    {
+        int price = item.SellPrice * M7EconomyConfig.PurchasePriceMultiplier;
+        GUILayout.BeginHorizontal();
+        GUILayout.Label($"[{item.Rarity}] {item.Name}");
+        GUI.enabled = LootRuntimeState.Gold >= price;
+        if (GUILayout.Button($"{price}G", GUILayout.Width(70)))
+        {
+            bool purchased = LootRuntimeState.TryBuy(item.Id);
+            notice = purchased ? $"{item.Name} 구매 완료 — Stash로 이동" : LootRuntimeState.LastFailureReason;
+        }
+        GUI.enabled = true;
         GUILayout.EndHorizontal();
     }
 
@@ -106,7 +157,7 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
     {
         if (item?.Definition == null) return;
         GUILayout.BeginHorizontal();
-        GUILayout.Label($"[{source}] [{item.Definition.Rarity}] {item.Definition.Name}");
+        GUILayout.Label($"[{source}] [{item.Definition.Rarity}] {(LootRuntimeState.IsInsured(item.InstanceId) ? "[보험] " : "")}{item.Definition.Name}");
         if (GUILayout.Button($"{item.Definition.SellPrice}G", GUILayout.Width(70)))
         {
             if (item.Definition.Rarity >= LootRarity.Unique) pendingUniqueSale = item.InstanceId;
@@ -149,6 +200,7 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
         else if (typeFilter == LootItemType.Weapon) typeFilter = LootItemType.Shield;
         else if (typeFilter == LootItemType.Shield) typeFilter = LootItemType.Armor;
         else if (typeFilter == LootItemType.Armor) typeFilter = LootItemType.Bag;
+        else if (typeFilter == LootItemType.Bag) typeFilter = LootItemType.Junk;
         else typeFilter = null;
     }
 

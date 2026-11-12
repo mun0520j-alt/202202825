@@ -241,7 +241,10 @@ public class TickManager : MonoBehaviour
         // 탈출구 Update가 Player 입력보다 늦게 실행되는 프레임에도 현재 행동의 Tick이
         // 체류 시간에서 빠지지 않도록 비용 적용 전에 탈출 시작 시각을 확정한다.
         if (actor is PlayerTurnActor player)
+        {
             DungeonStairs.PrepareExtractionForAction(player, action);
+            EscapeScrollZone.PrepareForAction(player);
+        }
 
         float naturalNextActionTime = currentTurnActor.NextActionTime + tickCost;
         currentTurnActor.NextActionTime = minimumNextActionTime.HasValue
@@ -268,6 +271,7 @@ public class TickManager : MonoBehaviour
         // 입력을 누른 채 다음 행동이 즉시 예약되기 전에 탈출 완료를 판정한다. AdvanceSchedule이
         // 먼저 끝났으므로 같은 Tick에 예약된 Enemy 공격과 Dead/MIA 판정 우선순위는 유지된다.
         DungeonStairs.TryResolveCompletedExtraction(PlayerTurnActor.Instance);
+        EscapeScrollZone.TryResolveCompleted(PlayerTurnActor.Instance);
     }
 
     public float GetActorNextActionTime(ITurnActor actor)

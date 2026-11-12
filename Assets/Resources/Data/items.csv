@@ -18,3 +18,9 @@ bag_unique,왕실 원정 가방,Bag,Unique,0,0,6,,50,200,2,2,4,5
 basic_weapon,기본 검,Weapon,Normal,20,0,0,,0,0,1,3,0,0
 basic_shield,낡은 방패,Shield,Normal,0,6,0,,0,0,2,2,0,0
 basic_armor,가죽 갑옷,Armor,Normal,0,6,0,,0,0,2,3,0,0
+junk_coin_pouch,은화 주머니,Junk,Normal,0,0,0,,100,15,1,1,0,0
+junk_candles,양초 묶음,Junk,Normal,0,0,0,,100,10,1,2,0,0
+junk_small_gem,작은 보석,Junk,Rare,0,0,0,,50,60,1,1,0,0
+junk_old_relic,오래된 성물,Junk,Epic,0,0,0,,50,120,2,1,0,0
+junk_crown_shard,금관 조각,Junk,Unique,0,0,0,,50,300,1,1,0,0
+escape_scroll,탈출 스크롤,Consumable,Normal,0,0,0,scroll_01h,0,15,1,1,0,0

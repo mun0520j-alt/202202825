@@ -1190,3 +1190,22 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 - **수정:** 가방 가로·세로 변경을 모두 감지하고 격자 선호 크기와 패널 레이아웃을 다시 계산한다.
 - **회귀 범위:** TC-M6-14·18, Normal/Rare/Epic/Unique 가방, 루팅 UI 동시 표시.
 
+
+## BUG-044 버전 표시 Canvas 추가 후 모든 UI 버튼 클릭 불가
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Closed — 사용자 에디터·빌드 Play 확인 (2026-11-12) |
+| Jira | 미등록 |
+| 심각도 | Blocker |
+| 우선순위 | P0 |
+| 발견 단계 | BETA 0.1 빌드 확인 (TC-B01 A판), 업로드 전 |
+| 관련 코드 | `BuildVersionLabel`, `ScreenSpaceCanvasProvider` |
+
+- **재현:** 공개 빌드 정리 커밋(35e4e47) 이후 영지에서 출격 버튼을 누른다. 에디터·빌드 동일.
+- **기대:** 버튼이 눌리고 출격한다.
+- **실제:** 영지·던전의 uGUI 버튼이 전부 반응하지 않는다.
+- **원인:** `BuildVersionLabel`이 `RuntimeInitializeOnLoad`로 `GraphicRaycaster` 없는 Overlay Canvas를 만들었다. `ScreenSpaceCanvasProvider`는 `FindObjectOfType<Canvas>()`로 첫 Canvas를 HUD 루트로 재사용하므로, 모든 HUD가 클릭을 받을 수 없는 Canvas에 붙었다.
+- **수정:** 버전 표시를 Canvas 없이 `OnGUI`로 그린다. 코드 주석에 이유를 남겼다.
+- **회귀 범위:** 영지 출격·상인·Stash·장착 슬롯, 던전 인벤토리·루팅, Esc 메뉴, `BETA 0.1` 표시.
+- **교훈:** "첫 번째 Canvas 재사용" 구조에서는 Canvas를 새로 만드는 코드가 전체 UI 입력에 영향을 준다. 공개 빌드 직전의 작은 변경도 A판 TC로 버튼 입력까지 확인한다.

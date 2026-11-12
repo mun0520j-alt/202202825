@@ -1,0 +1,9 @@
+key,value
+purchase_price_multiplier,4
+escape_scroll_use_ticks,1
+escape_scroll_stay_ticks,20
+escape_scroll_lifetime_ticks,50
+insurance_premium_rate,0.5
+insurance_return_rate,0.3
+insurance_wait_ticks,1500
+insurance_claim_ticks,3000

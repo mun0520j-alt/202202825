@@ -42,6 +42,8 @@ public class DungeonRunManager : MonoBehaviour
     [SerializeField] private GameObject playerPrefab;
 
     [Header("Enemy (M1 Runtime)")]
+    [SerializeField] private Sprite enemySprite;
+    [SerializeField] private RuntimeAnimatorController enemyAnimatorController;
     [SerializeField, Min(1)] private int enemiesPerFloor = 3;
     [SerializeField, Min(0.01f)] private float enemyMoveDuration = 0.1f;
     [SerializeField, Min(0f)] private float enemyHopHeight = 0.4f;
@@ -51,6 +53,10 @@ public class DungeonRunManager : MonoBehaviour
     [SerializeField, Min(1)] private int bossMaxHP = 320;
     [SerializeField, Min(1)] private int bossAttackPower = 43;
     [SerializeField, Min(0)] private int bossDefensePower = 10;
+
+    [Header("M7 Escape Scroll Zone Visual")]
+    [UnityEngine.Serialization.FormerlySerializedAs("escapeScrollSprite")]
+    [SerializeField] private Sprite escapeScrollSprite;
 
     [Header("Camera")]
     [SerializeField] private Camera targetCamera;
@@ -78,6 +84,7 @@ public class DungeonRunManager : MonoBehaviour
         GenerateAllFloors();
         int activeFloorIndex = ExpeditionSession.CurrentFloor - 1;
         SpawnPlayerAtFloor(activeFloorIndex);
+        SpawnEscapeScrollZoneAtFloor(activeFloorIndex);
         SpawnEnemiesAtFloor(activeFloorIndex);
         SpawnChestsAtFloor(activeFloorIndex);
         CreateFogForFloor(activeFloorIndex);
@@ -444,23 +451,48 @@ public class DungeonRunManager : MonoBehaviour
         enemy.SetActive(false);
         enemy.transform.SetParent(floorTilemap.transform.parent, false);
 
-        var renderer = enemy.AddComponent<SpriteRenderer>();
-        renderer.sprite = ProceduralSprite.GetWhiteSpriteCenterPivot();
-        renderer.color = new Color(0.35f, 0.85f, 0.3f, 1f);
+        var visual = new GameObject("Visual");
+        visual.transform.SetParent(enemy.transform, false);
+        var renderer = visual.AddComponent<SpriteRenderer>();
+        renderer.sprite = enemySprite != null ? enemySprite : ProceduralSprite.GetWhiteSpriteCenterPivot();
+        renderer.color = enemySprite != null ? Color.white : new Color(0.35f, 0.85f, 0.3f, 1f);
         renderer.sortingOrder = 2;
-        enemy.transform.localScale = new Vector3(0.75f, 0.75f, 1f);
+        if (renderer.sprite != null)
+        {
+            Vector2 spriteSize = renderer.sprite.bounds.size;
+            float scaleX = spriteSize.x > 0f ? floorTilemap.cellSize.x * 0.9f / spriteSize.x : 1f;
+            float scaleY = spriteSize.y > 0f ? floorTilemap.cellSize.y * 0.9f / spriteSize.y : 1f;
+            float visualScale = Mathf.Min(scaleX, scaleY);
+            visual.transform.localScale = new Vector3(visualScale, visualScale, 1f);
+        }
+        if (enemyAnimatorController != null)
+        {
+            var animator = visual.AddComponent<Animator>();
+            animator.runtimeAnimatorController = enemyAnimatorController;
+        }
 
         var collider = enemy.AddComponent<BoxCollider2D>();
-        collider.size = Vector2.one;
+        collider.size = new Vector2(floorTilemap.cellSize.x * 0.8f, floorTilemap.cellSize.y * 0.8f);
 
-        Vector3 cellOrigin = floorTilemap.CellToWorld(cell);
-        enemy.transform.position = cellOrigin + new Vector3(floorTilemap.cellSize.x * 0.5f, 0.375f, 0f);
+        enemy.transform.position = floorTilemap.GetCellCenterWorld(cell);
 
         var actor = enemy.AddComponent<EnemyTurnActor>();
         actor.ConfigureCombatStats(enemyMaxHP, enemyAttackPower, enemyDefensePower);
         actor.ConfigureRuntime(wallTilemap, floorTilemap, EnemyBehaviorType.Wander, enemyMoveDuration, enemyHopHeight);
         enemy.SetActive(true);
         return enemy;
+    }
+
+    private void SpawnEscapeScrollZoneAtFloor(int floorIndex)
+    {
+        if (floorIndex < 0 || floorIndex >= floors.Count || player == null) return;
+        Tilemap floor = floorTileTilemaps[floorIndex];
+        var actor = player.GetComponent<PlayerTurnActor>();
+        if (actor == null) return;
+
+        var zone = new GameObject($"EscapeScrollZone_F{floorIndex + 1}");
+        zone.transform.SetParent(floor.transform.parent, false);
+        zone.AddComponent<EscapeScrollZone>().Initialize(floor, actor.CurrentCell, escapeScrollSprite);
     }
 
     private void SpawnChestsAtFloor(int floorIndex)

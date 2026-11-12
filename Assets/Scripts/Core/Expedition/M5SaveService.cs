@@ -8,11 +8,12 @@ using UnityEngine;
 // LootRuntimeState가 상태를 소유하고, 이 클래스는 저장 파일 직렬화와 교체만 담당한다.
 public static class M5SaveService
 {
-    private const int CurrentSaveVersion = 3;
+    private const int CurrentSaveVersion = 4;
     private const string SaveFolderName = "Save";
     private const string SaveFileName = "save.json";
     private const string BackupFileName = "save.bak";
     private const string LegacyV2BackupFileName = "save_v2.bak";
+    private const string LegacyV3BackupFileName = "save_v3.bak";
     private const string TempFileName = "save.tmp";
 
     private static bool isRestoring;
@@ -23,6 +24,7 @@ public static class M5SaveService
     public static string SavePath => Path.Combine(SaveDirectory, SaveFileName);
     public static string BackupPath => Path.Combine(SaveDirectory, BackupFileName);
     public static string LegacyV2BackupPath => Path.Combine(SaveDirectory, LegacyV2BackupFileName);
+    public static string LegacyV3BackupPath => Path.Combine(SaveDirectory, LegacyV3BackupFileName);
     public static bool Fullscreen => currentSettings.fullscreen;
     public static int ResolutionWidth => currentSettings.resolution_width;
     public static int ResolutionHeight => currentSettings.resolution_height;
@@ -118,6 +120,11 @@ public static class M5SaveService
             Debug.LogError("[Save] v2 원본 백업에 실패해 v3 마이그레이션을 중단했습니다. 기존 파일은 변경하지 않습니다.");
             return;
         }
+        if (data.save_version == 3 && !TryPreserveLegacyV3Save(loadedPath))
+        {
+            Debug.LogError("[Save] v3 원본 백업에 실패해 v4 마이그레이션을 중단했습니다. 기존 파일은 변경하지 않습니다.");
+            return;
+        }
         Restore(data);
         if (!data.expedition_in_progress)
         {
@@ -130,9 +137,16 @@ public static class M5SaveService
         }
 
         recoveryNotice = "이전 원정이 종료되어 MIA 처리되었습니다.";
+        LootRuntimeState.ClearConfirmedInsuranceWithoutReturn();
         data.save_version = CurrentSaveVersion;
         data.expedition_in_progress = false;
         data.saved_at = DateTime.UtcNow.ToString("O");
+        // 보험은 장비에 걸린다. MIA로 사라진 장비의 보험만 정리하고 남은 장비의 보험은 유지한다.
+        data.insured_this_run = LootRuntimeState.InsuredThisRunIds.Select(instanceId => new LootRuntimeState.InsurancePolicy
+        {
+            InstanceId = instanceId,
+            ItemId = LootRuntimeState.GetInsuredItemId(instanceId)
+        }).ToList();
         Write(data);
         Debug.LogWarning("[Save] 종료되지 않은 원정을 MIA로 처리했습니다.");
     }
@@ -150,6 +164,23 @@ public static class M5SaveService
         catch (Exception exception)
         {
             Debug.LogError($"[Save] v2 원본 백업 실패: {LegacyV2BackupPath}\n{exception.Message}");
+            return false;
+        }
+    }
+
+    private static bool TryPreserveLegacyV3Save(string sourcePath)
+    {
+        try
+        {
+            Directory.CreateDirectory(SaveDirectory);
+            if (File.Exists(LegacyV3BackupPath)) return true;
+            File.Copy(sourcePath, LegacyV3BackupPath, false);
+            Debug.Log($"[Save] v3 원본을 별도 백업으로 보존했습니다: {LegacyV3BackupPath}");
+            return true;
+        }
+        catch (Exception exception)
+        {
+            Debug.LogError($"[Save] v3 원본 백업 실패: {LegacyV3BackupPath}\n{exception.Message}");
             return false;
         }
     }
@@ -187,6 +218,8 @@ public static class M5SaveService
                 RestoreBasicSlots(data.unequipped_basic_slots),
                 data.has_basic_loadout,
                 data.gold);
+            LootRuntimeState.RestoreInsurance(data.insurance_returns);
+            LootRuntimeState.RestoreConfirmedInsurance(data.insured_this_run);
             currentSettings = data.settings != null ? data.settings.Normalized() : SaveSettings.Default();
         }
         finally
@@ -281,6 +314,22 @@ public static class M5SaveService
             settings = currentSettings.Clone(),
             expedition_in_progress = expeditionInProgress
             ,gold = LootRuntimeState.Gold
+            ,insurance_returns = LootRuntimeState.InsuranceReturns.Select(CloneInsurance).ToList()
+            ,insured_this_run = LootRuntimeState.InsuredThisRunIds.Select(instanceId => new LootRuntimeState.InsurancePolicy
+            {
+                InstanceId = instanceId,
+                ItemId = LootRuntimeState.GetInsuredItemId(instanceId)
+            }).ToList()
+        };
+    }
+
+    private static LootRuntimeState.InsuranceReturn CloneInsurance(LootRuntimeState.InsuranceReturn entry)
+    {
+        return new LootRuntimeState.InsuranceReturn
+        {
+            ReturnId = entry.ReturnId, ItemId = entry.ItemId, InstanceId = entry.InstanceId,
+            Returned = entry.Returned, Revealed = entry.Revealed,
+            WaitTicksRemaining = entry.WaitTicksRemaining, ClaimTicksRemaining = entry.ClaimTicksRemaining
         };
     }
 
@@ -364,6 +413,8 @@ public static class M5SaveService
         public SaveSettings settings = new SaveSettings();
         public bool expedition_in_progress;
         public int gold;
+        public List<LootRuntimeState.InsuranceReturn> insurance_returns = new List<LootRuntimeState.InsuranceReturn>();
+        public List<LootRuntimeState.InsurancePolicy> insured_this_run = new List<LootRuntimeState.InsurancePolicy>();
     }
 
     [Serializable]

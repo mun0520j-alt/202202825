@@ -173,6 +173,9 @@ MonoBehaviour:
   floorTile: {fileID: 11400000, guid: d2a42e5d22cbf194f898173c5e6be0cb, type: 2}
   wallTile: {fileID: 11400000, guid: 16cfe7dfe48d2ad479b01dcc1d46adc4, type: 2}
   playerPrefab: {fileID: 7087258216566017545, guid: 33aeb87c70552834e990bc332285902d, type: 3}
+  enemySprite: {fileID: -3209854092255693953, guid: 26ce37446a192f441a66cdd022a3e202, type: 3}
+  enemyAnimatorController: {fileID: 9100000, guid: 288e8f37bda1a704bae9bace2dd96cd8, type: 2}
+  returnRitualSprite: {fileID: -8833982233236294839, guid: b4dfd530ed81bfe4aa5651359a94912c, type: 3}
   targetCamera: {fileID: 519420031}
 --- !u!1 &519420028
 GameObject:

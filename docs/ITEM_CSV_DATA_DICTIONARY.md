@@ -1,6 +1,6 @@
 # 아이템 CSV 데이터 사전
 
-> 원본: `Assets/Resources/Data/items.csv`. M6부터 출격 가방 격자 크기의 권위 데이터도 이 파일에 둔다.
+> 원본: `Assets/Resources/Data/items.csv`. M6부터 출격 가방 격자 크기의 권위 데이터도 이 파일에 둔다. M7 경제 수치는 `Assets/Resources/Data/m7_economy.csv`에서 관리한다.
 
 ## 컬럼
 
@@ -8,7 +8,7 @@
 |---|---|---|---|---|
 | `item_id` | string | Y | 저장·참조용 고유 ID | 중복 금지, 표시명으로 사용 금지 |
 | `item_name` | string | Y | UI 표시명 | 빈 값 금지 |
-| `item_type` | enum | Y | Weapon, Shield, Armor, Bag | 지원하지 않는 값은 로드 실패 처리 |
+| `item_type` | enum | Y | Weapon, Shield, Armor, Bag, Junk, Consumable | 지원하지 않는 값은 로드 실패 처리. Junk·Consumable은 장착 불가 |
 | `rarity` | enum | Y | Normal, Rare, Epic, Unique | 1~4층 Legendary 데이터 금지 |
 | `attack_bonus` | int | Y | 장착 공격력 보너스 | 0 이상 |
 | `defense_bonus` | int | Y | 장착 방어력 보너스 | 0 이상 |
@@ -29,8 +29,10 @@
 | Shield | 1 | 1 | 1 | 1 | 4 |
 | Armor | 1 | 1 | 1 | 1 | 4 |
 | Bag | 1 | 1 | 1 | 1 | 4 |
+| Junk | 2 | 1 | 1 | 1 | 5 |
+| Consumable | 1 | 0 | 0 | 0 | 1 |
 | 기본 지급(드롭 제외) | 3 | 0 | 0 | 0 | 3 |
-| 합계 | 7 | 4 | 4 | 4 | 19 |
+| 합계 | 10 | 5 | 5 | 5 | 25 |
 
 ## M4 전투 수치
 
@@ -46,6 +48,9 @@
 - `capacity_bonus`의 +2/+3/+4/+6은 v2 데이터 해석을 위해 남기며 M6 격자 배치에는 영향을 주지 않는다.
 - `basic_weapon`, `basic_shield`, `basic_armor`는 크기를 코드에 하드코딩하지 않기 위한 드롭 가중치 0의 기본 지급 데이터다.
 - 가방 `drop_weight=50`은 같은 등급 내 약 14% 드롭을 노린 초안으로, 통합 Play 후 확정한다.
+- M7 잡템 5종의 표시명은 임시다. 잡템은 장착할 수 없으며 판매·향후 퀘스트 납품에 사용한다.
+- M7 `escape_scroll`은 1×1 Consumable이며 일반 드롭에서는 제외(`drop_weight=0`)하고 상인 구매로 공급한다.
+- 같은 등급 내 가중치 기준 잡템 비율은 Normal 200/550(36.36%), Rare·Epic·Unique 각각 50/400(12.5%)다.
 
 ## 변경 절차
 

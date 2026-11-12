@@ -266,11 +266,28 @@ public class InventoryPanel : MonoBehaviour
                 label.text = kvp.Key == EquipmentSlotType.Bag
                     ? $"{(item != null ? item.itemName : "가방 없음")}\n{LootRuntimeState.RunBagGrid.Width}×{LootRuntimeState.RunBagGrid.Height}"
                     : item != null ? item.itemName : GetSlotLabel(kvp.Key);
-                label.color = item != null ? FilledSlotLabelColor : EmptySlotLabelColor;
+                bool insuredSlot = IsInsuredSlot(kvp.Key);
+                if (insuredSlot) label.text = "[보험] " + label.text;
+                label.color = item == null ? EmptySlotLabelColor : insuredSlot ? LootGridView.InsuredColor : FilledSlotLabelColor;
             }
             if (equipmentUnequipButtons.TryGetValue(kvp.Key, out var button))
                 button.gameObject.SetActive(item != null && IsUnequippableSlot(kvp.Key));
         }
+    }
+
+    private static bool IsInsuredSlot(EquipmentSlotType slot)
+    {
+        LootItemType type;
+        switch (slot)
+        {
+            case EquipmentSlotType.MainWeapon1: type = LootItemType.Weapon; break;
+            case EquipmentSlotType.OffHandShield: type = LootItemType.Shield; break;
+            case EquipmentSlotType.Armor: type = LootItemType.Armor; break;
+            case EquipmentSlotType.Bag: type = LootItemType.Bag; break;
+            default: return false;
+        }
+        return LootRuntimeState.EquippedLoot.TryGetValue(type, out LootItemInstance equipped)
+            && equipped != null && LootRuntimeState.IsInsured(equipped.InstanceId);
     }
 
     private static string GetSlotLabel(EquipmentSlotType slot)
@@ -709,8 +726,11 @@ public class InventoryPanel : MonoBehaviour
         actionLabel.text = $"{item.Definition.Name} [{item.Definition.Rarity}]";
         if (actionEquipButton != null)
         {
-            actionEquipButton.gameObject.SetActive(true);
-            actionEquipButton.interactable = true;
+            bool actionable = item.Definition.Type != LootItemType.Junk;
+            actionEquipButton.gameObject.SetActive(actionable);
+            actionEquipButton.interactable = actionable;
+            Text actionText = actionEquipButton.transform.Find("Label")?.GetComponent<Text>();
+            if (actionText != null) actionText.text = item.Definition.Type == LootItemType.Consumable ? "사용" : "장착";
         }
         actionRoot.SetActive(true);
     }
@@ -736,7 +756,7 @@ public class InventoryPanel : MonoBehaviour
         element.preferredWidth = 280f;
         actionLabel = CreateLabel(actionRoot.transform, "SelectedItem", "아이템 선택", 12, TextAnchor.MiddleLeft);
         actionLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = 140f;
-        CreateActionButton("Equip", "장착", () => { if (selectedBagItem != null) EquipBagItem(selectedBagItem.InstanceId); });
+        CreateActionButton("Equip", "장착", UseOrEquipSelectedItem);
         CreateActionButton("Drop", "버리기", () => { if (selectedBagItem != null) DropBagItem(selectedBagItem.InstanceId); });
         actionRoot.SetActive(false);
     }
@@ -755,8 +775,7 @@ public class InventoryPanel : MonoBehaviour
         }
 
         ConfigureActionRootLayout();
-        actionEquipButton = EnsureActionButton("Equip", "장착",
-            () => { if (selectedBagItem != null) EquipBagItem(selectedBagItem.InstanceId); });
+        actionEquipButton = EnsureActionButton("Equip", "장착", UseOrEquipSelectedItem);
         Button dropButton = EnsureActionButton("Drop", "버리기",
             () => { if (selectedBagItem != null) DropBagItem(selectedBagItem.InstanceId); });
         if (actionLabel != null) actionLabel.transform.SetSiblingIndex(0);
@@ -787,6 +806,23 @@ public class InventoryPanel : MonoBehaviour
         {
             actionLabel.gameObject.SetActive(false);
         }
+    }
+
+    private void UseOrEquipSelectedItem()
+    {
+        if (selectedBagItem?.Definition == null) return;
+        if (selectedBagItem.Definition.Type == LootItemType.Consumable)
+        {
+            if (!EscapeScrollZone.TryUseEscapeScroll(selectedBagItem.InstanceId, out string failure))
+            {
+                SetBagNotice(failure);
+                return;
+            }
+            HideItemActions();
+            CloseForEscape();
+            return;
+        }
+        EquipBagItem(selectedBagItem.InstanceId);
     }
 
     private Button EnsureActionButton(string name, string label, UnityEngine.Events.UnityAction action)

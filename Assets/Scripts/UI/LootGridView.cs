@@ -108,6 +108,7 @@ public sealed class LootGridView : MonoBehaviour
         selectionOutline.useGraphicAlpha = false;
         selectionOutline.enabled = placement.Item.InstanceId == selectedInstanceId;
         selectionOutlines[placement.Item.InstanceId] = selectionOutline;
+        if (LootRuntimeState.IsInsured(placement.Item.InstanceId)) CreateInsuredFrame(itemObject.transform);
 
         var labelObject = new GameObject("ShortLabel", typeof(RectTransform), typeof(Text));
         labelObject.transform.SetParent(itemObject.transform, false);
@@ -193,12 +194,34 @@ public sealed class LootGridView : MonoBehaviour
         Refresh();
     }
 
+    // 보험에 든 장비는 청록 테두리로 표시한다 (선택 표시의 노랑과 구분).
+    public static readonly Color InsuredColor = new Color(0.25f, 0.95f, 0.85f, 1f);
+
+    private static void CreateInsuredFrame(Transform parent)
+    {
+        var frame = new GameObject("InsuredFrame", typeof(RectTransform), typeof(Image));
+        frame.transform.SetParent(parent, false);
+        RectTransform rect = frame.GetComponent<RectTransform>();
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
+        rect.offsetMin = new Vector2(2f, 2f);
+        rect.offsetMax = new Vector2(-2f, -2f);
+        Image image = frame.GetComponent<Image>();
+        image.color = new Color(0f, 0f, 0f, 0f);
+        image.raycastTarget = false;
+        Outline outline = frame.AddComponent<Outline>();
+        outline.effectColor = InsuredColor;
+        outline.effectDistance = new Vector2(2f, -2f);
+        outline.useGraphicAlpha = false;
+    }
+
     internal void ShowTooltip(LootGridItemView item, Vector2 screenPosition)
     {
         if (dragged != null || tooltip == null || item?.Item?.Definition == null) return;
         LootItemData data = item.Item.Definition;
         tooltip.text = $"{data.Name} [{data.Rarity}]\n크기 {data.GridWidth}×{data.GridHeight}"
-            + $"\n공격 +{data.AttackBonus} / 방어 +{data.DefenseBonus}";
+            + $"\n공격 +{data.AttackBonus} / 방어 +{data.DefenseBonus}"
+            + (LootRuntimeState.IsInsured(item.Item.InstanceId) ? "\n보험됨" : string.Empty);
         tooltip.transform.parent.gameObject.SetActive(true);
         PositionTooltip(screenPosition);
     }
@@ -295,7 +318,7 @@ public sealed class LootGridView : MonoBehaviour
         return value.Length <= 4 ? value : value.Substring(0, 4);
     }
 
-    private static Color RarityColor(LootRarity rarity)
+    public static Color RarityColor(LootRarity rarity)
     {
         switch (rarity)
         {
