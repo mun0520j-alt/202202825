@@ -81,6 +81,7 @@ public static class LootRuntimeState
     {
         var item = runBag.Find(candidate => candidate.InstanceId == instanceId);
         if (item?.Definition == null) return Fail("장착할 아이템을 찾을 수 없습니다.");
+        if (item.Definition.Type == LootItemType.Junk) return Fail("잡템은 장착할 수 없습니다.");
         if (item.Definition.Type == LootItemType.Bag) return TryEquipBagFromRunBag(item);
         LootGridPlacement original = runBagGrid.Find(instanceId);
         if (original == null) return Fail("가방 배치 정보를 찾을 수 없습니다.");
@@ -230,6 +231,7 @@ public static class LootRuntimeState
     {
         var item = stash.Find(candidate => candidate.InstanceId == instanceId);
         if (item?.Definition == null) return Fail("장착할 아이템을 찾을 수 없습니다.");
+        if (item.Definition.Type == LootItemType.Junk) return Fail("잡템은 장착할 수 없습니다.");
         if (item.Definition.Type == LootItemType.Bag) MoveAllRunBagItemsToStash();
         stash.Remove(item);
         if (equippedLoot.TryGetValue(item.Definition.Type, out var previous) && previous != null) stash.Add(previous);
@@ -246,6 +248,7 @@ public static class LootRuntimeState
     {
         var item = runBag.Find(candidate => candidate.InstanceId == instanceId);
         if (item?.Definition == null) return Fail("장착할 아이템을 찾을 수 없습니다.");
+        if (item.Definition.Type == LootItemType.Junk) return Fail("잡템은 장착할 수 없습니다.");
         runBagGrid.Remove(instanceId, out _);
         runBag.Remove(item);
         if (item.Definition.Type == LootItemType.Bag) MoveAllRunBagItemsToStash();

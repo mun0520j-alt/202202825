@@ -709,8 +709,9 @@ public class InventoryPanel : MonoBehaviour
         actionLabel.text = $"{item.Definition.Name} [{item.Definition.Rarity}]";
         if (actionEquipButton != null)
         {
-            actionEquipButton.gameObject.SetActive(true);
-            actionEquipButton.interactable = true;
+            bool equippable = item.Definition.Type != LootItemType.Junk;
+            actionEquipButton.gameObject.SetActive(equippable);
+            actionEquipButton.interactable = equippable;
         }
         actionRoot.SetActive(true);
     }

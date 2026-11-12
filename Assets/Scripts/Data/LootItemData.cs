@@ -14,7 +14,8 @@ public enum LootItemType
     Weapon,
     Shield,
     Armor,
-    Bag
+    Bag,
+    Junk
 }
 
 [Serializable]
