@@ -88,15 +88,25 @@ public static class LootRuntimeState
         int originalY = original.Y;
         bool originalRotated = original.Rotated;
         equippedLoot.TryGetValue(item.Definition.Type, out var previous);
+        bool replacingBasic = previous == null && item.Definition.Type != LootItemType.Bag
+            && !unequippedBasicSlots.Contains(item.Definition.Type);
+        LootItemInstance previousForBag = previous;
+        if (replacingBasic)
+        {
+            string basicId = $"basic_{item.Definition.Type.ToString().ToLowerInvariant()}";
+            LootItemData basicDefinition = LootItemDatabase.FindById(basicId);
+            if (basicDefinition != null) previousForBag = new LootItemInstance(basicDefinition);
+        }
         runBagGrid.Remove(instanceId, out _);
         runBag.Remove(item);
-        if (previous != null && !runBagGrid.TryAutoPlace(previous, out _))
+        if (previousForBag != null && !runBagGrid.TryAutoPlace(previousForBag, out _))
         {
             runBag.Add(item);
             runBagGrid.TryPlace(item, originalX, originalY, originalRotated);
             return Fail("공간 부족");
         }
-        if (previous != null) runBag.Add(previous);
+        if (previousForBag != null) runBag.Add(previousForBag);
+        if (replacingBasic && previousForBag != null) unequippedBasicSlots.Add(item.Definition.Type);
         equippedLoot[item.Definition.Type] = item;
         RefreshBagCapacity();
         LastFailureReason = null;

@@ -116,8 +116,16 @@ public class InventoryPanel : MonoBehaviour
     public static bool CloseForEscape()
     {
         if (!IsOpen || activeInstance == null || activeInstance.panelRoot == null) return false;
+        activeInstance.HideItemActions();
         activeInstance.panelRoot.SetActive(false);
         IsOpen = false;
+        return true;
+    }
+
+    public static bool ClearSelectionForEscape()
+    {
+        if (!IsOpen || activeInstance == null || activeInstance.selectedBagItem == null) return false;
+        activeInstance.HideItemActions();
         return true;
     }
 
@@ -183,6 +191,12 @@ public class InventoryPanel : MonoBehaviour
 
         if (PauseMenuController.BlocksWorldInput) return;
 
+        if (IsOpen && selectedBagItem != null && Input.GetMouseButtonDown(1))
+        {
+            HideItemActions();
+            return;
+        }
+
         if (Input.GetKeyDown(toggleKey))
         {
             // 상자·바닥 루팅은 왼쪽 보관함과 오른쪽 인벤토리가 한 쌍인 모달이다.
@@ -192,7 +206,9 @@ public class InventoryPanel : MonoBehaviour
             // 주변 아이템 목록과 인벤토리는 같은 UI 입력 레이어를 쓰는 상호 배타 모달이다.
             // I로 인벤토리를 요청하면 기존 목록을 먼저 닫아 두 화면이 중첩되지 않게 한다.
             if (GroundLoot.IsSelectionOpen) GroundLoot.CloseSelectionForModalSwitch();
-            panelRoot.SetActive(!panelRoot.activeSelf);
+            bool wasOpen = panelRoot.activeSelf;
+            if (wasOpen) HideItemActions();
+            panelRoot.SetActive(!wasOpen);
             IsOpen = panelRoot.activeSelf;
 
             // 아직 구독을 못 했다면(예: Player가 Start 이후에 늦게 생성된 경우) 열 때마다
@@ -691,7 +707,25 @@ public class InventoryPanel : MonoBehaviour
         {
             actionRoot = existing.gameObject;
             actionLabel = existing.Find("SelectedItem")?.GetComponent<Text>();
+            EnsureActionButton("Equip", "장착", () => { if (selectedBagItem != null) EquipBagItem(selectedBagItem.InstanceId); });
+            EnsureActionButton("Drop", "버리기", () => { if (selectedBagItem != null) DropBagItem(selectedBagItem.InstanceId); });
         }
+    }
+
+    private void EnsureActionButton(string name, string label, UnityEngine.Events.UnityAction action)
+    {
+        Transform existing = actionRoot.transform.Find(name);
+        if (existing == null)
+        {
+            CreateActionButton(name, label, action);
+            return;
+        }
+        Button button = existing.GetComponent<Button>();
+        if (button == null) button = existing.gameObject.AddComponent<Button>();
+        button.onClick.RemoveAllListeners();
+        button.onClick.AddListener(action);
+        Text text = existing.Find("Label")?.GetComponent<Text>();
+        if (text != null) text.text = label;
     }
 
     private void CreateActionButton(string name, string label, UnityEngine.Events.UnityAction action)
@@ -711,6 +745,7 @@ public class InventoryPanel : MonoBehaviour
     private void HideItemActions()
     {
         selectedBagItem = null;
+        bagGridView?.ClearSelection();
         if (actionRoot != null) actionRoot.SetActive(false);
     }
 

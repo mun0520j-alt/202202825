@@ -65,6 +65,11 @@ public sealed class PauseMenuController : MonoBehaviour
             escapeConsumedFrame = Time.frameCount;
             return;
         }
+        if (InventoryPanel.ClearSelectionForEscape())
+        {
+            escapeConsumedFrame = Time.frameCount;
+            return;
+        }
         if (InventoryPanel.CloseForEscape())
         {
             escapeConsumedFrame = Time.frameCount;
