@@ -99,6 +99,7 @@ public class InventoryPanel : MonoBehaviour
     private System.Action<LootItemInstance> lootTransferHandler;
     private GameObject actionRoot;
     private Text actionLabel;
+    private Button actionEquipButton;
     private LootItemInstance selectedBagItem;
 
     private void Awake()
@@ -672,6 +673,11 @@ public class InventoryPanel : MonoBehaviour
         selectedBagItem = item;
         EnsureItemActions(panelRoot.transform);
         actionLabel.text = $"{item.Definition.Name} [{item.Definition.Rarity}]";
+        if (actionEquipButton != null)
+        {
+            actionEquipButton.gameObject.SetActive(true);
+            actionEquipButton.interactable = item.Definition.Type != LootItemType.Bag;
+        }
         actionRoot.SetActive(true);
     }
 
@@ -703,25 +709,33 @@ public class InventoryPanel : MonoBehaviour
 
     private void EnsureItemActions(Transform parent)
     {
-        if (actionRoot != null) return;
-        Transform existing = parent.Find("ItemActions");
-        if (existing == null) BuildItemActions(parent);
-        else
+        if (actionRoot == null)
         {
-            actionRoot = existing.gameObject;
-            actionLabel = existing.Find("SelectedItem")?.GetComponent<Text>();
-            EnsureActionButton("Equip", "장착", () => { if (selectedBagItem != null) EquipBagItem(selectedBagItem.InstanceId); });
-            EnsureActionButton("Drop", "버리기", () => { if (selectedBagItem != null) DropBagItem(selectedBagItem.InstanceId); });
+            Transform existing = parent.Find("ItemActions");
+            if (existing == null) BuildItemActions(parent);
+            else
+            {
+                actionRoot = existing.gameObject;
+                actionLabel = existing.Find("SelectedItem")?.GetComponent<Text>();
+            }
         }
+
+        actionEquipButton = EnsureActionButton("Equip", "장착",
+            () => { if (selectedBagItem != null) EquipBagItem(selectedBagItem.InstanceId); });
+        Button dropButton = EnsureActionButton("Drop", "버리기",
+            () => { if (selectedBagItem != null) DropBagItem(selectedBagItem.InstanceId); });
+        if (actionLabel != null) actionLabel.transform.SetSiblingIndex(0);
+        if (actionEquipButton != null) actionEquipButton.transform.SetSiblingIndex(1);
+        if (dropButton != null) dropButton.transform.SetSiblingIndex(2);
     }
 
-    private void EnsureActionButton(string name, string label, UnityEngine.Events.UnityAction action)
+    private Button EnsureActionButton(string name, string label, UnityEngine.Events.UnityAction action)
     {
         Transform existing = actionRoot.transform.Find(name);
         if (existing == null)
         {
             CreateActionButton(name, label, action);
-            return;
+            existing = actionRoot.transform.Find(name);
         }
         Button button = existing.GetComponent<Button>();
         if (button == null) button = existing.gameObject.AddComponent<Button>();
@@ -729,6 +743,7 @@ public class InventoryPanel : MonoBehaviour
         button.onClick.AddListener(action);
         Text text = existing.Find("Label")?.GetComponent<Text>();
         if (text != null) text.text = label;
+        return button;
     }
 
     private void CreateActionButton(string name, string label, UnityEngine.Events.UnityAction action)
