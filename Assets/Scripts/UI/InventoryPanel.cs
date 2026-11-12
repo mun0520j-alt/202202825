@@ -720,6 +720,7 @@ public class InventoryPanel : MonoBehaviour
             }
         }
 
+        ConfigureActionRootLayout();
         actionEquipButton = EnsureActionButton("Equip", "장착",
             () => { if (selectedBagItem != null) EquipBagItem(selectedBagItem.InstanceId); });
         Button dropButton = EnsureActionButton("Drop", "버리기",
@@ -727,6 +728,38 @@ public class InventoryPanel : MonoBehaviour
         if (actionLabel != null) actionLabel.transform.SetSiblingIndex(0);
         if (actionEquipButton != null) actionEquipButton.transform.SetSiblingIndex(1);
         if (dropButton != null) dropButton.transform.SetSiblingIndex(2);
+        actionRoot.transform.SetAsLastSibling();
+    }
+
+    private void ConfigureActionRootLayout()
+    {
+        RectTransform rect = actionRoot.GetComponent<RectTransform>() ?? actionRoot.AddComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0.5f, 0f);
+        rect.anchorMax = new Vector2(0.5f, 0f);
+        rect.pivot = new Vector2(0.5f, 0f);
+        rect.anchoredPosition = new Vector2(0f, 12f);
+        rect.sizeDelta = new Vector2(310f, 44f);
+
+        HorizontalLayoutGroup layout = actionRoot.GetComponent<HorizontalLayoutGroup>()
+            ?? actionRoot.AddComponent<HorizontalLayoutGroup>();
+        layout.spacing = 6f;
+        layout.padding = new RectOffset(6, 6, 4, 4);
+        layout.childAlignment = TextAnchor.MiddleCenter;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = true;
+
+        LayoutElement rootElement = actionRoot.GetComponent<LayoutElement>() ?? actionRoot.AddComponent<LayoutElement>();
+        rootElement.preferredWidth = 310f;
+        rootElement.preferredHeight = 44f;
+
+        if (actionLabel != null)
+        {
+            LayoutElement labelElement = actionLabel.GetComponent<LayoutElement>()
+                ?? actionLabel.gameObject.AddComponent<LayoutElement>();
+            labelElement.preferredWidth = 150f;
+        }
     }
 
     private Button EnsureActionButton(string name, string label, UnityEngine.Events.UnityAction action)
@@ -739,6 +772,9 @@ public class InventoryPanel : MonoBehaviour
         }
         Button button = existing.GetComponent<Button>();
         if (button == null) button = existing.gameObject.AddComponent<Button>();
+        LayoutElement element = existing.GetComponent<LayoutElement>() ?? existing.gameObject.AddComponent<LayoutElement>();
+        element.preferredWidth = 68f;
+        element.preferredHeight = 36f;
         button.onClick.RemoveAllListeners();
         button.onClick.AddListener(action);
         Text text = existing.Find("Label")?.GetComponent<Text>();
