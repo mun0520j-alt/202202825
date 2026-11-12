@@ -1068,7 +1068,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Fixed — Play 회귀 대기 (2026-11-12) |
+| 상태 | Closed — 사용자 Play 확인 (2026-11-12) |
 | Jira | 미등록 |
 | 심각도 | Major |
 | 우선순위 | P1 |
@@ -1086,7 +1086,7 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 
 | 항목 | 내용 |
 |---|---|
-| 상태 | Fixed — Play 회귀 대기 (2026-11-12) |
+| 상태 | Closed — 사용자 Play 확인 (2026-11-12) |
 | Jira | 미등록 |
 | 심각도 | Major |
 | 우선순위 | P1 |
@@ -1099,4 +1099,22 @@ DungeonRunManager.CreateRuntimeEnemy () (at Assets/Scripts/MapGen/DungeonRunMana
 - **원인:** `CloseLootOnly`가 동반 개방한 인벤토리를 닫지 않았고 미니맵이 모달 UI 가시성을 고려하지 않았다.
 - **수정:** 루팅 종료 시 인벤토리를 함께 닫고, 인벤토리·루팅이 열린 동안 미니맵 프레임과 카메라를 비활성화한다.
 - **회귀 범위:** TC-M6-19, 일반 인벤토리 단독 Esc, 자동 이동 취소 Esc, 미니맵 재표시.
+
+## BUG-039 — 루팅 중 I 입력이 상자와 인벤토리를 닫음
+
+| 항목 | 내용 |
+|---|---|
+| 상태 | Fixed — Play 회귀 대기 (2026-11-12) |
+| Jira | 미등록 |
+| 심각도 | Minor |
+| 우선순위 | P1 |
+| 발견 단계 | M6 통합 Play 루팅 |
+| 관련 코드 | `InventoryPanel`, `LootingPanel` |
+
+- **재현:** 상자·바닥 루팅 UI와 인벤토리가 함께 열린 상태에서 I를 누른다.
+- **기대:** 루팅 모달이 열린 동안 I 입력은 잠기며, Esc만 루팅 화면을 닫는다.
+- **실제:** I가 주변 루팅 모달을 닫고 인벤토리 토글까지 처리해 두 화면이 함께 닫힌다.
+- **원인:** 인벤토리 토글이 `GroundLoot.IsSelectionOpen`을 닫은 뒤 같은 프레임에 패널 활성 상태를 반전했다.
+- **수정:** `LootingPanel.IsOpen`이면 I 입력을 소비하지 않고 상태를 그대로 유지한다.
+- **회귀 범위:** TC-M6-19, 일반 상태 I 열기·닫기, Esc 루팅 동시 종료.
 

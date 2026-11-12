@@ -185,6 +185,10 @@ public class InventoryPanel : MonoBehaviour
 
         if (Input.GetKeyDown(toggleKey))
         {
+            // 상자·바닥 루팅은 왼쪽 보관함과 오른쪽 인벤토리가 한 쌍인 모달이다.
+            // 열린 동안 I 토글로 한쪽 또는 양쪽을 닫지 않고 Esc만 종료 입력으로 사용한다.
+            if (LootingPanel.IsOpen) return;
+
             // 주변 아이템 목록과 인벤토리는 같은 UI 입력 레이어를 쓰는 상호 배타 모달이다.
             // I로 인벤토리를 요청하면 기존 목록을 먼저 닫아 두 화면이 중첩되지 않게 한다.
             if (GroundLoot.IsSelectionOpen) GroundLoot.CloseSelectionForModalSwitch();
