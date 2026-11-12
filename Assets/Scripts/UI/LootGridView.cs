@@ -318,7 +318,7 @@ public sealed class LootGridView : MonoBehaviour
         return value.Length <= 4 ? value : value.Substring(0, 4);
     }
 
-    private static Color RarityColor(LootRarity rarity)
+    public static Color RarityColor(LootRarity rarity)
     {
         switch (rarity)
         {

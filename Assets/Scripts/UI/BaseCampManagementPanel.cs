@@ -57,12 +57,7 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
     private void DrawStashPanel(Rect area)
     {
         GUILayout.BeginArea(area, GUI.skin.box);
-        GUILayout.Label("장비 · 가방 · Stash");
-        GUILayout.Label("장착 장비");
-        DrawEquipment(LootItemType.Weapon, "무기");
-        DrawEquipment(LootItemType.Shield, "방패");
-        DrawEquipment(LootItemType.Armor, "갑옷");
-        DrawEquipment(LootItemType.Bag, "가방");
+        GUILayout.Label("보험 · Stash  (장착 장비는 오른쪽 패널)");
         DrawInsurancePanel();
 
         GUILayout.Space(6);
@@ -78,21 +73,6 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
         GUILayout.EndScrollView();
         if (!string.IsNullOrEmpty(notice)) GUILayout.Label(notice);
         GUILayout.EndArea();
-    }
-
-    private void DrawEquipment(LootItemType type, string label)
-    {
-        var item = LootRuntimeState.GetEquipped(type);
-        GUILayout.BeginHorizontal();
-        GUILayout.Label($"{label}: {(item?.Definition?.Name ?? "비어 있음")}", GUILayout.Width(240));
-        GUI.enabled = item != null;
-        if (GUILayout.Button("해제 → Stash"))
-        {
-            if (!LootRuntimeState.TryUnequipToStash(type)) notice = LootRuntimeState.LastFailureReason;
-            else notice = null;
-        }
-        GUI.enabled = true;
-        GUILayout.EndHorizontal();
     }
 
     private void DrawInsurancePanel()
