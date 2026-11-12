@@ -136,7 +136,8 @@ public class InventoryPanel : MonoBehaviour
         IsOpen = true;
         activeInstance.EnsureBagBindings();
         activeInstance.lootTransferHandler = transferToLoot;
-        activeInstance.bagGridView?.SetItemClickHandler(transferToLoot);
+        activeInstance.bagGridView?.SetItemClickHandler(null);
+        activeInstance.bagGridView?.SetItemDoubleClickHandler(transferToLoot);
         activeInstance.HideItemActions();
         activeInstance.RefreshBagSlots();
     }
@@ -146,6 +147,7 @@ public class InventoryPanel : MonoBehaviour
         if (activeInstance == null) return;
         activeInstance.lootTransferHandler = null;
         activeInstance.bagGridView?.SetItemClickHandler(activeInstance.SelectBagItem);
+        activeInstance.bagGridView?.SetItemDoubleClickHandler(null);
     }
 
     // [2026-09-04 신규] 에디터 메뉴(BuildHudInScene)가 "컴포넌트는 이미 붙어있는데(Awake가 다시
@@ -330,7 +332,8 @@ public class InventoryPanel : MonoBehaviour
         if (oldLayout != null) oldLayout.enabled = false;
         bagGridView = grid.GetComponent<LootGridView>() ?? grid.gameObject.AddComponent<LootGridView>();
         bagGridView.Bind(LootRuntimeState.RunBagGrid, LootRuntimeState.MoveRunBagItem);
-        bagGridView.SetItemClickHandler(lootTransferHandler ?? SelectBagItem);
+        bagGridView.SetItemClickHandler(lootTransferHandler == null ? SelectBagItem : null);
+        bagGridView.SetItemDoubleClickHandler(lootTransferHandler);
     }
 
     private void RefreshBagSlots()

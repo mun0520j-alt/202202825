@@ -31,9 +31,10 @@ public sealed class LootingPanel : MonoBehaviour
         instance.container = source;
         instance.player = actor;
         instance.title.text = source.DisplayName;
-        instance.notice.text = "클릭: 반대편으로 이동 (1 Tick)";
+        instance.notice.text = "첫 클릭: 선택 / 더블클릭: 이동 (1 Tick)";
         instance.gridView.Bind(source.Grid, source.Grid.Move);
-        instance.gridView.SetItemClickHandler(instance.TakeItem);
+        instance.gridView.SetItemClickHandler(null);
+        instance.gridView.SetItemDoubleClickHandler(instance.TakeItem);
         instance.panelRoot.SetActive(true);
         InventoryPanel.OpenForLoot(instance.PutItem);
     }
@@ -96,21 +97,22 @@ public sealed class LootingPanel : MonoBehaviour
 
     private void RefreshBoth()
     {
-        SetNotice("클릭: 반대편으로 이동 (1 Tick)");
+        SetNotice("첫 클릭: 선택 / 더블클릭: 이동 (1 Tick)");
         if (container == null)
         {
             InventoryPanel.ClearLootTransferHandler();
             return;
         }
         gridView.Bind(container.Grid, container.Grid.Move);
-        gridView.SetItemClickHandler(TakeItem);
+        gridView.SetItemClickHandler(null);
+        gridView.SetItemDoubleClickHandler(TakeItem);
         InventoryPanel.OpenForLoot(PutItem);
     }
 
     private void SetNotice(string message)
     {
         if (notice != null) notice.text = message;
-        if (!string.IsNullOrEmpty(message) && message != "클릭: 반대편으로 이동 (1 Tick)")
+        if (!string.IsNullOrEmpty(message) && message != "첫 클릭: 선택 / 더블클릭: 이동 (1 Tick)")
             Debug.LogWarning($"[Looting] {message}");
     }
 
