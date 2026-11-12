@@ -104,7 +104,7 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
             bool ok = inStash ? LootRuntimeState.MoveStashItemToBag(item.InstanceId) : LootRuntimeState.MoveBagItemToStash(item.InstanceId);
             notice = ok ? null : "출격 가방이 가득 찼습니다.";
         }
-        GUI.enabled = item.Definition.Type != LootItemType.Junk;
+        GUI.enabled = item.Definition.Type != LootItemType.Junk && item.Definition.Type != LootItemType.Consumable;
         if (GUILayout.Button("장착", GUILayout.Width(55)))
         {
             bool equipped = inStash

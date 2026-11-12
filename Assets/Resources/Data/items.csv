@@ -23,3 +23,4 @@ junk_candles,양초 묶음,Junk,Normal,0,0,0,,100,10,1,2,0,0
 junk_small_gem,작은 보석,Junk,Rare,0,0,0,,50,60,1,1,0,0
 junk_old_relic,오래된 성물,Junk,Epic,0,0,0,,50,120,2,1,0,0
 junk_crown_shard,금관 조각,Junk,Unique,0,0,0,,50,300,1,1,0,0
+escape_scroll,귀환 스크롤,Consumable,Normal,0,0,0,scroll_01h,0,15,1,1,0,0

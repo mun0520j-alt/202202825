@@ -9,6 +9,9 @@ public static class M7EconomyConfig
     private static Dictionary<string, float> values;
 
     public static int PurchasePriceMultiplier => Mathf.Max(1, Mathf.RoundToInt(Get("purchase_price_multiplier", 4f)));
+    public static float EscapeScrollUseTicks => Mathf.Max(1f, Get("escape_scroll_use_ticks", 1f));
+    public static float EscapeScrollStayTicks => Mathf.Max(1f, Get("escape_scroll_stay_ticks", 20f));
+    public static float EscapeScrollLifetimeTicks => Mathf.Max(EscapeScrollStayTicks, Get("escape_scroll_lifetime_ticks", 50f));
 
     private static float Get(string key, float fallback)
     {

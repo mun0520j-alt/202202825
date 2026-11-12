@@ -81,7 +81,7 @@ public static class LootRuntimeState
     {
         var item = runBag.Find(candidate => candidate.InstanceId == instanceId);
         if (item?.Definition == null) return Fail("장착할 아이템을 찾을 수 없습니다.");
-        if (item.Definition.Type == LootItemType.Junk) return Fail("잡템은 장착할 수 없습니다.");
+        if (item.Definition.Type == LootItemType.Junk || item.Definition.Type == LootItemType.Consumable) return Fail("이 아이템은 장착할 수 없습니다.");
         if (item.Definition.Type == LootItemType.Bag) return TryEquipBagFromRunBag(item);
         LootGridPlacement original = runBagGrid.Find(instanceId);
         if (original == null) return Fail("가방 배치 정보를 찾을 수 없습니다.");
@@ -231,7 +231,7 @@ public static class LootRuntimeState
     {
         var item = stash.Find(candidate => candidate.InstanceId == instanceId);
         if (item?.Definition == null) return Fail("장착할 아이템을 찾을 수 없습니다.");
-        if (item.Definition.Type == LootItemType.Junk) return Fail("잡템은 장착할 수 없습니다.");
+        if (item.Definition.Type == LootItemType.Junk || item.Definition.Type == LootItemType.Consumable) return Fail("이 아이템은 장착할 수 없습니다.");
         if (item.Definition.Type == LootItemType.Bag) MoveAllRunBagItemsToStash();
         stash.Remove(item);
         if (equippedLoot.TryGetValue(item.Definition.Type, out var previous) && previous != null) stash.Add(previous);
@@ -248,7 +248,7 @@ public static class LootRuntimeState
     {
         var item = runBag.Find(candidate => candidate.InstanceId == instanceId);
         if (item?.Definition == null) return Fail("장착할 아이템을 찾을 수 없습니다.");
-        if (item.Definition.Type == LootItemType.Junk) return Fail("잡템은 장착할 수 없습니다.");
+        if (item.Definition.Type == LootItemType.Junk || item.Definition.Type == LootItemType.Consumable) return Fail("이 아이템은 장착할 수 없습니다.");
         runBagGrid.Remove(instanceId, out _);
         runBag.Remove(item);
         if (item.Definition.Type == LootItemType.Bag) MoveAllRunBagItemsToStash();
@@ -296,10 +296,23 @@ public static class LootRuntimeState
     public static bool IsMerchantPurchaseItem(LootItemData definition)
     {
         if (definition == null || definition.Id.StartsWith("basic_", StringComparison.Ordinal)) return false;
+        if (definition.Id == "escape_scroll") return true;
         if (definition.Type == LootItemType.Bag)
             return definition.Rarity == LootRarity.Normal || definition.Rarity == LootRarity.Rare;
         return definition.Rarity == LootRarity.Normal
             && (definition.Type == LootItemType.Weapon || definition.Type == LootItemType.Shield || definition.Type == LootItemType.Armor);
+    }
+
+    public static bool TryConsumeRunBagItem(string instanceId, string expectedItemId)
+    {
+        LootItemInstance item = runBag.Find(candidate => candidate.InstanceId == instanceId);
+        if (item?.Definition == null || !string.Equals(item.Definition.Id, expectedItemId, StringComparison.Ordinal))
+            return Fail("사용할 아이템을 찾을 수 없습니다.");
+        runBagGrid.Remove(instanceId, out _);
+        runBag.Remove(item);
+        LastFailureReason = null;
+        Changed?.Invoke();
+        return true;
     }
 
     public static void ResolveRun(ExpeditionResult result)

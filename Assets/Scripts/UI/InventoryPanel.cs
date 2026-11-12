@@ -709,9 +709,11 @@ public class InventoryPanel : MonoBehaviour
         actionLabel.text = $"{item.Definition.Name} [{item.Definition.Rarity}]";
         if (actionEquipButton != null)
         {
-            bool equippable = item.Definition.Type != LootItemType.Junk;
-            actionEquipButton.gameObject.SetActive(equippable);
-            actionEquipButton.interactable = equippable;
+            bool actionable = item.Definition.Type != LootItemType.Junk;
+            actionEquipButton.gameObject.SetActive(actionable);
+            actionEquipButton.interactable = actionable;
+            Text actionText = actionEquipButton.transform.Find("Label")?.GetComponent<Text>();
+            if (actionText != null) actionText.text = item.Definition.Type == LootItemType.Consumable ? "사용" : "장착";
         }
         actionRoot.SetActive(true);
     }
@@ -737,7 +739,7 @@ public class InventoryPanel : MonoBehaviour
         element.preferredWidth = 280f;
         actionLabel = CreateLabel(actionRoot.transform, "SelectedItem", "아이템 선택", 12, TextAnchor.MiddleLeft);
         actionLabel.gameObject.AddComponent<LayoutElement>().preferredWidth = 140f;
-        CreateActionButton("Equip", "장착", () => { if (selectedBagItem != null) EquipBagItem(selectedBagItem.InstanceId); });
+        CreateActionButton("Equip", "장착", UseOrEquipSelectedItem);
         CreateActionButton("Drop", "버리기", () => { if (selectedBagItem != null) DropBagItem(selectedBagItem.InstanceId); });
         actionRoot.SetActive(false);
     }
@@ -756,8 +758,7 @@ public class InventoryPanel : MonoBehaviour
         }
 
         ConfigureActionRootLayout();
-        actionEquipButton = EnsureActionButton("Equip", "장착",
-            () => { if (selectedBagItem != null) EquipBagItem(selectedBagItem.InstanceId); });
+        actionEquipButton = EnsureActionButton("Equip", "장착", UseOrEquipSelectedItem);
         Button dropButton = EnsureActionButton("Drop", "버리기",
             () => { if (selectedBagItem != null) DropBagItem(selectedBagItem.InstanceId); });
         if (actionLabel != null) actionLabel.transform.SetSiblingIndex(0);
@@ -788,6 +789,23 @@ public class InventoryPanel : MonoBehaviour
         {
             actionLabel.gameObject.SetActive(false);
         }
+    }
+
+    private void UseOrEquipSelectedItem()
+    {
+        if (selectedBagItem?.Definition == null) return;
+        if (selectedBagItem.Definition.Type == LootItemType.Consumable)
+        {
+            if (!ReturnRitualAnchor.TryUseEscapeScroll(selectedBagItem.InstanceId, out string failure))
+            {
+                SetBagNotice(failure);
+                return;
+            }
+            HideItemActions();
+            CloseForEscape();
+            return;
+        }
+        EquipBagItem(selectedBagItem.InstanceId);
     }
 
     private Button EnsureActionButton(string name, string label, UnityEngine.Events.UnityAction action)

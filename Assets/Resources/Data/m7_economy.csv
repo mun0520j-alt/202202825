@@ -1,2 +1,5 @@
 key,value
 purchase_price_multiplier,4
+escape_scroll_use_ticks,1
+escape_scroll_stay_ticks,20
+escape_scroll_lifetime_ticks,50
