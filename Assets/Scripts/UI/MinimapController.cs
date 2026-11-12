@@ -37,6 +37,7 @@ public class MinimapController : MonoBehaviour
     private Camera minimapCamera;
     private Transform followTarget;
     private RenderTexture renderTexture;
+    private GameObject minimapFrame;
 
     private void Awake()
     {
@@ -79,6 +80,10 @@ public class MinimapController : MonoBehaviour
     private void LateUpdate()
     {
         if (!Application.isPlaying) return; // 에디터에서는 플레이어 추적 안 함([ExecuteAlways] 대비).
+
+        bool shouldShow = !InventoryPanel.IsOpen && !LootingPanel.IsOpen;
+        if (minimapFrame != null && minimapFrame.activeSelf != shouldShow) minimapFrame.SetActive(shouldShow);
+        if (minimapCamera != null) minimapCamera.enabled = shouldShow;
 
         if (followTarget == null)
         {
@@ -130,6 +135,7 @@ public class MinimapController : MonoBehaviour
         var hudRoot = hudRootForCheck;
 
         var frameGo = new GameObject("MinimapFrame");
+        minimapFrame = frameGo;
         frameGo.transform.SetParent(hudRoot, false);
         var frameRect = frameGo.AddComponent<RectTransform>();
         frameRect.anchorMin = new Vector2(1f, 1f);
@@ -161,6 +167,7 @@ public class MinimapController : MonoBehaviour
     // 카메라와 RawImage 양쪽에 다시 꽂아준다.
     private void BindExisting(Transform cameraTransform, Transform frameTransform)
     {
+        minimapFrame = frameTransform.gameObject;
         minimapCamera = cameraTransform.GetComponent<Camera>();
         renderTexture = minimapCamera != null ? minimapCamera.targetTexture as RenderTexture : null;
 

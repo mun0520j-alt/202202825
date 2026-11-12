@@ -8,6 +8,7 @@ public sealed class DungeonInteractionMenu : MonoBehaviour
 {
     private readonly List<DungeonDoor> doors = new List<DungeonDoor>();
     private readonly List<DungeonChest> chests = new List<DungeonChest>();
+    private readonly List<GroundLootPile> lootPiles = new List<GroundLootPile>();
     public static bool IsOpen { get; private set; }
 
     private void OnDisable()
@@ -32,10 +33,13 @@ public sealed class DungeonInteractionMenu : MonoBehaviour
         chests.Clear();
         DungeonDoor.CollectAdjacent(player.FloorTilemap, player.CurrentCell, doors);
         DungeonChest.CollectAdjacent(player.CurrentCell, chests);
-        if (doors.Count == 0 || chests.Count == 0)
+        lootPiles.Clear();
+        GroundLootPile.CollectAdjacent(player.CurrentCell, lootPiles);
+        if (doors.Count + chests.Count + lootPiles.Count <= 1)
         {
             doors.Clear();
             chests.Clear();
+            lootPiles.Clear();
             return;
         }
         if (!LootInteractionGate.TryClaim()) return;
@@ -52,7 +56,7 @@ public sealed class DungeonInteractionMenu : MonoBehaviour
             return;
         }
 
-        int count = doors.Count + chests.Count;
+        int count = doors.Count + chests.Count + lootPiles.Count;
         float height = 42f + count * 34f;
         var rect = new Rect(Screen.width * 0.5f - 180f, Screen.height * 0.5f - height * 0.5f, 360f, height);
         GUI.Box(rect, "주변 상호작용");
@@ -81,6 +85,18 @@ public sealed class DungeonInteractionMenu : MonoBehaviour
             }
             row++;
         }
+        foreach (var pile in lootPiles)
+        {
+            if (pile == null) continue;
+            if (GUI.Button(new Rect(rect.x + 12f, rect.y + 30f + row * 34f, rect.width - 24f, 28f),
+                $"{pile.DisplayName} ({pile.Grid.Placements.Count}개)"))
+            {
+                Close();
+                pile.OpenFromInteractionMenu(player);
+                return;
+            }
+            row++;
+        }
     }
 
     private void Close()
@@ -88,5 +104,6 @@ public sealed class DungeonInteractionMenu : MonoBehaviour
         IsOpen = false;
         doors.Clear();
         chests.Clear();
+        lootPiles.Clear();
     }
 }

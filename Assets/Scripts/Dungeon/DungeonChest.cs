@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 
-public sealed class DungeonChest : MonoBehaviour
+public sealed class DungeonChest : MonoBehaviour, ILootContainer
 {
+    public static float ChestReopenTickCost { get; set; } = 0f;
     private static readonly HashSet<Vector3Int> occupiedCells = new HashSet<Vector3Int>();
     private static readonly Dictionary<Vector3Int, DungeonChest> chestsByCell = new Dictionary<Vector3Int, DungeonChest>();
     private Tilemap floor;
@@ -14,8 +15,11 @@ public sealed class DungeonChest : MonoBehaviour
     private bool opened;
     private bool opening;
     private SpriteRenderer chestRenderer;
+    private readonly LootGridModel lootGrid = new LootGridModel(5, 5);
     public Vector3Int Cell => cell;
     public Tilemap FloorTilemap => floor;
+    public string DisplayName => $"상자 — {floorNumber}층";
+    public LootGridModel Grid => lootGrid;
 
     public void Initialize(Tilemap floorTilemap, Vector3Int targetCell, int currentFloor, int seed)
     {
@@ -56,12 +60,14 @@ public sealed class DungeonChest : MonoBehaviour
         if (results == null) return;
         foreach (var chest in chestsByCell.Values)
         {
-            if (chest != null && !chest.opened && !chest.opening && Manhattan(playerCell, chest.cell) == 1)
+            if (chest != null && !chest.opening && Manhattan(playerCell, chest.cell) == 1)
                 results.Add(chest);
         }
     }
 
-    public string InteractionLabel => opening ? "상자 여는 중..." : $"상자 열기 ({TickCost.Interact:0} Tick)";
+    public string InteractionLabel => opening ? "상자 여는 중..."
+        : opened ? $"상자 다시 열기 ({ChestReopenTickCost:0} Tick)"
+        : $"상자 열기 ({TickCost.Interact:0} Tick)";
 
     public bool TryOpenFromInteractionMenu(PlayerTurnActor player)
     {
@@ -73,7 +79,7 @@ public sealed class DungeonChest : MonoBehaviour
         if (PauseMenuController.BlocksWorldInput) return;
         var player = PlayerTurnActor.Instance;
         if (InventoryPanel.IsOpen || GroundLoot.IsSelectionOpen) return;
-        if (opened || opening || player == null || !Input.GetKeyDown(KeyCode.E)) return;
+        if (opening || player == null || !Input.GetKeyDown(KeyCode.E)) return;
         if (Manhattan(player.CurrentCell, cell) != 1) return;
         if (GroundLoot.HasAdjacent(player.CurrentCell) || !LootInteractionGate.TryClaim()) return;
         TryBeginOpen(player);
@@ -81,7 +87,20 @@ public sealed class DungeonChest : MonoBehaviour
 
     private bool TryBeginOpen(PlayerTurnActor player)
     {
-        if (opened || opening || player == null || Manhattan(player.CurrentCell, cell) != 1) return false;
+        if (opening || player == null || Manhattan(player.CurrentCell, cell) != 1) return false;
+        if (opened)
+        {
+            if (ChestReopenTickCost <= 0f)
+            {
+                LootingPanel.Open(this, player);
+                return true;
+            }
+            return player.TryPerformTimedAction(ChestReopenTickCost, "ChestReopen", () =>
+            {
+                LootingPanel.Open(this, player);
+                return true;
+            });
+        }
         if (!player.TrySpendInteraction(TickCost.Interact, "Loot")) return false;
         opening = true;
         StartCoroutine(ResolveOpenAfterTick(player));
@@ -110,26 +129,30 @@ public sealed class DungeonChest : MonoBehaviour
         }
 
         var item = new LootItemInstance(definition);
-        if (LootRuntimeState.TryAddToRunBag(item))
-        {
-            M3MeasurementAutomation.RecordItemAcquired();
-            Debug.Log($"[Chest] {definition.Name} ({definition.Rarity}) 획득 — {LootRuntimeState.RunBag.Count}/{LootRuntimeState.BagCapacity}");
-        }
-        else
-        {
-            M3MeasurementAutomation.RecordItemGrounded();
-            new GameObject("GroundLoot").AddComponent<GroundLoot>().Initialize(floor, cell, item);
-            Debug.Log($"[Chest] 가방이 가득 차 {definition.Name}을(를) 바닥에 남겼습니다.");
-        }
+        if (!TryAdd(item)) Debug.LogError($"[Chest] 5x5 상자에 {definition.Name}을 배치하지 못했습니다.");
+        else M3MeasurementAutomation.RecordChestItemGenerated();
+        LootingPanel.Open(this, player);
     }
 
     private void OnGUI()
     {
         var player = PlayerTurnActor.Instance;
-        if (opened || player == null || Manhattan(player.CurrentCell, cell) != 1) return;
-        string label = opening ? "상자 여는 중..." : $"E: 상자 열기 ({TickCost.Interact:0} Tick)";
+        if (player == null || Manhattan(player.CurrentCell, cell) != 1) return;
+        string label = opening ? "상자 여는 중..." : $"E: {InteractionLabel}";
         GUI.Box(new Rect(Screen.width * 0.5f - 150f, Screen.height - 90f, 300f, 40f), label);
     }
+
+    public bool TryAdd(LootItemInstance item)
+    {
+        return item != null && lootGrid.TryAutoPlace(item, out _);
+    }
+
+    public bool TryRemove(string instanceId, out LootItemInstance item)
+    {
+        return lootGrid.Remove(instanceId, out item);
+    }
+
+    public void HandleContentsChanged() { }
 
     private static int Manhattan(Vector3Int a, Vector3Int b)
     {

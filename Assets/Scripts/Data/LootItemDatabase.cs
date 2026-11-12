@@ -7,6 +7,7 @@ using UnityEngine;
 public static class LootItemDatabase
 {
     private const string ResourcePath = "Data/items";
+    private const int MinimumFieldCount = 14;
     private static List<LootItemData> items;
 
     public static IReadOnlyList<LootItemData> Items
@@ -95,7 +96,11 @@ public static class LootItemDatabase
         for (int i = 1; i < lines.Length; i++)
         {
             string[] fields = lines[i].Split(',');
-            if (fields.Length < 9) continue;
+            if (fields.Length < MinimumFieldCount)
+            {
+                Debug.LogError($"[LootItemDatabase] {i + 1}행의 컬럼이 부족합니다. 필요 {MinimumFieldCount}, 실제 {fields.Length}.");
+                continue;
+            }
             if (!Enum.TryParse(fields[2], true, out LootItemType type)) continue;
             if (!Enum.TryParse(fields[3], true, out LootRarity rarity)) continue;
 
@@ -110,7 +115,11 @@ public static class LootItemDatabase
                 CapacityBonus = ParseInt(fields[6]),
                 IconKey = fields[7].Trim(),
                 DropWeight = ParseInt(fields[8]),
-                SellPrice = fields.Length > 9 ? ParseInt(fields[9]) : DefaultSellPrice(rarity)
+                SellPrice = ParseInt(fields[9]),
+                GridWidth = ParseInt(fields[10]),
+                GridHeight = ParseInt(fields[11]),
+                BagGridWidth = ParseInt(fields[12]),
+                BagGridHeight = ParseInt(fields[13])
             });
         }
         Debug.Log($"[LootItemDatabase] CSV 아이템 {items.Count}개 로드 완료.");
@@ -121,14 +130,4 @@ public static class LootItemDatabase
         return int.TryParse(value.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int result) ? result : 0;
     }
 
-    private static int DefaultSellPrice(LootRarity rarity)
-    {
-        switch (rarity)
-        {
-            case LootRarity.Rare: return 30;
-            case LootRarity.Epic: return 80;
-            case LootRarity.Unique: return 200;
-            default: return 10;
-        }
-    }
 }

@@ -10,22 +10,14 @@ public sealed class GroundLoot : MonoBehaviour
     private static bool selectionOpen;
     private LootItemInstance item;
     private Vector3Int cell;
-    public static bool IsSelectionOpen => selectionOpen || DungeonInteractionMenu.IsOpen;
-    public static bool IsLootSelectionOpen => selectionOpen;
+    public static bool IsSelectionOpen => selectionOpen || DungeonInteractionMenu.IsOpen || GroundLootPile.IsSelectionOpen;
+    public static bool IsLootSelectionOpen => selectionOpen || GroundLootPile.IsSelectionOpen;
 
     public void Initialize(Tilemap floor, Vector3Int targetCell, LootItemInstance loot)
     {
-        item = loot;
-        cell = targetCell;
-        transform.position = floor.GetCellCenterWorld(cell);
-        name = $"GroundLoot({loot.Definition.Name})";
-        activeLoot.Add(this);
-
-        var renderer = gameObject.AddComponent<SpriteRenderer>();
-        renderer.sprite = ProceduralSprite.GetWhiteSpriteCenterPivot();
-        renderer.color = RarityColor(loot.Definition.Rarity);
-        renderer.sortingOrder = 6;
-        transform.localScale = new Vector3(0.35f, 0.35f, 1f);
+        if (!GroundLootPile.AddOrCreate(floor, targetCell, loot))
+            Debug.LogWarning("[Loot] 바닥 더미 공간 부족으로 아이템을 버리지 못했습니다.");
+        Destroy(gameObject);
     }
 
     private void OnDestroy()
@@ -37,7 +29,8 @@ public sealed class GroundLoot : MonoBehaviour
 
     public static bool HasAdjacent(Vector3Int playerCell)
     {
-        return activeLoot.Exists(loot => loot != null && loot.item != null && Manhattan(playerCell, loot.cell) <= 1);
+        return GroundLootPile.HasAdjacent(playerCell)
+            || activeLoot.Exists(loot => loot != null && loot.item != null && Manhattan(playerCell, loot.cell) <= 1);
     }
 
     private void Update()
@@ -58,6 +51,7 @@ public sealed class GroundLoot : MonoBehaviour
 
     public static bool TryInteractAt(Vector3Int targetCell, PlayerTurnActor player)
     {
+        if (GroundLootPile.TryInteractAt(targetCell, player)) return true;
         if (player == null || Manhattan(player.CurrentCell, targetCell) > 1) return false;
         var target = activeLoot.Find(loot => loot != null && loot.item != null && loot.cell == targetCell);
         if (target == null) return false;
@@ -175,6 +169,7 @@ public sealed class GroundLoot : MonoBehaviour
 
     public static void CloseSelectionForModalSwitch()
     {
+        if (GroundLootPile.CloseForModalSwitch()) return;
         CloseSelection();
     }
 
