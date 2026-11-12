@@ -93,6 +93,8 @@ public sealed class BaseCampGridPanel : MonoBehaviour
         text.fontSize = size;
         text.alignment = TextAnchor.MiddleCenter;
         text.color = Color.white;
+        text.text = value;
+        text.raycastTarget = false;
         return text;
     }
 

@@ -20,9 +20,11 @@ public sealed class ExpeditionResultPanel : MonoBehaviour
         var panelImage = panel.AddComponent<Image>();
         panelImage.color = new Color(0.04f, 0.05f, 0.08f, 0.96f);
         var panelRect = panel.GetComponent<RectTransform>();
-        panelRect.anchorMin = new Vector2(0.5f, 0.5f);
-        panelRect.anchorMax = new Vector2(0.5f, 0.5f);
-        panelRect.sizeDelta = new Vector2(680f, 520f);
+        // BaseCamp는 왼쪽 상인과 오른쪽 장비·Stash·격자 패널을 항상 함께 표시한다.
+        // 중앙 정렬 680px은 오른쪽 관리 패널을 덮으므로, 두 사이의 실제 여백 중앙에 맞춘다.
+        panelRect.anchorMin = new Vector2(0.385f, 0.5f);
+        panelRect.anchorMax = new Vector2(0.385f, 0.5f);
+        panelRect.sizeDelta = new Vector2(460f, 520f);
 
         string body;
         var result = ExpeditionSession.LastResult;
@@ -43,7 +45,7 @@ public sealed class ExpeditionResultPanel : MonoBehaviour
         var textGo = CreateUiObject("ResultText", panel.transform);
         var text = textGo.AddComponent<Text>();
         text.font = HudFont.GetDefault();
-        text.fontSize = 30;
+        text.fontSize = 25;
         text.alignment = TextAnchor.MiddleCenter;
         text.color = Color.white;
         text.text = body;
