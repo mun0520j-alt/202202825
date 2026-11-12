@@ -1,34 +1,31 @@
 using UnityEngine;
-using UnityEngine.UI;
 
 // 모든 씬 오른쪽 아래에 빌드 버전을 표시한다 (BETA 0.1~). 값은 Player Settings의 Version(bundleVersion).
-// 피드백 스크린샷에 버전이 함께 찍히도록 항상 맨 위에 그린다.
-public static class BuildVersionLabel
+// 주의: Canvas를 만들면 ScreenSpaceCanvasProvider의 FindObjectOfType<Canvas>()가 이 Canvas를 HUD 루트로
+// 잡아 GraphicRaycaster 없는 Canvas에 UI가 붙고 모든 버튼 클릭이 막힌다(2026-11-12). 그래서 OnGUI로 그린다.
+public sealed class BuildVersionLabel : MonoBehaviour
 {
     public const string Prefix = "BETA ";
+    private GUIStyle style;
+    private string text;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Create()
     {
-        var root = new GameObject("BuildVersionLabel", typeof(Canvas));
-        Object.DontDestroyOnLoad(root);
-        Canvas canvas = root.GetComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = short.MaxValue;
+        var go = new GameObject("BuildVersionLabel");
+        DontDestroyOnLoad(go);
+        go.AddComponent<BuildVersionLabel>();
+    }
 
-        var textObject = new GameObject("Text", typeof(RectTransform), typeof(Text));
-        textObject.transform.SetParent(root.transform, false);
-        RectTransform rect = textObject.GetComponent<RectTransform>();
-        rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(1f, 0f);
-        rect.anchoredPosition = new Vector2(-8f, 4f);
-        rect.sizeDelta = new Vector2(200f, 20f);
-
-        Text text = textObject.GetComponent<Text>();
-        text.font = HudFont.GetDefault();
-        text.fontSize = 12;
-        text.alignment = TextAnchor.LowerRight;
-        text.color = new Color(1f, 1f, 1f, 0.55f);
-        text.raycastTarget = false;
-        text.text = Prefix + Application.version;
+    private void OnGUI()
+    {
+        if (style == null)
+        {
+            style = new GUIStyle(GUI.skin.label) { fontSize = 12, alignment = TextAnchor.LowerRight };
+            style.normal.textColor = new Color(1f, 1f, 1f, 0.55f);
+            text = Prefix + Application.version;
+        }
+        GUI.depth = -1000;
+        GUI.Label(new Rect(Screen.width - 208f, Screen.height - 24f, 200f, 20f), text, style);
     }
 }
