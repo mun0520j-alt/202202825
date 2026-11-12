@@ -43,6 +43,7 @@ public class DungeonRunManager : MonoBehaviour
 
     [Header("Enemy (M1 Runtime)")]
     [SerializeField] private Sprite enemySprite;
+    [SerializeField] private RuntimeAnimatorController enemyAnimatorController;
     [SerializeField, Min(1)] private int enemiesPerFloor = 3;
     [SerializeField, Min(0.01f)] private float enemyMoveDuration = 0.1f;
     [SerializeField, Min(0f)] private float enemyHopHeight = 0.4f;
@@ -462,6 +463,11 @@ public class DungeonRunManager : MonoBehaviour
             float scaleY = spriteSize.y > 0f ? floorTilemap.cellSize.y * 0.9f / spriteSize.y : 1f;
             float visualScale = Mathf.Min(scaleX, scaleY);
             visual.transform.localScale = new Vector3(visualScale, visualScale, 1f);
+        }
+        if (enemyAnimatorController != null)
+        {
+            var animator = visual.AddComponent<Animator>();
+            animator.runtimeAnimatorController = enemyAnimatorController;
         }
 
         var collider = enemy.AddComponent<BoxCollider2D>();

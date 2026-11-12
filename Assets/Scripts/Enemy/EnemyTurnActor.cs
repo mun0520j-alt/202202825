@@ -46,8 +46,9 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     [SerializeField] private int attackPower = 50;
     [SerializeField] private int defensePower = 10;
 
-    // 발 위치 보정(Y)에 쓴다 — 아래 GetCellFootWorldPosition() 주석 참고.
+    // 피격 플래시와 애니메이션 제어에 사용한다.
     private SpriteRenderer spriteRenderer;
+    private Animator spriteAnimator;
 
     // AI는 차례가 오면 즉시 판단해서 바로 CompleteTurn을 불러야 하는 게 정상 동작이라(Player와
     // 반대), 이 호출을 깜빡하는 버그가 생기면 TickManager 워치독이 곧바로 잡아내야 한다.
@@ -84,7 +85,7 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
         StopAllCoroutines();
         isAnimating = false;
         currentCell = cell;
-        transform.position = GetCellFootWorldPosition(cell);
+        transform.position = GetCellCenterWorldPosition(cell);
     }
 #endif
 
@@ -165,6 +166,7 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
         currentCell = floorTilemap.WorldToCell(transform.position);
 
         spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+        spriteAnimator = GetComponentInChildren<Animator>();
         if (spriteRenderer == null)
         {
             Debug.LogWarning("[EnemyTurnActor] SpriteRenderer를 못 찾아서 발 위치 보정(Y) 없이 셀 바닥에 그대로 배치됩니다.");
@@ -538,26 +540,10 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     // 그대로(보정 없음)"이었는데, goblin을 실제로 배치해보니 스프라이트가 타일 아래로 파묻혀
     // 보이는 문제가 있었다. 원인: 이 프로젝트의 몹 스프라이트는 전부 pivot이 Center(0.5, 0.5)로
     // 통일되어 있는데(PixelArtImportFixer.cs 임포트 규칙), 몹마다 스프라이트를 크롭한 실제 픽셀
-    // 크기가 다르다(goblin 12x11px, knight_m 16x21px, big_demon 25x31px 등, 전부 16px=1유닛
-    // 기준). pivot이 Center라 transform.position은 "스프라이트의 중심"을 가리키는데, 몹마다
-    // 세로 크기가 다르니 발(스프라이트 하단)이 타일 바닥선에 오도록 하려면 몹마다 다른 만큼
-    // 위로 올려줘야 한다 — 고정 상수로는 안 되고, 매번 스프라이트 자체에서 실제 세로 반높이
-    // (spriteRenderer.sprite.bounds.extents.y, 월드 유닛 기준)를 읽어와야 몹 종류가 몇 개든
-    // 자동으로 정확히 맞는다.
-    private Vector3 GetCellFootWorldPosition(Vector3Int cell)
+    // Player와 동일하게 논리 셀의 정중앙(x.5/y.5)을 화면 좌표로 사용한다.
+    private Vector3 GetCellCenterWorldPosition(Vector3Int cell)
     {
-        Vector3 cellOrigin = floorTilemap.CellToWorld(cell); // 셀의 바닥-왼쪽 모서리(정수 좌표)
-        Vector3 cellSize = floorTilemap.cellSize;
-
-        float footOffsetY = 0f;
-        if (spriteRenderer != null && spriteRenderer.sprite != null)
-        {
-            // 시각 자식만 타일 크기에 맞춰 확대할 수 있으므로 Actor 루트가 아니라
-            // 실제 SpriteRenderer Transform의 월드 배율을 사용한다.
-            footOffsetY = spriteRenderer.sprite.bounds.extents.y * Mathf.Abs(spriteRenderer.transform.lossyScale.y);
-        }
-
-        return cellOrigin + new Vector3(cellSize.x * 0.5f, footOffsetY, 0f);
+        return floorTilemap.GetCellCenterWorld(cell);
     }
 
     // PlayerTurnActor.HopTo()와 동일한 사인 곡선 홉 애니메이션(네크로댄서 참고) — 기울임/찌그러짐
@@ -565,9 +551,10 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
     private IEnumerator HopTo(Vector3Int targetCell)
     {
         isAnimating = true;
+        if (spriteAnimator != null) spriteAnimator.Play("run", 0, 0f);
 
         Vector3 startPos = transform.position;
-        Vector3 endPos = GetCellFootWorldPosition(targetCell);
+        Vector3 endPos = GetCellCenterWorldPosition(targetCell);
 
         // 논리 이동과 턴 완료를 연출보다 먼저 확정해 플레이어 및 다른 Enemy의 홉을 동시에 시작한다.
         currentCell = targetCell;
@@ -585,6 +572,7 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
         }
 
         transform.position = endPos; // 부동소수점 오차 정리 — 정확히 목표 위치에 스냅.
+        if (spriteAnimator != null) spriteAnimator.Play("idle", 0, 0f);
         isAnimating = false;
         if (turnPendingDuringAnimation)
         {
