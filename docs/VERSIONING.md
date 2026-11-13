@@ -41,3 +41,27 @@
 | `beta-0.1` | 배포 | 첫 itch 공개 Windows 빌드 — `m7`과 같은 merge 커밋 `56aec4b` |
 
 `m7`과 `beta-0.1`처럼 개발 마일스톤 완료 커밋이 그대로 공개 빌드 기준이면 같은 커밋에 두 주석 태그를 붙일 수 있다.
+
+## 5. 병합 브랜치 정리 이력
+
+2026-11-13에 `origin/main` 미병합 원격 브랜치가 0개임을 확인한 뒤 아래 병합 브랜치를 정리했다. 필요하면 마지막 커밋 해시에서 같은 이름의 브랜치를 다시 만들 수 있다.
+
+| 삭제한 원격 브랜치 | 마지막 커밋 |
+|---|---|
+| `docs/handoff-2026-11-06` | `42baa79` |
+| `docs/m2-closeout` | `1427881` |
+| `docs/m4-external-sync-m5-prep` | `6b768de` |
+| `docs/m6-closeout` | `0a2ee03` |
+| `docs/m7-closeout` | `6e4bb06` |
+| `docs/m7-leftovers` | `6e4bb06` |
+| `feature/m0-baseline-audit` | `6fb461b` |
+| `feature/m1-expedition-loop` | `b3369b4` |
+| `feature/m2-loot-loss` | `8949893` |
+| `feature/m3-measurement-balance` | `41a440a` |
+| `feature/m4-depth-expansion` | `31303d8` |
+| `feature/m5-save` | `91eb9ec` |
+| `feature/m6-grid-inventory` | `7281c11` |
+| `feature/m7-meta-economy` | `bf2c082` |
+| `fix/BUG-001-minimap-destroy` | `20d643d` |
+
+앞으로 PR 병합 후에는 GitHub의 **Delete branch**를 사용해 작업 브랜치를 바로 정리한다.
