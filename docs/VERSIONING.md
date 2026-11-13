@@ -28,6 +28,7 @@
 - **itch 업로드 버전 칸에도 같은 이름을 넣는다.** butler 사용 시 `--userversion beta-0.X`.
 - 태그는 주석 태그(`git tag -a`)만 사용한다. push·태그 생성은 사용자 확인 후.
 - 공개 빌드 파일명은 `dungeon-extraction-beta-0.X-windows.zip` 형식을 사용한다.
+- 세이브 스키마를 올리기 전, 마이그레이션 회귀용 이전 버전 샘플을 `QA/evidence/saves/<배포 버전>/`에 보관한다. 샘플 파일은 사용자가 준비하며 민감한 로컬 정보는 포함하지 않는다.
 
 ## 4. 이력
 
