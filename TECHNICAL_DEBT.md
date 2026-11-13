@@ -14,6 +14,8 @@
 | TD-010 | 보스 전리품 더미 공간 부족 시 아이템 소실 | `GroundLootPile.Create`는 같은 칸에 가득 찬 더미가 있으면 남는 보스 드롭을 경고 로그만 남기고 버린다. 빈도는 낮지만 보상 소실이므로 인접 칸에 새 더미를 만들어야 함 | Low | Open | M7 |
 | TD-011 | 출격 가방 저장 시 격자 위치 없는 아이템 무로그 누락 | `SaveRunBagItems`가 격자 배치가 없는 아이템을 경고 없이 건너뛴다. TD-009 동기화 누락이 생기면 조용히 손실되므로 최소 경고 로그 필요 | Low | Open | M6.1 (TD-009와 함께) |
 | TD-012 | 기본 출격 가방 3×2가 코드 상수 | `LootRuntimeState.BaseBagGridWidth/Height`가 const라 기본 격자 조정 시 코드 수정 필요. 아이템·가방 크기는 CSV, 기본 격자만 코드에 있음 | Low | Open | M7 |
+| TD-013 | Unity 6 폐기 예정 탐색 API 일괄 교체 | `FindObjectOfType`·`FindObjectsOfType`·`GetInstanceID` obsolete 경고가 남아 있어 향후 Unity 업데이트 시 호환성과 유지보수 비용이 증가함 | Medium | Open | M8 |
+| TD-014 | HUD Canvas를 이름·컴포넌트로 명시 식별 | `ScreenSpaceCanvasProvider`가 첫 Canvas를 재사용해 BUG-044처럼 별도 Canvas 추가가 전체 UI 입력을 끊을 수 있음 | High | Open | M8 |
 
 ## 관리 규칙
 
