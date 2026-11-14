@@ -1,0 +1,8 @@
+key,value
+level_2_reputation,100
+level_2_gold,300
+level_3_reputation,300
+level_3_gold,1000
+sell_bonus_per_level,0.1
+buy_discount_per_level,0.1
+insurance_bonus_per_level,0.1

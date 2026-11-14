@@ -621,6 +621,7 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
             if (isBoss)
             {
                 if (bossTelegraph != null) Destroy(bossTelegraph);
+                ExpeditionRunRecord.RecordBossDefeated();
                 DropBossLoot();
             }
             M3MeasurementAutomation.RecordEnemyKill();

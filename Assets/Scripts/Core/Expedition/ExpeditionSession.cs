@@ -32,6 +32,7 @@ public static class ExpeditionSession
     {
         M3MeasurementAutomation.PrepareNewSession();
         LootRuntimeState.BeginNewRun();
+        ExpeditionRunRecord.BeginRun();
         IsActive = true;
         CurrentFloor = FirstFloor;
         ElapsedTicks = 0f;
@@ -76,6 +77,10 @@ public static class ExpeditionSession
     {
         if (!IsActive) return;
 
+        var carriedItems = new List<LootItemInstance>(LootRuntimeState.RunBag);
+        carriedItems.AddRange(LootRuntimeState.EquippedLoot.Values);
+        ExpeditionRunSnapshot run = ExpeditionRunRecord.Complete(result, CurrentFloor, ElapsedTicks);
+
         LastResult = new ExpeditionResultData
         {
             Result = result,
@@ -84,6 +89,7 @@ public static class ExpeditionSession
             AcquiredItems = new List<string>(acquiredItems)
         };
         M3MeasurementAutomation.Finish(result, ElapsedTicks, CurrentFloor);
+        QuestRuntimeState.RecordExpeditionCompleted(run, carriedItems);
         LootRuntimeState.ResolveRun(result);
         IsActive = false;
         M5SaveService.CompleteExpedition();

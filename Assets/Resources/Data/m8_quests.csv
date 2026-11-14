@@ -1,0 +1,10 @@
+quest_id,order,route,type,prerequisite_id,target_item_id,target_rarity,target_category,target_count,target_floor,target_value,requires_found_in_raid,requires_boss_kill,reward_reputation,reward_gold,reward_item_id,reward_item_count,reserved
+q01,1,Common,Delivery,,junk_coin_pouch,,,3,0,0,1,0,20,30,,0,
+q02,2,Common,Escape,q01,,,,1,3,0,0,0,20,0,escape_scroll,1,
+q03,3,Common,Carry,q02,,Rare,Equipment,2,0,0,0,0,30,50,,0,
+q04a,4,Combat,Escape,q03,,,,1,5,0,0,1,60,100,weapon_rare,1,
+q05a,5,Combat,Carry,q04a,,Epic,Equipment,1,5,0,0,0,70,150,,0,
+q06a,6,Combat,Escape,q05a,,,,2,5,0,0,1,100,200,equipment_epic_random,1,
+q04b,4,Collection,Delivery,q03,junk_small_gem,,,2,0,0,1,0,60,100,,0,
+q05b,5,Collection,Delivery,q04b,junk_old_relic:1|junk_candles:3,,,4,0,0,1,0,70,150,,0,
+q06b,6,Collection,Carry,q05b,,,Junk,1,0,500,0,0,100,200,bag_rare,1,
