@@ -1,6 +1,6 @@
 # 아이템 CSV 데이터 사전
 
-> 원본: `Assets/Resources/Data/items.csv`. M6부터 출격 가방 격자 크기의 권위 데이터도 이 파일에 둔다. M7 경제 수치는 `Assets/Resources/Data/m7_economy.csv`에서 관리한다.
+> 원본: `Assets/Resources/Data/items.csv`. M6부터 출격 가방 격자 크기의 권위 데이터도 이 파일에 둔다. M7 경제 수치는 `Assets/Resources/Data/m7_economy.csv`, M8 퀘스트·우호도 수치는 `m8_quests.csv`와 `m8_economy.csv`에서 관리한다.
 
 ## 컬럼
 
@@ -60,6 +60,30 @@
 4. TC-M2-42로 이름·등급·스탯·가중치 반영을 확인한다.
 5. M3 분포 자동화를 실행한다.
 6. 스키마 변경이면 세이브 마이그레이션 영향을 기록한다.
+
+## M8 퀘스트 CSV
+
+원본: `Assets/Resources/Data/m8_quests.csv`
+
+| 컬럼 묶음 | 의미 |
+|---|---|
+| `quest_id`, `order`, `route`, `type`, `prerequisite_id` | 고유 ID·순서·Common/Combat/Collection 분기·Delivery/Escape/Carry 종류·선행 조건 |
+| `target_item_id` | 단일 또는 복합 납품 조건. 복합은 `item_id:개수|item_id:개수` 형식 |
+| `target_rarity`, `target_category`, `target_count`, `target_floor`, `target_value` | 운반 등급·범주·수량·도달 층·판매가 합계 조건 |
+| `requires_found_in_raid`, `requires_boss_kill` | 인레이드 납품·보스 처치 필요 여부(0/1) |
+| `reward_reputation`, `reward_gold`, `reward_item_id`, `reward_item_count` | 우호도·Gold·아이템 보상 |
+| `title`, `description` | 상인 퀘스트 UI 표시 문자열 |
+
+- `equipment_epic_random`은 Epic 무기·방패·갑옷 중 하나를 보상하는 예약 키다.
+- 두 루트 모두 공통 퀘스트를 포함한 우호도 합계가 300이어야 한다.
+- `Dungeon Tools > QA > M8 Quest Data Validation`에서 정의 수·선행·분기 합계·복합 납품을 검사한다.
+
+## M8 경제 CSV
+
+원본: `Assets/Resources/Data/m8_economy.csv`
+
+- Lv2/Lv3 필요 우호도와 Gold, 레벨당 판매 보너스·구매 할인·보험 반환 보너스를 관리한다.
+- 런타임 가격과 보험 판정은 UI가 아니라 `LootRuntimeState`에서 이 설정을 적용한다.
 
 ## 알려진 제한
 

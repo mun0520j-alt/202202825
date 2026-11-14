@@ -33,6 +33,13 @@ public static class LootRuntimeState
     public static IReadOnlyList<InsuranceReturn> InsuranceReturns => insuranceReturns;
     public static IEnumerable<string> InsuredThisRunIds => insuredThisRun;
     public static string GetInsuredItemId(string instanceId) => insuredItemIds.TryGetValue(instanceId, out string itemId) ? itemId : null;
+    public static float EffectiveInsuranceReturnRate => Mathf.Clamp01(M7EconomyConfig.InsuranceReturnRate
+        + (QuestRuntimeState.ReputationLevel - 1) * M8EconomyConfig.InsuranceBonusPerLevel);
+    public static int GetSellPrice(LootItemData item) => item == null ? 0 : Mathf.Max(0,
+        Mathf.RoundToInt(item.SellPrice * (1f + (QuestRuntimeState.ReputationLevel - 1) * M8EconomyConfig.SellBonusPerLevel)));
+    public static int GetPurchasePrice(LootItemData item) => item == null ? 0 : Mathf.Max(0,
+        Mathf.RoundToInt(item.SellPrice * M7EconomyConfig.PurchasePriceMultiplier
+            * (1f - (QuestRuntimeState.ReputationLevel - 1) * M8EconomyConfig.BuyDiscountPerLevel)));
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetRuntimeState()
@@ -288,7 +295,7 @@ public static class LootRuntimeState
             runBagGrid.Remove(item.InstanceId, out _);
             runBag.Remove(item);
         }
-        Gold += Mathf.Max(0, item.Definition.SellPrice);
+        Gold += GetSellPrice(item.Definition);
         insuredThisRun.Remove(item.InstanceId);
         insuredItemIds.Remove(item.InstanceId);
         Changed?.Invoke();
@@ -301,11 +308,52 @@ public static class LootRuntimeState
         if (definition == null) return Fail("구매할 아이템을 찾을 수 없습니다.");
         if (!IsMerchantPurchaseItem(definition)) return Fail("상인이 판매하지 않는 아이템입니다.");
 
-        int price = Mathf.Max(0, definition.SellPrice * M7EconomyConfig.PurchasePriceMultiplier);
+        int price = GetPurchasePrice(definition);
         if (Gold < price) return Fail("Gold가 부족합니다.");
 
         Gold -= price;
         stash.Add(new LootItemInstance(definition));
+        LastFailureReason = null;
+        Changed?.Invoke();
+        return true;
+    }
+
+    public static bool TrySpendGold(int amount)
+    {
+        amount = Mathf.Max(0, amount);
+        if (Gold < amount) return Fail("Gold가 부족합니다.");
+        Gold -= amount;
+        LastFailureReason = null;
+        Changed?.Invoke();
+        return true;
+    }
+
+    public static void AddGold(int amount)
+    {
+        Gold += Mathf.Max(0, amount);
+        Changed?.Invoke();
+    }
+
+    public static void AddRewardToStash(LootItemInstance item)
+    {
+        if (item == null) return;
+        stash.Add(item);
+        Changed?.Invoke();
+    }
+
+    public static bool TryConsumeQuestItems(IEnumerable<string> instanceIds)
+    {
+        var ids = new HashSet<string>(instanceIds ?? Enumerable.Empty<string>(), StringComparer.Ordinal);
+        var items = stash.Concat(runBag).Where(item => item != null && ids.Contains(item.InstanceId)).ToList();
+        if (items.Count != ids.Count) return Fail("납품 아이템 상태가 변경되었습니다.");
+        foreach (LootItemInstance item in items)
+        {
+            stash.Remove(item);
+            if (runBag.Remove(item)) runBagGrid.Remove(item.InstanceId, out _);
+            insuredThisRun.Remove(item.InstanceId);
+            insuredItemIds.Remove(item.InstanceId);
+            droppedInsuredThisRun.Remove(item.InstanceId);
+        }
         LastFailureReason = null;
         Changed?.Invoke();
         return true;
@@ -452,7 +500,7 @@ public static class LootRuntimeState
             if (!dropped && !lostWithPlayer) continue;
             if (eligibleResult && insuredItemIds.TryGetValue(instanceId, out string itemId))
             {
-                bool returned = new System.Random(Guid.NewGuid().GetHashCode()).NextDouble() < M7EconomyConfig.InsuranceReturnRate;
+                bool returned = new System.Random(Guid.NewGuid().GetHashCode()).NextDouble() < EffectiveInsuranceReturnRate;
                 insuranceReturns.Add(new InsuranceReturn
                 {
                     ReturnId = Guid.NewGuid().ToString("N"), ItemId = itemId, InstanceId = instanceId,

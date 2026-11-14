@@ -37,6 +37,8 @@ public sealed class QuestDefinition
     public int RewardGold;
     public string RewardItemId;
     public int RewardItemCount;
+    public string Title;
+    public string Description;
 }
 
 public static class QuestDefinitionDatabase
@@ -72,7 +74,7 @@ public static class QuestDefinitionDatabase
         for (int i = 1; i < lines.Length; i++)
         {
             string[] f = lines[i].Split(',');
-            if (f.Length < 18 || string.IsNullOrWhiteSpace(f[0])) continue;
+            if (f.Length < 20 || string.IsNullOrWhiteSpace(f[0])) continue;
             if (!Enum.TryParse(f[2].Trim(), true, out QuestRoute route)
                 || !Enum.TryParse(f[3].Trim(), true, out QuestObjectiveType type)) continue;
             var definition = new QuestDefinition
@@ -82,7 +84,7 @@ public static class QuestDefinitionDatabase
                 TargetCategory = f[7].Trim(), TargetCount = Int(f[8]), TargetFloor = Int(f[9]),
                 TargetValue = Int(f[10]), RequiresFoundInRaid = Bool(f[11]), RequiresBossKill = Bool(f[12]),
                 RewardReputation = Int(f[13]), RewardGold = Int(f[14]), RewardItemId = f[15].Trim(),
-                RewardItemCount = Int(f[16])
+                RewardItemCount = Int(f[16]), Title = f[18].Trim(), Description = f[19].Trim()
             };
             byId[definition.Id] = definition;
             all.Add(definition);

@@ -8,12 +8,13 @@ using UnityEngine;
 // LootRuntimeState가 상태를 소유하고, 이 클래스는 저장 파일 직렬화와 교체만 담당한다.
 public static class M5SaveService
 {
-    private const int CurrentSaveVersion = 4;
+    private const int CurrentSaveVersion = 5;
     private const string SaveFolderName = "Save";
     private const string SaveFileName = "save.json";
     private const string BackupFileName = "save.bak";
     private const string LegacyV2BackupFileName = "save_v2.bak";
     private const string LegacyV3BackupFileName = "save_v3.bak";
+    private const string LegacyV4BackupFileName = "save_v4.bak";
     private const string TempFileName = "save.tmp";
 
     private static bool isRestoring;
@@ -25,6 +26,7 @@ public static class M5SaveService
     public static string BackupPath => Path.Combine(SaveDirectory, BackupFileName);
     public static string LegacyV2BackupPath => Path.Combine(SaveDirectory, LegacyV2BackupFileName);
     public static string LegacyV3BackupPath => Path.Combine(SaveDirectory, LegacyV3BackupFileName);
+    public static string LegacyV4BackupPath => Path.Combine(SaveDirectory, LegacyV4BackupFileName);
     public static bool Fullscreen => currentSettings.fullscreen;
     public static int ResolutionWidth => currentSettings.resolution_width;
     public static int ResolutionHeight => currentSettings.resolution_height;
@@ -33,8 +35,10 @@ public static class M5SaveService
     private static void Initialize()
     {
         LootRuntimeState.Changed -= HandleLootChanged;
+        QuestRuntimeState.Changed -= HandleQuestChanged;
         Load();
         LootRuntimeState.Changed += HandleLootChanged;
+        QuestRuntimeState.Changed += HandleQuestChanged;
     }
 
     public static void PrepareForExpedition()
@@ -94,6 +98,12 @@ public static class M5SaveService
         Write(Capture(expeditionInProgress: false, includeExpeditionItems: true));
     }
 
+    private static void HandleQuestChanged()
+    {
+        if (isRestoring || ExpeditionSession.IsActive) return;
+        Write(Capture(expeditionInProgress: false, includeExpeditionItems: true));
+    }
+
     private static void Load()
     {
         SaveData data = TryRead(SavePath);
@@ -125,6 +135,11 @@ public static class M5SaveService
             Debug.LogError("[Save] v3 원본 백업에 실패해 v4 마이그레이션을 중단했습니다. 기존 파일은 변경하지 않습니다.");
             return;
         }
+        if (data.save_version == 4 && !TryPreserveLegacyV4Save(loadedPath))
+        {
+            Debug.LogError("[Save] v4 원본 백업에 실패해 v5 마이그레이션을 중단했습니다. 기존 파일은 변경하지 않습니다.");
+            return;
+        }
         Restore(data);
         if (!data.expedition_in_progress)
         {
@@ -137,6 +152,7 @@ public static class M5SaveService
         }
 
         recoveryNotice = "이전 원정이 종료되어 MIA 처리되었습니다.";
+        QuestRuntimeState.RecordInterruptedMIA();
         LootRuntimeState.ClearConfirmedInsuranceWithoutReturn();
         data.save_version = CurrentSaveVersion;
         data.expedition_in_progress = false;
@@ -185,6 +201,23 @@ public static class M5SaveService
         }
     }
 
+    private static bool TryPreserveLegacyV4Save(string sourcePath)
+    {
+        try
+        {
+            Directory.CreateDirectory(SaveDirectory);
+            if (File.Exists(LegacyV4BackupPath)) return true;
+            File.Copy(sourcePath, LegacyV4BackupPath, false);
+            Debug.Log($"[Save] v4 원본을 별도 백업으로 보존했습니다: {LegacyV4BackupPath}");
+            return true;
+        }
+        catch (Exception exception)
+        {
+            Debug.LogError($"[Save] v4 원본 백업 실패: {LegacyV4BackupPath}\n{exception.Message}");
+            return false;
+        }
+    }
+
     private static SaveData TryRead(string path)
     {
         if (!File.Exists(path)) return null;
@@ -213,13 +246,14 @@ public static class M5SaveService
         {
             LootRuntimeState.RestorePersistentState(
                 RestoreRunBag(data.run_bag, data.save_version),
-                RestoreItems(data.stash),
-                RestoreItems(data.equipped),
+                RestoreItems(data.stash, data.save_version),
+                RestoreItems(data.equipped, data.save_version),
                 RestoreBasicSlots(data.unequipped_basic_slots),
                 data.has_basic_loadout,
                 data.gold);
             LootRuntimeState.RestoreInsurance(data.insurance_returns);
             LootRuntimeState.RestoreConfirmedInsurance(data.insured_this_run);
+            QuestRuntimeState.RestorePersistentState(data.quest_state);
             currentSettings = data.settings != null ? data.settings.Normalized() : SaveSettings.Default();
         }
         finally
@@ -240,13 +274,13 @@ public static class M5SaveService
                 Debug.LogWarning($"[Save] CSV에 없는 item_id를 건너뜁니다: {saved.item_id}");
                 continue;
             }
-            var item = new LootItemInstance(definition, saved.instance_id);
+            var item = new LootItemInstance(definition, saved.instance_id, saveVersion >= 5 && saved.found_in_raid);
             result.Add(new LootGridRestoreItem(item, saved.x, saved.y, saved.rotated, saveVersion >= 3));
         }
         return result;
     }
 
-    private static List<LootItemInstance> RestoreItems(List<SavedItem> savedItems)
+    private static List<LootItemInstance> RestoreItems(List<SavedItem> savedItems, int saveVersion)
     {
         var result = new List<LootItemInstance>();
         if (savedItems == null) return result;
@@ -258,7 +292,7 @@ public static class M5SaveService
                 Debug.LogWarning($"[Save] CSV에 없는 item_id를 건너뜁니다: {saved.item_id}");
                 continue;
             }
-            result.Add(new LootItemInstance(definition, saved.instance_id));
+            result.Add(new LootItemInstance(definition, saved.instance_id, saveVersion >= 5 && saved.found_in_raid));
         }
         return result;
     }
@@ -320,6 +354,7 @@ public static class M5SaveService
                 InstanceId = instanceId,
                 ItemId = LootRuntimeState.GetInsuredItemId(instanceId)
             }).ToList()
+            ,quest_state = QuestRuntimeState.CapturePersistentState()
         };
     }
 
@@ -348,6 +383,7 @@ public static class M5SaveService
                 x = placement.X,
                 y = placement.Y,
                 rotated = placement.Rotated
+                ,found_in_raid = item.IsFoundInRaid
             });
         }
         return result;
@@ -358,7 +394,8 @@ public static class M5SaveService
         return items.Where(item => item?.Definition != null).Select(item => new SavedItem
         {
             item_id = item.Definition.Id,
-            instance_id = item.InstanceId
+            instance_id = item.InstanceId,
+            found_in_raid = item.IsFoundInRaid
         }).ToList();
     }
 
@@ -415,6 +452,7 @@ public static class M5SaveService
         public int gold;
         public List<LootRuntimeState.InsuranceReturn> insurance_returns = new List<LootRuntimeState.InsuranceReturn>();
         public List<LootRuntimeState.InsurancePolicy> insured_this_run = new List<LootRuntimeState.InsurancePolicy>();
+        public QuestRuntimeState.PersistentState quest_state = new QuestRuntimeState.PersistentState();
     }
 
     [Serializable]
@@ -425,6 +463,7 @@ public static class M5SaveService
         public int x;
         public int y;
         public bool rotated;
+        public bool found_in_raid;
     }
 
     [Serializable]
