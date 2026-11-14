@@ -199,6 +199,19 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
             GUILayout.EndHorizontal();
         }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        GUILayout.Space(8);
+        GUILayout.Label("QA 전용 (공개 빌드 제외)");
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("납품품 지급")) notice = QuestRuntimeState.DebugGrantDeliveryRequirements() ? "인레이드 납품품 지급" : "현재 납품 퀘스트가 아닙니다.";
+        if (GUILayout.Button("현재 목표 완료")) notice = QuestRuntimeState.DebugCompleteActiveObjective() ? "목표 완료 처리" : "진행 중 퀘스트 없음";
+        GUILayout.EndHorizontal();
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("우호도·Gold 지급")) { QuestRuntimeState.DebugGrantEconomy(); notice = "우호도 300·Gold 2000 확보"; }
+        if (GUILayout.Button("퀘스트 초기화")) { QuestRuntimeState.DebugResetAll(); notice = "퀘스트 상태 초기화"; }
+        GUILayout.EndHorizontal();
+#endif
+
         QuestDefinition active = QuestRuntimeState.ActiveQuest;
         if (active == null)
         {
@@ -239,6 +252,7 @@ public sealed class BaseCampManagementPanel : MonoBehaviour
 
         if (QuestRuntimeState.ObjectiveReady && GUILayout.Button("보상 수령"))
             notice = QuestRuntimeState.TryClaimReward() ? "퀘스트 완료" : "보상 수령 실패";
+
     }
 
     private void DrawUniqueSaleConfirmation()

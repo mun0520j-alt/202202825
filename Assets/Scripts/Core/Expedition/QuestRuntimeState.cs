@@ -245,4 +245,51 @@ public static class QuestRuntimeState
         deliverySelection.Clear();
         Changed?.Invoke();
     }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    public static bool DebugGrantDeliveryRequirements()
+    {
+        QuestDefinition quest = ActiveQuest;
+        if (quest == null || quest.Type != QuestObjectiveType.Delivery || string.IsNullOrEmpty(quest.TargetItemId)) return false;
+        foreach (string part in quest.TargetItemId.Split('|'))
+        {
+            string[] pair = part.Split(':');
+            int count = pair.Length > 1 && int.TryParse(pair[1], out int parsed) ? parsed : 1;
+            LootItemData definition = LootItemDatabase.FindById(pair[0]);
+            if (definition == null) return false;
+            for (int i = 0; i < count; i++) LootRuntimeState.AddRewardToStash(new LootItemInstance(definition, foundInRaid: true));
+        }
+        return true;
+    }
+
+    public static bool DebugCompleteActiveObjective()
+    {
+        QuestDefinition quest = ActiveQuest;
+        if (quest == null) return false;
+        Progress = Mathf.Max(1, quest.TargetCount);
+        ObjectiveReady = true;
+        Changed?.Invoke();
+        return true;
+    }
+
+    public static void DebugGrantEconomy()
+    {
+        Reputation = Mathf.Max(Reputation, M8EconomyConfig.Level3Reputation);
+        LootRuntimeState.AddGold(2000);
+        Changed?.Invoke();
+    }
+
+    public static void DebugResetAll()
+    {
+        completed.Clear();
+        deliverySelection.Clear();
+        ActiveQuestId = null;
+        SelectedRoute = QuestRoute.Common;
+        Progress = 0;
+        ObjectiveReady = false;
+        Reputation = 0;
+        ReputationLevel = 1;
+        Changed?.Invoke();
+    }
+#endif
 }
