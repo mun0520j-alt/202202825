@@ -642,7 +642,8 @@ public class EnemyTurnActor : MonoBehaviour, ITurnActor
             LootRarity rarity = LootItemDatabase.RollBossDropRarity(rng);
             LootItemData definition = LootItemDatabase.Roll(rarity, rng);
             if (definition == null) continue;
-            drops.Add(new LootItemInstance(definition));
+            // 보스 전리품은 바닥에 놓이기 전 생성 순간부터 인레이드 상태를 소유한다.
+            drops.Add(new LootItemInstance(definition, foundInRaid: true));
         }
         if (drops.Count > 0) GroundLootPile.Create(floorTilemap, currentCell, drops, "보스 전리품");
         M3MeasurementAutomation.RecordBossItemsGenerated(drops.Count);

@@ -128,7 +128,8 @@ public sealed class DungeonChest : MonoBehaviour, ILootContainer
             yield break;
         }
 
-        var item = new LootItemInstance(definition);
+        // 던전에서 생성된 순간부터 인레이드 아이템이다. 생환 시점에 사후 부여하지 않는다.
+        var item = new LootItemInstance(definition, foundInRaid: true);
         if (!TryAdd(item)) Debug.LogError($"[Chest] 5x5 상자에 {definition.Name}을 배치하지 못했습니다.");
         else M3MeasurementAutomation.RecordChestItemGenerated();
         LootingPanel.Open(this, player);
